@@ -68,6 +68,15 @@ func (p *Plugin) setConfiguration(configuration *configuration) {
 	p.configuration = configuration
 }
 
+// IsValid checks if all needed fields are set.
+func (c *configuration) IsValid() error {
+	return nil
+}
+
+func (c *configuration) sanitize() {
+
+}
+
 // OnConfigurationChange is invoked when configuration changes may have been made.
 func (p *Plugin) OnConfigurationChange() error {
 	var configuration = new(configuration)
@@ -77,7 +86,19 @@ func (p *Plugin) OnConfigurationChange() error {
 		return errors.Wrap(err, "failed to load plugin configuration")
 	}
 
+	configuration.sanitize()
+
 	p.setConfiguration(configuration)
+
+	command, err := p.getCommand(configuration)
+	if err != nil {
+		return errors.Wrap(err, "failed to get command")
+	}
+
+	err = p.API.RegisterCommand(command)
+	if err != nil {
+		return errors.Wrap(err, "failed to register command")
+	}
 
 	return nil
 }
