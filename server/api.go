@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"runtime/debug"
@@ -12,7 +11,9 @@ import (
 
 // ServeHTTP demonstrates a plugin that handles HTTP requests by greeting the world.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello, world!")
+	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)
+
+	p.initializeAPI().ServeHTTP(w, r)
 }
 
 func (p *Plugin) initializeAPI() *mux.Router {
@@ -24,6 +25,8 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.Use(p.checkConfigured)
 
 	// Add custom routes here
+	apiRouter.HandleFunc(PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
+	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
@@ -71,7 +74,7 @@ func (p *Plugin) checkConfigured(next http.Handler) http.Handler {
 
 func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Header.Get("Mattermost-User-ID")
+		userID := r.Header.Get(HeaderMattermostUserID)
 		if userID == "" {
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return

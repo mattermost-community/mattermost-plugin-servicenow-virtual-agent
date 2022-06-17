@@ -8,4 +8,5 @@ require (
 	github.com/mattermost/mattermost-server/v6 v6.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
+	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb // indirect
 )
