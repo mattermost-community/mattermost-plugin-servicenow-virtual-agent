@@ -6,10 +6,10 @@ import (
 	"runtime/debug"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-server/v6/plugin"
+	"github.com/mattermost/mattermost-server/v5/plugin"
 )
 
-// ServeHTTP demonstrates a plugin that handles HTTP requests by greeting the world.
+// ServeHTTP demonstrates a plugin that handles HTTP requests.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)
 
@@ -22,7 +22,6 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	p.handleStaticFiles(r)
 
 	apiRouter := r.PathPrefix("/api/v1").Subrouter()
-	apiRouter.Use(p.checkConfigured)
 
 	// Add custom routes here
 	apiRouter.HandleFunc(PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
@@ -54,19 +53,6 @@ func (p *Plugin) withRecovery(next http.Handler) http.Handler {
 					"stack", string(debug.Stack()))
 			}
 		}()
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (p *Plugin) checkConfigured(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		config := p.getConfiguration()
-
-		if err := config.IsValid(); err != nil {
-			http.Error(w, "This plugin is not configured.", http.StatusNotImplemented)
-			return
-		}
 
 		next.ServeHTTP(w, r)
 	})

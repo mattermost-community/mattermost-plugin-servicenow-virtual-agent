@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mattermost/mattermost-server/v6/model"
-	"github.com/mattermost/mattermost-server/v6/plugin"
+	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/mattermost/mattermost-server/v5/plugin"
 )
 
 func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
@@ -20,7 +20,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		return
 	}
 
-	if channel.Type != model.ChannelTypeDirect {
+	if channel.Type != model.CHANNEL_DIRECT {
 		return
 	}
 

@@ -13,5 +13,5 @@ const (
 
 	BotUsername    = "servicenow-virtual-agent"
 	BotDisplayName = "ServiceNow Virtual Agent"
-	BotDescription = "A bot account created by the plugin servicenow virtual agent."
+	BotDescription = "A bot account created by the plugin ServiceNow Virtual Agent."
 )

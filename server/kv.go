@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/utils/kvstore"
-	"github.com/mattermost/mattermost-server/v6/plugin"
+	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
 )
 
