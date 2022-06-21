@@ -9,7 +9,7 @@ Use GitHub's template feature to make a copy of this repository by clicking the 
 
 Alternatively shallow clone the repository matching your plugin name:
 ```
-git clone --depth 1 https://github.com/mattermost/mattermost-plugin-starter-template com.example.my-plugin
+git clone --depth 1 https://github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent com.example.my-plugin
 ```
 
 Note that this project uses [Go modules](https://github.com/golang/go/wiki/Modules). Be sure to locate the project outside of `$GOPATH`.

@@ -7,10 +7,10 @@ import (
 	"runtime/debug"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-server/v6/plugin"
+	"github.com/mattermost/mattermost-server/v5/plugin"
 )
 
-// ServeHTTP demonstrates a plugin that handles HTTP requests by greeting the world.
+// ServeHTTP demonstrates a plugin that handles HTTP requests.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hello, world!")
 }
@@ -19,9 +19,6 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(p.withRecovery)
 	p.handleStaticFiles(r)
-
-	apiRouter := r.PathPrefix("/api/v1").Subrouter()
-	apiRouter.Use(p.checkConfigured)
 
 	// Add custom routes here
 	r.Handle("{anything:.*}", http.NotFoundHandler())
@@ -54,29 +51,4 @@ func (p *Plugin) withRecovery(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-func (p *Plugin) checkConfigured(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		config := p.getConfiguration()
-
-		if err := config.IsValid(); err != nil {
-			http.Error(w, "This plugin is not configured.", http.StatusNotImplemented)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Header.Get("Mattermost-User-ID")
-		if userID == "" {
-			http.Error(w, "Not authorized", http.StatusUnauthorized)
-			return
-		}
-
-		handler(w, r)
-	}
 }

@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-plugin-api/experimental/command"
-	"github.com/mattermost/mattermost-server/v6/model"
-	"github.com/mattermost/mattermost-server/v6/plugin"
+	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
 )
 
@@ -74,11 +74,6 @@ func (p *Plugin) getCommand(config *configuration) (*model.Command, error) {
 
 func (p *Plugin) help(args *model.CommandArgs) *model.CommandResponse {
 	p.postCommandResponse(args, fmt.Sprintf("%s%s", helpTextHeader, commonHelpText))
-	return &model.CommandResponse{}
-}
-
-func (p *Plugin) responsef(commandArgs *model.CommandArgs, format string, args ...interface{}) *model.CommandResponse {
-	p.postCommandResponse(commandArgs, fmt.Sprintf(format, args...))
 	return &model.CommandResponse{}
 }
 
