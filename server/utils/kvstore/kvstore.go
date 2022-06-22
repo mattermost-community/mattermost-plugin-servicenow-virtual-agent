@@ -5,7 +5,6 @@ package kvstore
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
@@ -20,11 +19,6 @@ type KVStore interface {
 }
 
 var ErrNotFound = errors.New("not found")
-
-const (
-	atomicRetryLimit = 5
-	atomicRetryWait  = 30 * time.Millisecond
-)
 
 func Ensure(s KVStore, key string, newValue []byte) ([]byte, error) {
 	value, err := s.Load(key)
@@ -50,7 +44,7 @@ func Ensure(s KVStore, key string, newValue []byte) ([]byte, error) {
 	return value, nil
 }
 
-func LoadJSON(s KVStore, key string, v interface{}) (error) {
+func LoadJSON(s KVStore, key string, v interface{}) error {
 	data, err := s.Load(key)
 	if err != nil {
 		return err
@@ -58,7 +52,7 @@ func LoadJSON(s KVStore, key string, v interface{}) (error) {
 	return json.Unmarshal(data, v)
 }
 
-func StoreJSON(s KVStore, key string, v interface{}) (error) {
+func StoreJSON(s KVStore, key string, v interface{}) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return err

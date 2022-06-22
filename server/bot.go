@@ -25,13 +25,10 @@ func (p *Plugin) DM(mattermostUserID, format string, args ...interface{}) (strin
 	}
 	post := &model.Post{
 		ChannelId: channel.Id,
-		UserId: p.botUserID,
-		Message: fmt.Sprintf(format, args...),
+		UserId:    p.botUserID,
+		Message:   fmt.Sprintf(format, args...),
 	}
 	sentPost, err := p.API.CreatePost(post)
-	if err != nil {
-		return "", err
-	}
 	if err != nil {
 		return "", err
 	}
