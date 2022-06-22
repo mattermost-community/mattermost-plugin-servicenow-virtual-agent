@@ -22,7 +22,6 @@ default: all
 
 # Verify environment, and define PLUGIN_ID, PLUGIN_VERSION, HAS_SERVER and HAS_WEBAPP as needed.
 include build/setup.mk
-include build/legacy.mk
 
 BUNDLE_NAME ?= $(PLUGIN_ID)-$(PLUGIN_VERSION).tar.gz
 
@@ -34,6 +33,11 @@ endif
 ## Checks the code style, tests, builds and bundles the plugin.
 .PHONY: all
 all: check-style test dist
+
+## Propagates plugin manifest information into the server/ and webapp/ folders as required.
+.PHONY: apply
+apply:
+	./build/bin/manifest apply
 
 ## Runs eslint and golangci-lint
 .PHONY: check-style
@@ -130,7 +134,7 @@ endif
 
 ## Builds and bundles the plugin.
 .PHONY: dist
-dist:	server webapp bundle
+dist:	apply server webapp bundle
 
 ## Builds and installs the plugin to a server.
 .PHONY: deploy
@@ -267,7 +271,7 @@ endif
 sync:
 ifndef STARTERTEMPLATE_PATH
 	@echo STARTERTEMPLATE_PATH is not set.
-	@echo Set STARTERTEMPLATE_PATH to a local clone of https://github.com/mattermost/mattermost-plugin-starter-template and retry.
+	@echo Set STARTERTEMPLATE_PATH to a local clone of https://github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent and retry.
 	@exit 1
 endif
 	cd ${STARTERTEMPLATE_PATH} && go run ./build/sync/main.go ./build/sync/plan.yml $(PWD)
