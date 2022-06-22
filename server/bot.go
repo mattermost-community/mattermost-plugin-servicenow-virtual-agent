@@ -20,7 +20,7 @@ func (p *Plugin) Ephemeral(userID, channelID, format string, args ...interface{}
 func (p *Plugin) DM(mattermostUserID, format string, args ...interface{}) (string, error) {
 	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
 	if err != nil {
-		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", mattermostUserID)
+		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", mattermostUserID, "error", err.Error())
 		return "", err
 	}
 	post := &model.Post{
@@ -30,6 +30,7 @@ func (p *Plugin) DM(mattermostUserID, format string, args ...interface{}) (strin
 	}
 	sentPost, err := p.API.CreatePost(post)
 	if err != nil {
+		p.API.LogError("error occurred while creating post", "error", err.Error())
 		return "", err
 	}
 	return sentPost.Id, nil

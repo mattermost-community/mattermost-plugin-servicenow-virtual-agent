@@ -69,7 +69,11 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 		return err
 	}
 
-	_, _ = p.DM(mattermostUserID, ConnectSuccessMessage, mattermostUserID)
+	_, err = p.DM(mattermostUserID, ConnectSuccessMessage, mattermostUserID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
