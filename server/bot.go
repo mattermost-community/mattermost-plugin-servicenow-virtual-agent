@@ -18,24 +18,20 @@ func (p *Plugin) Ephemeral(userID, channelID, format string, args ...interface{}
 
 // DM posts a simple Direct Message to the specified user
 func (p *Plugin) DM(mattermostUserID, format string, args ...interface{}) (string, error) {
-	postID, err := p.dm(mattermostUserID, &model.Post{
-		Message: fmt.Sprintf(format, args...),
-	})
-	if err != nil {
-		return "", err
-	}
-	return postID, nil
-}
-
-func (p *Plugin) dm(mattermostUserID string, post *model.Post) (string, error) {
 	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
 	if err != nil {
 		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", mattermostUserID)
 		return "", err
 	}
-	post.ChannelId = channel.Id
-	post.UserId = p.botUserID
+	post := &model.Post{
+		ChannelId: channel.Id,
+		UserId: p.botUserID,
+		Message: fmt.Sprintf(format, args...),
+	}
 	sentPost, err := p.API.CreatePost(post)
+	if err != nil {
+		return "", err
+	}
 	if err != nil {
 		return "", err
 	}

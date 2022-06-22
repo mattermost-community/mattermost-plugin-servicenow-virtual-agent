@@ -119,7 +119,7 @@ func applyManifest(manifest *model.Manifest) error {
 			[]byte(pluginIDTSFileTemplate),
 			0600,
 		); err != nil {
-			return errors.Wrap(err, "failed to open webapp/src/manifest.ts")
+			return errors.Wrap(err, "failed to write webapp/src/manifest.ts")
 		}
 	}
 

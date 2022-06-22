@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -39,7 +38,7 @@ func (p *Plugin) httpOAuth2Complete(w http.ResponseWriter, r *http.Request) {
 
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	if mattermostUserID == "" {
-		http.Error(w, "not authorized", http.StatusInternalServerError)
+		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -70,14 +69,13 @@ func (p *Plugin) httpOAuth2Complete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Plugin) NewOAuth2Config() *oauth2.Config {
-	baseURL := strings.TrimRight(p.getConfiguration().ServiceNowURL, "/")
 	return &oauth2.Config{
-		ClientID:     p.configuration.ServiceNowOAuthClientID,
-		ClientSecret: p.configuration.ServiceNowOAuthClientSecret,
+		ClientID:     p.getConfiguration().ServiceNowOAuthClientID,
+		ClientSecret: p.getConfiguration().ServiceNowOAuthClientSecret,
 		RedirectURL:  fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Complete),
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  fmt.Sprintf("%s/oauth_auth.do", baseURL),
-			TokenURL: fmt.Sprintf("%s/oauth_token.do", baseURL),
+			AuthURL:  fmt.Sprintf("%s/oauth_auth.do", p.getConfiguration().ServiceNowURL),
+			TokenURL: fmt.Sprintf("%s/oauth_token.do", p.getConfiguration().ServiceNowURL),
 		},
 	}
 }

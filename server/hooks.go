@@ -24,13 +24,13 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		return
 	}
 
-	botID := strings.Split(channel.Name, "__")[0]
-	if botID != p.botUserID {
+	channelName := strings.Split(channel.Name, "__")
+	if channelName[0] != p.botUserID && channelName[1] != p.botUserID {
 		return
 	}
 
 	mattermostUserID := post.UserId
-	// Check if the user is connected to serviceNow
+	// Check if the user is connected to ServiceNow
 	_, err := p.GetUser(mattermostUserID)
 	if err == nil {
 		// TODO: Send the user message to serviceNow for further computation

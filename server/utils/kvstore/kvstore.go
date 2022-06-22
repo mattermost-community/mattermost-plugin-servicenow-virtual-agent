@@ -4,7 +4,6 @@
 package kvstore
 
 import (
-	"bytes"
 	"encoding/json"
 	"time"
 
@@ -51,7 +50,7 @@ func Ensure(s KVStore, key string, newValue []byte) ([]byte, error) {
 	return value, nil
 }
 
-func LoadJSON(s KVStore, key string, v interface{}) (returnErr error) {
+func LoadJSON(s KVStore, key string, v interface{}) (error) {
 	data, err := s.Load(key)
 	if err != nil {
 		return err
@@ -59,53 +58,10 @@ func LoadJSON(s KVStore, key string, v interface{}) (returnErr error) {
 	return json.Unmarshal(data, v)
 }
 
-func StoreJSON(s KVStore, key string, v interface{}) (returnErr error) {
+func StoreJSON(s KVStore, key string, v interface{}) (error) {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
 	return s.Store(key, data)
-}
-
-func AtomicModifyWithOptions(s KVStore, key string, modify func(initialValue []byte, storeErr error) ([]byte, *model.PluginKVSetOptions, error)) error {
-	currentAttempt := 0
-	for {
-		initialBytes, appErr := s.Load(key)
-		newValue, opts, err := modify(initialBytes, appErr)
-		if err != nil {
-			return errors.Wrap(err, "modification error")
-		}
-
-		// No modifications have been done. No reason to hit the plugin API.
-		if bytes.Equal(initialBytes, newValue) {
-			return nil
-		}
-
-		if opts == nil {
-			opts = &model.PluginKVSetOptions{}
-		}
-		opts.Atomic = true
-		opts.OldValue = initialBytes
-		success, setError := s.StoreWithOptions(key, newValue, *opts)
-		if setError != nil {
-			return errors.Wrap(setError, "problem writing value")
-		}
-		if success {
-			return nil
-		}
-
-		currentAttempt++
-		if currentAttempt >= atomicRetryLimit {
-			return errors.New("reached write attempt limit")
-		}
-
-		time.Sleep(atomicRetryWait)
-	}
-}
-
-func AtomicModify(s KVStore, key string, modify func(initialValue []byte, storeErr error) ([]byte, error)) error {
-	return AtomicModifyWithOptions(s, key, func(initialValue []byte, storeErr error) ([]byte, *model.PluginKVSetOptions, error) {
-		b, err := modify(initialValue, storeErr)
-		return b, nil, err
-	})
 }

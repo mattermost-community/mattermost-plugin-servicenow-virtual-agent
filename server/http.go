@@ -33,15 +33,15 @@ func (p *Plugin) CallJSON(method, path string, in, out interface{}, httpClient *
 }
 
 func (p *Plugin) call(method, path, contentType string, inBody io.Reader, out interface{}, httpClient *http.Client) (responseData []byte, err error) {
-	errContext := fmt.Sprintf("msgraph: Call failed: method:%s, path:%s", method, path)
-	pathURL, err := url.Parse(strings.TrimSpace(fmt.Sprintf("%s%s", p.configuration.ServiceNowURL, path)))
+	errContext := fmt.Sprintf("serviceNow virtual agent: Call failed: method:%s, path:%s", method, path)
+	pathURL, err := url.Parse(strings.TrimSpace(fmt.Sprintf("%s%s", p.getConfiguration().ServiceNowURL, path)))
 	if err != nil {
 		return nil, errors.WithMessage(err, errContext)
 	}
 
 	if pathURL.Scheme == "" || pathURL.Host == "" {
 		var baseURL *url.URL
-		baseURL, err = url.Parse(p.configuration.ServiceNowURL)
+		baseURL, err = url.Parse(p.getConfiguration().ServiceNowURL)
 		if err != nil {
 			return nil, errors.WithMessage(err, errContext)
 		}
@@ -92,9 +92,6 @@ func (p *Plugin) call(method, path, contentType string, inBody io.Reader, out in
 	err = json.Unmarshal(responseData, &errResp)
 	if err != nil {
 		return responseData, errors.WithMessagef(err, "status: %s", resp.Status)
-	}
-	if err != nil {
-		return responseData, err
 	}
 	return responseData, fmt.Errorf("errorMessage %s. errorDetail: %s", errResp.Error.Message, errResp.Error.Detail)
 }

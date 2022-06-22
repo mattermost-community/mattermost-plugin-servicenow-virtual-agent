@@ -96,7 +96,7 @@ func (c *configuration) IsValid() error {
 }
 
 func (c *configuration) sanitize() {
-	c.ServiceNowURL = strings.TrimSpace(c.ServiceNowURL)
+	c.ServiceNowURL = strings.TrimRight(strings.TrimSpace(c.ServiceNowURL), "/")
 	c.ServiceNowOAuthClientID = strings.TrimSpace(c.ServiceNowOAuthClientID)
 	c.ServiceNowOAuthClientSecret = strings.TrimSpace(c.ServiceNowOAuthClientSecret)
 }
@@ -123,8 +123,6 @@ func (p *Plugin) OnConfigurationChange() error {
 	configuration.PluginID = manifest.ID
 
 	p.setConfiguration(configuration)
-
-	p.Store = p.NewStore(p.API)
 
 	return nil
 }

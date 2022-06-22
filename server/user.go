@@ -16,9 +16,9 @@ type User struct {
 }
 
 func (p *Plugin) InitOAuth2(mattermostUserID string) (string, error) {
-	user, err := p.GetUser(mattermostUserID)
+	_, err := p.GetUser(mattermostUserID)
 	if err == nil {
-		return "", fmt.Errorf("user is already connected to %s", user.MattermostUserID)
+		return "", fmt.Errorf("user is already connected to ServiceNow")
 	}
 
 	conf := p.NewOAuth2Config()

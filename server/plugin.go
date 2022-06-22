@@ -34,6 +34,8 @@ func (p *Plugin) OnActivate() error {
 		return err
 	}
 
+	p.Store = p.NewStore(p.API)
+
 	if err := p.initBotUser(); err != nil {
 		return err
 	}
