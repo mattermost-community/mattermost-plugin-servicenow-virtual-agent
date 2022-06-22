@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -18,6 +20,14 @@ import (
 // If you add non-reference types to your configuration struct, be sure to rewrite Clone as a deep
 // copy appropriate for your types.
 type configuration struct {
+	ServiceNowURL               string `json:"ServiceNowURL"`
+	ServiceNowOAuthClientID     string `json:"ServiceNowOAuthClientID"`
+	ServiceNowOAuthClientSecret string `json:"ServiceNowOAuthClientSecret"`
+	EncryptionSecret            string `json:"EncryptionSecret"`
+	MattermostSiteURL           string
+	PluginID                    string
+	PluginURL                   string
+	PluginURLPath               string
 }
 
 // Clone shallow copies the configuration. Your implementation may require a deep copy if
@@ -70,11 +80,25 @@ func (p *Plugin) setConfiguration(configuration *configuration) {
 
 // IsValid checks if all needed fields are set.
 func (c *configuration) IsValid() error {
+	if c.ServiceNowURL == "" {
+		return fmt.Errorf("serviceNow URL should not be empty")
+	}
+	if c.ServiceNowOAuthClientID == "" {
+		return fmt.Errorf("serviceNow OAuth clientID should not be empty")
+	}
+	if c.ServiceNowOAuthClientSecret == "" {
+		return fmt.Errorf("serviceNow OAuth clientSecret should not be empty")
+	}
+	if c.EncryptionSecret == "" {
+		return fmt.Errorf("encryption secret should not be empty")
+	}
 	return nil
 }
 
 func (c *configuration) sanitize() {
-
+	c.ServiceNowURL = strings.TrimRight(strings.TrimSpace(c.ServiceNowURL), "/")
+	c.ServiceNowOAuthClientID = strings.TrimSpace(c.ServiceNowOAuthClientID)
+	c.ServiceNowOAuthClientSecret = strings.TrimSpace(c.ServiceNowOAuthClientSecret)
 }
 
 // OnConfigurationChange is invoked when configuration changes may have been made.
@@ -88,17 +112,17 @@ func (p *Plugin) OnConfigurationChange() error {
 
 	configuration.sanitize()
 
+	mattermostSiteURL := p.API.GetConfig().ServiceSettings.SiteURL
+	if mattermostSiteURL == nil {
+		return errors.New("plugin requires Mattermost Site URL to be set")
+	}
+
+	configuration.MattermostSiteURL = *mattermostSiteURL
+	configuration.PluginURL = p.GetPluginURL()
+	configuration.PluginURLPath = p.GetPluginURLPath()
+	configuration.PluginID = manifest.ID
+
 	p.setConfiguration(configuration)
-
-	command, err := p.getCommand(configuration)
-	if err != nil {
-		return errors.Wrap(err, "failed to get command")
-	}
-
-	err = p.API.RegisterCommand(command)
-	if err != nil {
-		return errors.Wrap(err, "failed to register command")
-	}
 
 	return nil
 }

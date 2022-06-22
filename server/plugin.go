@@ -2,18 +2,13 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
-)
-
-const (
-	botUsername    = "servicenow-virtual-agent"
-	botDisplayName = "ServiceNow Virtual Agent Plugin"
-	botDescription = "A bot account created by the plugin ServiceNow Virtual Agent."
 )
 
 // Plugin implements the interface expected by the Mattermost server to communicate between the server and plugin processes.
@@ -30,12 +25,16 @@ type Plugin struct {
 	router *mux.Router
 	// user ID of the bot account
 	botUserID string
+
+	store Store
 }
 
 func (p *Plugin) OnActivate() error {
 	if err := p.OnConfigurationChange(); err != nil {
 		return err
 	}
+
+	p.store = p.NewStore(p.API)
 
 	if err := p.initBotUser(); err != nil {
 		return err
@@ -48,9 +47,9 @@ func (p *Plugin) OnActivate() error {
 
 func (p *Plugin) initBotUser() error {
 	botID, err := p.Helpers.EnsureBot(&model.Bot{
-		Username:    botUsername,
-		DisplayName: botDisplayName,
-		Description: botDescription,
+		Username:    BotUsername,
+		DisplayName: BotDisplayName,
+		Description: BotDescription,
 	}, plugin.ProfileImagePath(filepath.Join("assets", "profile.png")))
 	if err != nil {
 		return errors.Wrap(err, "can't ensure bot")
@@ -58,4 +57,16 @@ func (p *Plugin) initBotUser() error {
 
 	p.botUserID = botID
 	return nil
+}
+
+func (p *Plugin) GetSiteURL() string {
+	return p.getConfiguration().MattermostSiteURL
+}
+
+func (p *Plugin) GetPluginURLPath() string {
+	return "/plugins/" + manifest.ID + "/api/v1"
+}
+
+func (p *Plugin) GetPluginURL() string {
+	return strings.TrimRight(p.GetSiteURL(), "/") + p.GetPluginURLPath()
 }

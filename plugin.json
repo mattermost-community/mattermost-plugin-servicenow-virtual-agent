@@ -20,6 +20,38 @@
     "settings_schema": {
         "header": "",
         "footer": "",
-        "settings": []
+        "settings": [
+            {
+                "key": "ServiceNowURL",
+                "display_name": "ServiceNow URL:",
+                "type": "text",
+                "help_text": "The base URL for using the plugin with a ServiceNow server.",
+                "placeholder": "https://servicenow.com",
+                "default": null
+            },
+            {
+                "key": "ServiceNowOAuthClientID",
+                "display_name": "ServiceNow OAuth Client ID:",
+                "type": "text",
+                "help_text": "The client ID for the OAuth app registered with ServiceNow.",
+                "placeholder": "",
+                "default": null
+            },
+            {
+                "key": "ServiceNowOAuthClientSecret",
+                "display_name": "ServiceNow OAuth Client Secret:",
+                "type": "text",
+                "help_text": "The client secret for the OAuth app registered with ServiceNow.",
+                "placeholder": "",
+                "default": null
+            },
+            {
+                "key": "EncryptionSecret",
+                "display_name": "Encryption Secret:",
+                "type": "generated",
+                "help_text": "The secret key used to encrypt and decrpyt OAuth token.",
+                "default": ""
+            }
+        ]
     }
 }
