@@ -26,7 +26,7 @@ type Plugin struct {
 	// user ID of the bot account
 	botUserID string
 
-	Store Store
+	store Store
 }
 
 func (p *Plugin) OnActivate() error {
@@ -34,7 +34,7 @@ func (p *Plugin) OnActivate() error {
 		return err
 	}
 
-	p.Store = p.NewStore(p.API)
+	p.store = p.NewStore(p.API)
 
 	if err := p.initBotUser(); err != nil {
 		return err

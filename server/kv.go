@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/utils/kvstore"
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/store/kvstore"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
 )

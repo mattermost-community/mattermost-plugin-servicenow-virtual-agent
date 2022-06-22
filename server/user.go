@@ -23,7 +23,7 @@ func (p *Plugin) InitOAuth2(mattermostUserID string) (string, error) {
 
 	conf := p.NewOAuth2Config()
 	state := fmt.Sprintf("%v_%v", model.NewId()[0:15], mattermostUserID)
-	err = p.Store.StoreOAuth2State(state)
+	err = p.store.StoreOAuth2State(state)
 	if err != nil {
 		return "", err
 	}
@@ -38,7 +38,7 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 
 	oconf := p.NewOAuth2Config()
 
-	err := p.Store.VerifyOAuth2State(state)
+	err := p.store.VerifyOAuth2State(state)
 	if err != nil {
 		return errors.WithMessage(err, "missing stored state")
 	}
@@ -64,7 +64,7 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 		OAuth2Token:      encryptedToken,
 	}
 
-	err = p.Store.StoreUser(u)
+	err = p.store.StoreUser(u)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 }
 
 func (p *Plugin) GetUser(mattermostUserID string) (*User, error) {
-	storedUser, err := p.Store.LoadUser(mattermostUserID)
+	storedUser, err := p.store.LoadUser(mattermostUserID)
 	if err != nil {
 		return nil, err
 	}
