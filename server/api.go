@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"path/filepath"
 	"runtime/debug"
 
 	"github.com/gorilla/mux"
+	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 )
 
@@ -26,6 +28,7 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	// Add custom routes here
 	apiRouter.HandleFunc(PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
+	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
@@ -67,5 +70,52 @@ func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 		}
 
 		handler(w, r)
+	}
+}
+
+func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
+	response := &model.PostActionIntegrationResponse{}
+	decoder := json.NewDecoder(r.Body)
+	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
+	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
+		p.API.LogError("error decoding PostActionIntegrationRequest params: ", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+	disconnectUser := postActionIntegrationRequest.Context[DisconnectUserContextName].(bool)
+	if !disconnectUser {
+		rejectionPost, err := p.GetDisconnectUserPost(mattermostUserID, DisconnectUserRejectedMessage)
+		if err != nil {
+			p.API.LogError("error occurred while creating disconnect user rejection post: ", err.Error())
+		} else {
+			response = &model.PostActionIntegrationResponse{
+				Update: rejectionPost,
+			}
+		}
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+
+	if err := p.DisconnectUser(mattermostUserID); err != nil {
+		p.API.LogError("error occurred while disconnecting user. UserID: %s. Error: %s", mattermostUserID, err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+	successPost, err := p.GetDisconnectUserPost(mattermostUserID, DisconnectUserSuccessMessage)
+	if err != nil {
+		p.API.LogError("error occurred while creating disconnect user success post: ", err.Error())
+	} else {
+		response = &model.PostActionIntegrationResponse{
+			Update: successPost,
+		}
+	}
+	p.returnPostActionIntegrationResponse(w, response)
+}
+
+func (p *Plugin) returnPostActionIntegrationResponse(w http.ResponseWriter, res *model.PostActionIntegrationResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write(res.ToJson()); err != nil {
+		p.API.LogWarn("failed to write PostActionIntegrationResponse", "Error", err.Error())
 	}
 }
