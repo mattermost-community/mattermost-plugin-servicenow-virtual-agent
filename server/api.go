@@ -78,7 +78,7 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
-		p.API.LogError("error decoding PostActionIntegrationRequest params: ", err.Error())
+		p.API.LogError("error decoding PostActionIntegrationRequest params.", "error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
@@ -87,7 +87,7 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	if !disconnectUser {
 		rejectionPost, err := p.GetDisconnectUserPost(mattermostUserID, DisconnectUserRejectedMessage)
 		if err != nil {
-			p.API.LogError("error occurred while creating disconnect user rejection post: ", err.Error())
+			p.API.LogError("error occurred while creating disconnect user rejection post.", "error", err.Error())
 		} else {
 			response = &model.PostActionIntegrationResponse{
 				Update: rejectionPost,
@@ -104,7 +104,7 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	}
 	successPost, err := p.GetDisconnectUserPost(mattermostUserID, DisconnectUserSuccessMessage)
 	if err != nil {
-		p.API.LogError("error occurred while creating disconnect user success post: ", err.Error())
+		p.API.LogError("error occurred while creating disconnect user success post", "error", err.Error())
 	} else {
 		response = &model.PostActionIntegrationResponse{
 			Update: successPost,
