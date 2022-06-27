@@ -13,6 +13,8 @@ const (
 	PathUserDisconnect = "/user/disconnect"
 	PathGetUser        = "/api/now/table/sys_user"
 
+	SysQueryParam = "sysparm_query"
+
 	BotUsername    = "servicenow-virtual-agent"
 	BotDisplayName = "ServiceNow Virtual Agent"
 	BotDescription = "A bot account created by the plugin ServiceNow Virtual Agent."

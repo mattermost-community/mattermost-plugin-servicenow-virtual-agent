@@ -39,13 +39,13 @@ func (c *client) GetMe(mattermostUserID string) (*ServiceNowUser, error) {
 	userDetails := &UserDetails{}
 	path := fmt.Sprintf("%s%s", c.plugin.getConfiguration().ServiceNowURL, PathGetUser)
 	params := url.Values{}
-	params.Add("sysparm_query", fmt.Sprintf("email=%s", mattermostUser.Email))
+	params.Add(SysQueryParam, fmt.Sprintf("email=%s", mattermostUser.Email))
 	_, err := c.CallJSON(http.MethodGet, path, nil, userDetails, params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get user details")
 	}
 	if len(userDetails.UserDetails) == 0 {
-		return nil, errors.New(fmt.Sprintf("user doesn't exist on serviceNow with email %s", mattermostUser.Email))
+		return nil, errors.New(fmt.Sprintf("user doesn't exist on ServiceNow with email %s", mattermostUser.Email))
 	}
 
 	return userDetails.UserDetails[0], nil
