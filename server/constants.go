@@ -4,13 +4,14 @@ const (
 	HeaderMattermostUserID = "Mattermost-User-ID"
 
 	ConnectSuccessMessage = "Thanks for linking your ServiceNow account!\n" +
-		"You've connected your Mattermost account `%s` to ServiceNow."
+		"Your ServiceNow account (*%s*) has been connected to Mattermost."
 	WelcomePretextMessage = "Welcome to the Mattermost ServiceNow Virtual Agent.\n" +
 		"I'm here to help you. Let's start by linking your ServiceNow account.\n[Link to ServiceNow](%s)"
 
 	PathOAuth2Connect  = "/oauth2/connect"
 	PathOAuth2Complete = "/oauth2/complete"
 	PathUserDisconnect = "/user/disconnect"
+	PathGetUser        = "/api/now/table/sys_user"
 
 	BotUsername    = "servicenow-virtual-agent"
 	BotDisplayName = "ServiceNow Virtual Agent"
