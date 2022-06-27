@@ -33,7 +33,7 @@ func (p *Plugin) MakeClient(ctx context.Context, token *oauth2.Token) Client {
 func (c *client) GetMe(mattermostUserID string) (*ServiceNowUser, error) {
 	mattermostUser, appErr := c.plugin.API.GetUser(mattermostUserID)
 	if appErr != nil {
-		return nil, errors.Wrap(appErr, fmt.Sprintf("failed to get user detauls by mattermostUserID. UserID: %s", mattermostUserID))
+		return nil, errors.Wrap(appErr, fmt.Sprintf("failed to get user details by mattermostUserID. UserID: %s", mattermostUserID))
 	}
 
 	userDetails := &UserDetails{}
