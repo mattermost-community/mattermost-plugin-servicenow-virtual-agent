@@ -61,6 +61,7 @@ func (p *Plugin) GetPostWithSlackAttachment(mattermostUserID string, attachments
 		ChannelId: channel.Id,
 		UserId:    p.botUserID,
 	}
+
 	model.ParseSlackAttachment(post, attachments)
 
 	return post, nil

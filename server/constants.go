@@ -21,4 +21,5 @@ const (
 	DisconnectUserConfirmationMessge = "Are you sure you want to disconnect your ServiceNow account?"
 	DisconnectUserRejectedMessage    = "You're still connected to your ServiceNow account."
 	DisconnectUserSuccessMessage     = "Successfully disconnected your ServiceNow account."
+	AlreadyDisconnectedMessage       = "You're not connected to your ServiceNow account."
 )
