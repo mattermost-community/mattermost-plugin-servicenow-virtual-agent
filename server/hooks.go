@@ -32,14 +32,18 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 	mattermostUserID := post.UserId
 	// Check if the user is connected to ServiceNow
 	_, err := p.GetUser(mattermostUserID)
-	if err == nil {
-		// TODO: Send the user message to serviceNow for further computation
+	if err != nil {
+		if err == ErrNotFound {
+			_, _ = p.DM(mattermostUserID, WelcomePretextMessage, fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Connect))
+		} else {
+			p.API.LogError("error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error())
+		}
 		return
 	}
 
-	_, err = p.DM(mattermostUserID, WelcomePretextMessage, fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Connect))
-	if err != nil {
-		// Don't log the error here again as it is already logged inside the DM function
+	if strings.ToLower(post.Message) == DisconnectKeyword {
+		_, _ = p.DMWithAttachments(post.UserId, p.CreateDisconnectUserAttachment())
 		return
 	}
+	// TODO: Send the user message to serviceNow for further computation
 }

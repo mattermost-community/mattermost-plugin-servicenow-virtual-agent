@@ -85,3 +85,57 @@ func (p *Plugin) GetUser(mattermostUserID string) (*User, error) {
 
 	return storedUser, nil
 }
+
+func (p *Plugin) DisconnectUser(mattermostUserID string) error {
+	if err := p.store.DeleteUser(mattermostUserID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Plugin) CreateDisconnectUserAttachment() *model.SlackAttachment {
+	disconnectUserPath := fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathUserDisconnect)
+	disconnectUserAttachment := &model.SlackAttachment{
+		Title: DisconnectUserConfirmationMessge,
+		Color: "#FF0000",
+		Actions: []*model.PostAction{
+			{
+				Type: "button",
+				Name: "Yes",
+				Integration: &model.PostActionIntegration{
+					URL: disconnectUserPath,
+					Context: map[string]interface{}{
+						DisconnectUserContextName: true,
+					},
+				},
+			},
+			{
+				Type: "button",
+				Name: "No",
+				Integration: &model.PostActionIntegration{
+					URL: disconnectUserPath,
+					Context: map[string]interface{}{
+						DisconnectUserContextName: false,
+					},
+				},
+			},
+		},
+	}
+
+	return disconnectUserAttachment
+}
+
+func (p *Plugin) GetDisconnectUserPost(mattermostUserID, message string) (*model.Post, error) {
+	disconnectUserAttachment := &model.SlackAttachment{
+		Title: message,
+		Color: "#32CD32",
+	}
+
+	post, err := p.GetPostWithSlackAttachment(mattermostUserID, disconnectUserAttachment)
+	if err != nil {
+		return nil, err
+	}
+
+	return post, nil
+}
