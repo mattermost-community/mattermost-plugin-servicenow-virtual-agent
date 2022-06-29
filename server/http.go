@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -22,26 +21,26 @@ type Error struct {
 	Message string `json:"message"`
 }
 
-func (p *Plugin) CallJSON(method, path string, in, out interface{}, httpClient *http.Client) (responseData []byte, err error) {
+func (c *client) CallJSON(method, path string, in, out interface{}, params url.Values) (responseData []byte, err error) {
 	contentType := "application/json"
 	buf := &bytes.Buffer{}
 	err = json.NewEncoder(buf).Encode(in)
 	if err != nil {
 		return nil, err
 	}
-	return p.call(method, path, contentType, buf, out, httpClient)
+	return c.call(method, path, contentType, buf, out, params)
 }
 
-func (p *Plugin) call(method, path, contentType string, inBody io.Reader, out interface{}, httpClient *http.Client) (responseData []byte, err error) {
+func (c *client) call(method, path, contentType string, inBody io.Reader, out interface{}, params url.Values) (responseData []byte, err error) {
 	errContext := fmt.Sprintf("serviceNow virtual agent: Call failed: method:%s, path:%s", method, path)
-	pathURL, err := url.Parse(strings.TrimSpace(fmt.Sprintf("%s%s", p.getConfiguration().ServiceNowURL, path)))
+	pathURL, err := url.Parse(path)
 	if err != nil {
 		return nil, errors.WithMessage(err, errContext)
 	}
 
 	if pathURL.Scheme == "" || pathURL.Host == "" {
 		var baseURL *url.URL
-		baseURL, err = url.Parse(p.getConfiguration().ServiceNowURL)
+		baseURL, err = url.Parse(c.plugin.getConfiguration().ServiceNowURL)
 		if err != nil {
 			return nil, errors.WithMessage(err, errContext)
 		}
@@ -55,11 +54,13 @@ func (p *Plugin) call(method, path, contentType string, inBody io.Reader, out in
 	if err != nil {
 		return nil, err
 	}
+	if params != nil {
+		req.URL.RawQuery = params.Encode()
+	}
 	if contentType != "" {
 		req.Header.Add("Content-Type", contentType)
 	}
-
-	resp, err := httpClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

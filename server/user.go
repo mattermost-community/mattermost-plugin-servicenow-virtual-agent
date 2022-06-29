@@ -10,9 +10,20 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type UserDetails struct {
+	UserDetails []*ServiceNowUser `json:"result"`
+}
+
+type ServiceNowUser struct {
+	UserID   string `json:"sys_id"`
+	Email    string `json:"email"`
+	Username string `json:"user_name"`
+}
+
 type User struct {
 	MattermostUserID string
 	OAuth2Token      string
+	ServiceNowUser
 }
 
 func (p *Plugin) InitOAuth2(mattermostUserID string) (string, error) {
@@ -54,6 +65,12 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 		return err
 	}
 
+	client := p.MakeClient(context.Background(), tok)
+	serviceNowUser, err := client.GetMe(mattermostUserID)
+	if err != nil {
+		return err
+	}
+
 	encryptedToken, err := p.NewEncodedAuthToken(tok)
 	if err != nil {
 		return err
@@ -62,6 +79,7 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 	u := &User{
 		MattermostUserID: mattermostUserID,
 		OAuth2Token:      encryptedToken,
+		ServiceNowUser:   *serviceNowUser,
 	}
 
 	err = p.store.StoreUser(u)
@@ -69,7 +87,7 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 		return err
 	}
 
-	_, err = p.DM(mattermostUserID, ConnectSuccessMessage, mattermostUserID)
+	_, err = p.DM(mattermostUserID, ConnectSuccessMessage, serviceNowUser.Email)
 	if err != nil {
 		return err
 	}
