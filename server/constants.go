@@ -7,6 +7,7 @@ const (
 		"Your ServiceNow account (*%s*) has been connected to Mattermost."
 	WelcomePretextMessage = "Welcome to the Mattermost ServiceNow Virtual Agent.\n" +
 		"I'm here to help you. Let's start by linking your ServiceNow account.\n[Link to ServiceNow](%s)"
+	GenericErrorMessage = "Something went wrong. Please try again later."
 
 	PathOAuth2Connect              = "/oauth2/connect"
 	PathOAuth2Complete             = "/oauth2/complete"

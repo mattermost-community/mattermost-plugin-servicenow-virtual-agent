@@ -37,7 +37,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		if err == ErrNotFound {
 			_, _ = p.DM(mattermostUserID, WelcomePretextMessage, fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Connect))
 		} else {
-			p.API.LogError("error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error())
+			p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error()))
 		}
 		return
 	}
@@ -49,13 +49,13 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	tok, err := p.ParseAuthToken(user.OAuth2Token)
 	if err != nil {
-		p.API.LogError("error occurred while decrypting token. Error: %s", err.Error())
+		p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("error occurred while decrypting token. Error: %s", err.Error()))
 		return
 	}
 
 	client := p.MakeClient(context.Background(), tok)
 	err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message)
 	if err != nil {
-		p.API.LogError(err.Error())
+		p.logAndSendErrorToUser(mattermostUserID, channel.Id, err.Error())
 	}
 }
