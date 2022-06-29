@@ -29,6 +29,7 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.handleVirtualAgentWebhook).Methods(http.MethodPost)
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
@@ -111,6 +112,11 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	p.returnPostActionIntegrationResponse(w, response)
+}
+
+func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {
+	// TODO: Add logic to process webhook response and display it to the user
+	ReturnStatusOK(w)
 }
 
 func (p *Plugin) returnPostActionIntegrationResponse(w http.ResponseWriter, res *model.PostActionIntegrationResponse) {

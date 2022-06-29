@@ -2,16 +2,14 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"net/url"
 
-	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 )
 
 type Client interface {
 	GetMe(mattermostUserID string) (*ServiceNowUser, error)
+	SendMessageToVirtualAgentAPI(userID, messageText string) error
 }
 
 type client struct {
@@ -28,25 +26,4 @@ func (p *Plugin) MakeClient(ctx context.Context, token *oauth2.Token) Client {
 		plugin:     p,
 	}
 	return c
-}
-
-func (c *client) GetMe(mattermostUserID string) (*ServiceNowUser, error) {
-	mattermostUser, appErr := c.plugin.API.GetUser(mattermostUserID)
-	if appErr != nil {
-		return nil, errors.Wrap(appErr, fmt.Sprintf("failed to get user details by mattermostUserID. UserID: %s", mattermostUserID))
-	}
-
-	userDetails := &UserDetails{}
-	path := fmt.Sprintf("%s%s", c.plugin.getConfiguration().ServiceNowURL, PathGetUser)
-	params := url.Values{}
-	params.Add(SysQueryParam, fmt.Sprintf("email=%s", mattermostUser.Email))
-	_, err := c.CallJSON(http.MethodGet, path, nil, userDetails, params)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get user details")
-	}
-	if len(userDetails.UserDetails) == 0 {
-		return nil, errors.New(fmt.Sprintf("user doesn't exist on ServiceNow with email %s", mattermostUser.Email))
-	}
-
-	return userDetails.UserDetails[0], nil
 }
