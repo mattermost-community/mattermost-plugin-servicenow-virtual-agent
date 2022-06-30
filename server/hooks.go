@@ -47,13 +47,13 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		return
 	}
 
-	tok, err := p.ParseAuthToken(user.OAuth2Token)
+	token, err := p.ParseAuthToken(user.OAuth2Token)
 	if err != nil {
 		p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("error occurred while decrypting token. Error: %s", err.Error()))
 		return
 	}
 
-	client := p.MakeClient(context.Background(), tok)
+	client := p.MakeClient(context.Background(), token)
 	err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message)
 	if err != nil {
 		p.logAndSendErrorToUser(mattermostUserID, channel.Id, err.Error())
