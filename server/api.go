@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"runtime/debug"
@@ -115,7 +116,21 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {
-	// TODO: Add logic to process webhook response and display it to the user
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		p.API.LogError("error occurred while reading webhook body.", "error", err.Error())
+		http.Error(w, "Error occurred while reading webhook body.", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		return
+	}
+	err = p.ProcessResponse(data)
+	if err != nil {
+		p.API.LogError("error occurred while processing response body.", "error", err.Error())
+		http.Error(w, "Error occurred while processing response body.", http.StatusInternalServerError)
+		return
+	}
 	ReturnStatusOK(w)
 }
 

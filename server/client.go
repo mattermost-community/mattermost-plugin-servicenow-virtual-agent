@@ -9,6 +9,7 @@ import (
 
 type Client interface {
 	GetMe(mattermostUserID string) (*ServiceNowUser, error)
+	StartConverstaionWithVirtualAgent(userID string) error
 	SendMessageToVirtualAgentAPI(userID, messageText string) error
 }
 

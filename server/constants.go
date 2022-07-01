@@ -15,6 +15,7 @@ const (
 	PathGetUser                    = "/api/now/table/sys_user"
 	PathVirtualAgentWebhook        = "/nowbot/processResponse"
 	PathVirtualAgentBotIntegration = "/api/sn_va_as_service/bot/integration"
+	PathActionOptions              = "/action_options"
 
 	SysQueryParam = "sysparm_query"
 
@@ -27,4 +28,9 @@ const (
 	DisconnectUserConfirmationMessge = "Are you sure you want to disconnect your ServiceNow account?"
 	DisconnectUserRejectedMessage    = "You're still connected to your ServiceNow account."
 	DisconnectUserSuccessMessage     = "Successfully disconnected your ServiceNow account."
+
+	StartConversationAction  = "START_CONVERSATION"
+	OutputTextUIType         = "OutputText"
+	TopicPickerControlUIType = "TopicPickerControl"
+	PickerUIType             = "Picker"
 )
