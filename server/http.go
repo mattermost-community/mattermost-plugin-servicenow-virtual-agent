@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
 )
 
@@ -95,4 +96,10 @@ func (c *client) call(method, path, contentType string, inBody io.Reader, out in
 		return responseData, errors.WithMessagef(err, "status: %s", resp.Status)
 	}
 	return responseData, fmt.Errorf("errorMessage %s. errorDetail: %s", errResp.Error.Message, errResp.Error.Detail)
+}
+
+func ReturnStatusOK(w io.Writer) {
+	m := make(map[string]string)
+	m[model.STATUS] = model.STATUS_OK
+	_, _ = w.Write([]byte(model.MapToJson(m)))
 }

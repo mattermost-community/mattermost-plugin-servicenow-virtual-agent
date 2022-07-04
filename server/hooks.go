@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -31,12 +32,12 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	mattermostUserID := post.UserId
 	// Check if the user is connected to ServiceNow
-	_, err := p.GetUser(mattermostUserID)
+	user, err := p.GetUser(mattermostUserID)
 	if err != nil {
 		if err == ErrNotFound {
 			_, _ = p.DM(mattermostUserID, WelcomePretextMessage, fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Connect))
 		} else {
-			p.API.LogError("error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error())
+			p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error()))
 		}
 		return
 	}
@@ -45,5 +46,16 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		_, _ = p.DMWithAttachments(post.UserId, p.CreateDisconnectUserAttachment())
 		return
 	}
-	// TODO: Send the user message to serviceNow for further computation
+
+	token, err := p.ParseAuthToken(user.OAuth2Token)
+	if err != nil {
+		p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("error occurred while decrypting token. Error: %s", err.Error()))
+		return
+	}
+
+	client := p.MakeClient(context.Background(), token)
+	err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message)
+	if err != nil {
+		p.logAndSendErrorToUser(mattermostUserID, channel.Id, err.Error())
+	}
 }

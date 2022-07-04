@@ -3,6 +3,7 @@ module github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent
 go 1.16
 
 require (
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/mattermost/mattermost-server/v5 v5.37.9
 	github.com/pkg/errors v0.9.1

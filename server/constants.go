@@ -7,11 +7,14 @@ const (
 		"Your ServiceNow account (*%s*) has been connected to Mattermost."
 	WelcomePretextMessage = "Welcome to the Mattermost ServiceNow Virtual Agent.\n" +
 		"I'm here to help you. Let's start by linking your ServiceNow account.\n[Link to ServiceNow](%s)"
+	GenericErrorMessage = "Something went wrong. Please try again later."
 
-	PathOAuth2Connect  = "/oauth2/connect"
-	PathOAuth2Complete = "/oauth2/complete"
-	PathUserDisconnect = "/user/disconnect"
-	PathGetUser        = "/api/now/table/sys_user"
+	PathOAuth2Connect              = "/oauth2/connect"
+	PathOAuth2Complete             = "/oauth2/complete"
+	PathUserDisconnect             = "/user/disconnect"
+	PathGetUser                    = "/api/now/table/sys_user"
+	PathVirtualAgentWebhook        = "/nowbot/processResponse"
+	PathVirtualAgentBotIntegration = "/api/sn_va_as_service/bot/integration"
 
 	SysQueryParam = "sysparm_query"
 
