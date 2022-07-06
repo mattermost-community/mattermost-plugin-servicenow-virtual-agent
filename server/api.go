@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -30,6 +31,7 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.handlePickerSelection)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.handleVirtualAgentWebhook).Methods(http.MethodPost)
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
@@ -113,6 +115,36 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	p.returnPostActionIntegrationResponse(w, response)
+}
+
+func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
+	response := &model.PostActionIntegrationResponse{}
+	decoder := json.NewDecoder(r.Body)
+	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
+	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
+		p.API.LogError("Error decoding PostActionIntegrationRequest params.", "error", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+
+	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+	user, err := p.store.LoadUser(mattermostUserID)
+	if err != nil {
+		p.API.LogError("Error loading user from KV store.", "error", err.Error())
+	}
+
+	token, err := p.ParseAuthToken(user.OAuth2Token)
+	if err != nil {
+		p.API.LogError("Error parsing OAuth2 token.", "error", err.Error())
+		return
+	}
+
+	ctx := context.Background()
+	client := p.MakeClient(ctx, token)
+	err = client.SendMessageToVirtualAgentAPI(user.UserID, postActionIntegrationRequest.Context["selected_option"].(string), false)
+	if err != nil {
+		p.API.LogError("Error sending message to virtual agent API.", "error", err.Error())
+	}
 }
 
 func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {

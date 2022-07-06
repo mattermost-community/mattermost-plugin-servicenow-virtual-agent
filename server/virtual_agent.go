@@ -87,11 +87,11 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string) error {
+func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed bool) error {
 	requestBody := &VirtualAgentRequestBody{
 		Message: &MessageBody{
 			Text:  messageText,
-			Typed: true, // TODO: Make this dynamic after adding support for Default Picker List
+			Typed: typed,
 		},
 		RequestID: c.plugin.generateUUID(),
 		UserID:    userID,
@@ -127,8 +127,12 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 		return err
 	}
 
-	// TODO: Fetch the mattermostUserID from the DB using sys_id
-	userId := "11j1muahwbdpzf48j8j8xixwxh"
+	user, err := p.store.LoadUserWithSysID(vaResponse.UserID)
+	if err != nil {
+		return err
+	}
+
+	userId := user.MattermostUserID
 	for _, messageResponse := range vaResponse.Body {
 		switch res := messageResponse.Value.(type) {
 		case *OutputText:
@@ -180,7 +184,7 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	for _, option := range options {
 		postOptions = append(postOptions, &model.PostActionOptions{
 			Text:  option.Label,
-			Value: option.Value,
+			Value: option.Label,
 		})
 	}
 

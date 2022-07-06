@@ -29,6 +29,7 @@ type UserStore interface {
 	LoadUser(mattermostUserID string) (*User, error)
 	StoreUser(user *User) error
 	DeleteUser(mattermostUserID string) error
+	LoadUserWithSysID(mattermostUserID string) (*User, error)
 }
 
 // OAuth2StateStore manages OAuth2 state
@@ -63,8 +64,22 @@ func (s *pluginStore) LoadUser(mattermostUserID string) (*User, error) {
 	return &user, nil
 }
 
+func (s *pluginStore) LoadUserWithSysID(UserID string) (*User, error) {
+	user := User{}
+	err := kvstore.LoadJSON(s.userKV, UserID, &user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (s *pluginStore) StoreUser(user *User) error {
 	err := kvstore.StoreJSON(s.userKV, user.MattermostUserID, user)
+	if err != nil {
+		return err
+	}
+
+	err = kvstore.StoreJSON(s.userKV, user.UserID, user)
 	if err != nil {
 		return err
 	}
