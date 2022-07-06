@@ -132,15 +132,15 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 		return err
 	}
 
-	userId := user.MattermostUserID
+	userID := user.MattermostUserID
 	for _, messageResponse := range vaResponse.Body {
 		switch res := messageResponse.Value.(type) {
 		case *OutputText:
-			_, _ = p.DM(userId, res.Value)
+			_, _ = p.DM(userID, res.Value)
 		case *TopicPickerControl:
-			_, _ = p.DMWithAttachments(userId, p.CreateTopicPickerControlAttachment(res))
+			_, _ = p.DMWithAttachments(userID, p.CreateTopicPickerControlAttachment(res))
 		case *Picker:
-			_, _ = p.DMWithAttachments(userId, p.CreatePickerAttachment(res))
+			_, _ = p.DMWithAttachments(userID, p.CreatePickerAttachment(res))
 		}
 	}
 

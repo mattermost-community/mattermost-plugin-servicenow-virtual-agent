@@ -64,9 +64,9 @@ func (s *pluginStore) LoadUser(mattermostUserID string) (*User, error) {
 	return &user, nil
 }
 
-func (s *pluginStore) LoadUserWithSysID(UserID string) (*User, error) {
+func (s *pluginStore) LoadUserWithSysID(userID string) (*User, error) {
 	user := User{}
-	err := kvstore.LoadJSON(s.userKV, UserID, &user)
+	err := kvstore.LoadJSON(s.userKV, userID, &user)
 	if err != nil {
 		return nil, err
 	}

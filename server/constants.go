@@ -29,9 +29,9 @@ const (
 	DisconnectUserRejectedMessage    = "You're still connected to your ServiceNow account."
 	DisconnectUserSuccessMessage     = "Successfully disconnected your ServiceNow account."
 
-	StartConversationAction  = "START_CONVERSATION"
-	OutputTextUIType         = "OutputText"
-	TopicPickerControlUIType = "TopicPickerControl"
-	PickerUIType             = "Picker"
-	AlreadyDisconnectedMessage       = "You're not connected to your ServiceNow account."
+	StartConversationAction    = "START_CONVERSATION"
+	OutputTextUIType           = "OutputText"
+	TopicPickerControlUIType   = "TopicPickerControl"
+	PickerUIType               = "Picker"
+	AlreadyDisconnectedMessage = "You're not connected to your ServiceNow account."
 )
