@@ -34,7 +34,21 @@ type OutputText struct {
 	UIType   string `json:"uiType"`
 	Group    string `json:"group"`
 	Value    string `json:"value"`
+	ItemType string `json:"itemType"`
 	MaskType string `json:"maskType"`
+}
+
+type OutputLinkValue struct {
+	Action string `json:"action"`
+}
+
+type OutputLink struct {
+	UIType string `json:"uiType"`
+	Group  string `json:"group"`
+	Label  string `json:"label"`
+	Header string `json:"header"`
+	Type   string `json:"type"`
+	Value  OutputLinkValue
 }
 
 type TopicPickerControl struct {
@@ -78,6 +92,8 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(TopicPickerControl)
 	case PickerUIType:
 		m.Value = new(Picker)
+	case OutputLinkUIType:
+		m.Value = new(OutputLink)
 	}
 
 	if m.Value != nil {
@@ -141,10 +157,19 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			_, _ = p.DMWithAttachments(userID, p.CreateTopicPickerControlAttachment(res))
 		case *Picker:
 			_, _ = p.DMWithAttachments(userID, p.CreatePickerAttachment(res))
+		case *OutputLink:
+			_, _ = p.DMWithAttachments(userID, p.CreateOutputLinkAttachment(res))
 		}
 	}
 
 	return nil
+}
+
+func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Pretext: body.Header,
+		Text:    fmt.Sprintf("[%s](%s)", body.Label, body.Value.Action),
+	}
 }
 
 func (p *Plugin) CreateTopicPickerControlAttachment(body *TopicPickerControl) *model.SlackAttachment {

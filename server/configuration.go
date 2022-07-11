@@ -24,6 +24,7 @@ type configuration struct {
 	ServiceNowOAuthClientID     string `json:"ServiceNowOAuthClientID"`
 	ServiceNowOAuthClientSecret string `json:"ServiceNowOAuthClientSecret"`
 	EncryptionSecret            string `json:"EncryptionSecret"`
+	WebhookSecret               string `json:"WebhookSecret"`
 	MattermostSiteURL           string
 	PluginID                    string
 	PluginURL                   string

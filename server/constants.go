@@ -33,5 +33,6 @@ const (
 	OutputTextUIType           = "OutputText"
 	TopicPickerControlUIType   = "TopicPickerControl"
 	PickerUIType               = "Picker"
+	OutputLinkUIType           = "OutputLink"
 	AlreadyDisconnectedMessage = "You're not connected to your ServiceNow account."
 )

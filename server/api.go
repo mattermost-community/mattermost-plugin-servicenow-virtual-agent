@@ -2,15 +2,19 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"runtime/debug"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
+	"github.com/pkg/errors"
 )
 
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
@@ -32,10 +36,39 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.handlePickerSelection)).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.handleVirtualAgentWebhook).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.handleAuthRequired(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
+}
+
+func (p *Plugin) handleAuthRequired(handleFunc func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, r.FormValue("secret")); err != nil {
+			p.API.LogError("Invalid secret", "Error", err.Error())
+			http.Error(w, fmt.Sprintf("Invalid Secret. Error: %s", err.Error()), status)
+			return
+		}
+
+		handleFunc(w, r)
+	}
+}
+
+// Ref: mattermost plugin confluence(https://github.com/mattermost/mattermost-plugin-confluence/blob/3ee2aa149b6807d14fe05772794c04448a17e8be/server/controller/main.go#L97)
+func verifyHTTPSecret(expected, got string) (status int, err error) {
+	for {
+		if subtle.ConstantTimeCompare([]byte(got), []byte(expected)) == 1 {
+			break
+		}
+
+		unescaped, _ := url.QueryUnescape(got)
+		if unescaped == got {
+			return http.StatusForbidden, errors.New("request URL: secret did not match")
+		}
+		got = unescaped
+	}
+
+	return 0, nil
 }
 
 // handleStaticFiles handles the static files under the assets directory.

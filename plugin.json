@@ -51,6 +51,14 @@
                 "type": "generated",
                 "help_text": "The secret key used to encrypt and decrpyt OAuth token.",
                 "default": ""
+            },
+            {
+                "key": "WebhookSecret",
+                "display_name": "ServiceNow Webhook Secret:",
+                "type": "generated",
+                "help_text": "The webhook secret used by the ServiceNow API calls to Mattermost for sending message response.",
+                "regenerate_help_text": "Regenerates the secret for ServiceNow Plugin. Regenerating this key invalidates any existing token.",
+                "default": ""
             }
         ]
     }
