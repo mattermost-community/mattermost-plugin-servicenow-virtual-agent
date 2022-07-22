@@ -195,9 +195,11 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	attachment := &MessageAttachment{}
+
 	ctx := context.Background()
 	client := p.MakeClient(ctx, token)
-	err = client.SendMessageToVirtualAgentAPI(user.UserID, postActionIntegrationRequest.Context["selected_option"].(string), false)
+	err = client.SendMessageToVirtualAgentAPI(user.UserID, postActionIntegrationRequest.Context["selected_option"].(string), false, attachment)
 	if err != nil {
 		p.API.LogError("Error sending message to virtual agent API.", "error", err.Error())
 	}

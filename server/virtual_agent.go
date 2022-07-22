@@ -17,8 +17,15 @@ type VirtualAgentRequestBody struct {
 }
 
 type MessageBody struct {
-	Text  string `json:"text"`
-	Typed bool   `json:"typed"`
+	Attachment *MessageAttachment `json:"attachment"`
+	Text       string             `json:"text"`
+	Typed      bool               `json:"typed"`
+}
+
+type MessageAttachment struct {
+	URL         string `json:"url"`
+	ContentType string `json:"contentType"`
+	FileName    string `json:"fileName"`
 }
 
 type VirtualAgentResponse struct {
@@ -43,12 +50,13 @@ type OutputLinkValue struct {
 }
 
 type OutputLink struct {
-	UIType string `json:"uiType"`
-	Group  string `json:"group"`
-	Label  string `json:"label"`
-	Header string `json:"header"`
-	Type   string `json:"type"`
-	Value  OutputLinkValue
+	UIType        string `json:"uiType"`
+	Group         string `json:"group"`
+	Label         string `json:"label"`
+	Header        string `json:"header"`
+	Type          string `json:"type"`
+	Value         OutputLinkValue
+	PromptMessage string `json:"promptMsg"`
 }
 
 type TopicPickerControl struct {
@@ -103,11 +111,12 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed bool) error {
+func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed bool, attachment *MessageAttachment) error {
 	requestBody := &VirtualAgentRequestBody{
 		Message: &MessageBody{
-			Text:  messageText,
-			Typed: typed,
+			Attachment: attachment,
+			Text:       messageText,
+			Typed:      typed,
 		},
 		RequestID: c.plugin.generateUUID(),
 		UserID:    userID,
