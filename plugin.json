@@ -57,7 +57,7 @@
                 "display_name": "ServiceNow Webhook Secret:",
                 "type": "generated",
                 "help_text": "The webhook secret used by the ServiceNow API calls to Mattermost for sending message response.",
-                "regenerate_help_text": "Regenerates the secret for ServiceNow Plugin. Regenerating this key invalidates any existing token.",
+                "regenerate_help_text": "Regenerates the secret for ServiceNow Virtual Agent Plugin. Regenerating this key invalidates any existing key.",
                 "default": ""
             }
         ]

@@ -1,7 +1,8 @@
 package main
 
 const (
-	HeaderMattermostUserID = "Mattermost-User-ID"
+	HeaderMattermostUserID                      = "Mattermost-User-ID"
+	ContextTokenKey        ServiceNowOAuthToken = "ServiceNow-Oauth-Token"
 
 	ConnectSuccessMessage = "Thanks for linking your ServiceNow account!\n" +
 		"Your ServiceNow account (*%s*) has been connected to Mattermost."
@@ -31,8 +32,12 @@ const (
 
 	StartConversationAction    = "START_CONVERSATION"
 	OutputTextUIType           = "OutputText"
+	InputTextUIType            = "InputText"
 	TopicPickerControlUIType   = "TopicPickerControl"
 	PickerUIType               = "Picker"
+	BooleanUIType              = "Boolean"
 	OutputLinkUIType           = "OutputLink"
 	AlreadyDisconnectedMessage = "You're not connected to your ServiceNow account."
 )
+
+type ServiceNowOAuthToken string

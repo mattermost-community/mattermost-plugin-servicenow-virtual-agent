@@ -31,11 +31,12 @@ type MessageResponseBody struct {
 }
 
 type OutputText struct {
-	UIType   string `json:"uiType"`
-	Group    string `json:"group"`
-	Value    string `json:"value"`
-	ItemType string `json:"itemType"`
-	MaskType string `json:"maskType"`
+	UIType        string `json:"uiType"`
+	Group         string `json:"group"`
+	Value         string `json:"value"`
+	ItemType      string `json:"itemType"`
+	MaskType      string `json:"maskType"`
+	Label         string `json:"label"`
 }
 
 type OutputLinkValue struct {
@@ -82,15 +83,21 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	var uiType struct {
 		UIType string `json:"uiType"`
 	}
+
 	if err := json.Unmarshal(data, &uiType); err != nil {
 		return err
 	}
+
 	switch uiType.UIType {
 	case OutputTextUIType:
+		m.Value = new(OutputText)
+	case InputTextUIType:
 		m.Value = new(OutputText)
 	case TopicPickerControlUIType:
 		m.Value = new(TopicPickerControl)
 	case PickerUIType:
+		m.Value = new(Picker)
+	case BooleanUIType:
 		m.Value = new(Picker)
 	case OutputLinkUIType:
 		m.Value = new(OutputLink)
@@ -113,8 +120,7 @@ func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed 
 		UserID:    userID,
 	}
 
-	_, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil)
-	if err != nil {
+	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
 		return errors.Wrap(err, "failed to call virtual agent bot integration API")
 	}
 
@@ -128,8 +134,7 @@ func (c *client) StartConverstaionWithVirtualAgent(userID string) error {
 		UserID:    userID,
 	}
 
-	_, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil)
-	if err != nil {
+	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
 		return errors.Wrap(err, "failed to start conversation with virtual agent bot")
 	}
 
@@ -138,8 +143,7 @@ func (c *client) StartConverstaionWithVirtualAgent(userID string) error {
 
 func (p *Plugin) ProcessResponse(data []byte) error {
 	vaResponse := &VirtualAgentResponse{}
-	err := json.Unmarshal(data, &vaResponse)
-	if err != nil {
+	if err := json.Unmarshal(data, &vaResponse); err != nil {
 		return err
 	}
 
@@ -152,13 +156,25 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 	for _, messageResponse := range vaResponse.Body {
 		switch res := messageResponse.Value.(type) {
 		case *OutputText:
-			_, _ = p.DM(userID, res.Value)
+			message := res.Value
+			if res.Label != "" {
+				message = res.Label
+			}
+			if _, err = p.DM(userID, message); err != nil {
+				return err
+			}
 		case *TopicPickerControl:
-			_, _ = p.DMWithAttachments(userID, p.CreateTopicPickerControlAttachment(res))
+			if _, err = p.DMWithAttachments(userID, p.CreateTopicPickerControlAttachment(res)); err != nil {
+				return err
+			}
 		case *Picker:
-			_, _ = p.DMWithAttachments(userID, p.CreatePickerAttachment(res))
+			if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
+				return err
+			}
 		case *OutputLink:
-			_, _ = p.DMWithAttachments(userID, p.CreateOutputLinkAttachment(res))
+			if _, err = p.DMWithAttachments(userID, p.CreateOutputLinkAttachment(res)); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -209,7 +225,7 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	for _, option := range options {
 		postOptions = append(postOptions, &model.PostActionOptions{
 			Text:  option.Label,
-			Value: option.Label,
+			Value: option.Value,
 		})
 	}
 
