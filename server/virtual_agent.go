@@ -31,12 +31,12 @@ type MessageResponseBody struct {
 }
 
 type OutputText struct {
-	UIType        string `json:"uiType"`
-	Group         string `json:"group"`
-	Value         string `json:"value"`
-	ItemType      string `json:"itemType"`
-	MaskType      string `json:"maskType"`
-	Label         string `json:"label"`
+	UIType   string `json:"uiType"`
+	Group    string `json:"group"`
+	Value    string `json:"value"`
+	ItemType string `json:"itemType"`
+	MaskType string `json:"maskType"`
+	Label    string `json:"label"`
 }
 
 type OutputLinkValue struct {
@@ -223,10 +223,12 @@ func (p *Plugin) CreatePickerAttachment(body *Picker) *model.SlackAttachment {
 func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptions {
 	var postOptions []*model.PostActionOptions
 	for _, option := range options {
-		postOptions = append(postOptions, &model.PostActionOptions{
-			Text:  option.Label,
-			Value: option.Value,
-		})
+		if option.Enabled {
+			postOptions = append(postOptions, &model.PostActionOptions{
+				Text:  option.Label,
+				Value: option.Value,
+			})
+		}
 	}
 
 	return postOptions
