@@ -1,0 +1,24 @@
+# Setting up your ServiceNow instance
+
+We need to setup our virtual agent on a servicenow instance, to which we will send our API requests.
+
+## 1. Create your service now instance 
+  - Log in to [ServiceNow](https://developer.servicenow.com).
+  - Then click on  Create Instance in the top right corner.
+  - Once the instance is created, open the menu from the top right corner, navigate to Manage Instance Password, and log in to your dev instance in a new tab.
+
+## 2. Install Glide Virtual Agent and Virtual Agent
+  - Navigate to **All > System Applications > All Available Application > All** and install the Glide Virtual Agent and Virtual Agent API
+
+## 3. Configuring the Virtual Agent API
+
+  - Navigate to **System Web Services > Outbound > Rest Message**
+  - Go to **VA Bot to Bot > postMessage**.
+  - Update the endpoint to -> `https://your-mattermost-url.com/plugins/mattermost-plugin-servicenow-virtual-agent/api/v1/nowbot/processResponse?secret=your-webhook-secret`.
+  Note: (Webhook secret can be generated from the Mattermost system console settings of virtual agent plugin.)
+ 
+## 4. Creating an OAuth app in ServiceNow
+  - Navigate to **All > System OAuth > Application Registry.**
+  - Create on the New button on the top right corner and then go to Create an OAuth API endpoint for external clients.
+  - Enter the name for your app and set the redirect url to `https://your-mattermost-url.com/plugins/mattermost-plugin-servicenow-virtual-agent/api/v1/oauth2/complete`.
+  - The client secret will be generated automatically.
