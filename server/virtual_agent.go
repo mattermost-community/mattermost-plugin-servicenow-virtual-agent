@@ -223,12 +223,10 @@ func (p *Plugin) CreatePickerAttachment(body *Picker) *model.SlackAttachment {
 func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptions {
 	var postOptions []*model.PostActionOptions
 	for _, option := range options {
-		if option.Enabled {
-			postOptions = append(postOptions, &model.PostActionOptions{
-				Text:  option.Label,
-				Value: option.Value,
-			})
-		}
+		postOptions = append(postOptions, &model.PostActionOptions{
+			Text:  option.Label,
+			Value: option.Label,
+		})
 	}
 
 	return postOptions

@@ -89,9 +89,9 @@ func (p *Plugin) withRecovery(next http.Handler) http.Handler {
 		defer func() {
 			if x := recover(); x != nil {
 				p.API.LogError("Recovered from a panic",
-					"url", r.URL.String(),
+					"URL", r.URL.String(),
 					"Error", x,
-					"stack", string(debug.Stack()))
+					"Stack", string(debug.Stack()))
 			}
 		}()
 
@@ -119,7 +119,7 @@ func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
 			p.API.LogError("Error loading user from KV store.", "Error", err.Error())
 			return
 		}
-
+		// Adding the ServiceNow User ID in the request headers to pass it to the next handler
 		r.Header.Set("ServiceNow-User-ID", user.UserID)
 
 		token, err := p.ParseAuthToken(user.OAuth2Token)
@@ -214,6 +214,15 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	if err := client.SendMessageToVirtualAgentAPI(userID, postActionIntegrationRequest.Context["selected_option"].(string), false); err != nil {
 		p.API.LogError("Error sending message to virtual agent API.", "Error", err.Error())
 	}
+
+	p.API.DeletePost(postActionIntegrationRequest.PostId)
+
+	newPost := &model.Post{
+		UserId:  r.Header.Get(HeaderMattermostUserID),
+		Message: postActionIntegrationRequest.Context["selected_option"].(string),
+	}
+	p.API.CreatePost(newPost)
+
 	ReturnStatusOK(w)
 }
 
