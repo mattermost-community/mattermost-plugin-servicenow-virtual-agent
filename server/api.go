@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
@@ -15,7 +14,6 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
-	"golang.org/x/oauth2"
 )
 
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
@@ -36,7 +34,7 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.handlePickerSelection)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
@@ -107,29 +105,6 @@ func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		handler(w, r)
-	}
-}
-
-func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Header.Get(HeaderMattermostUserID)
-		user, err := p.store.LoadUser(userID)
-		if err != nil {
-			p.API.LogError("Error loading user from KV store.", "Error", err.Error())
-			return
-		}
-		// Adding the ServiceNow User ID in the request headers to pass it to the next handler
-		r.Header.Set("ServiceNow-User-ID", user.UserID)
-
-		token, err := p.ParseAuthToken(user.OAuth2Token)
-		if err != nil {
-			p.API.LogError("Error parsing OAuth2 token.", "Error", err.Error())
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), ContextTokenKey, token)
-		r = r.Clone(ctx)
 		handler(w, r)
 	}
 }
@@ -206,23 +181,18 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
-	userID := r.Header.Get("ServiceNow-User-ID")
-
-	client := p.MakeClient(ctx, token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, postActionIntegrationRequest.Context["selected_option"].(string), false); err != nil {
-		p.API.LogError("Error sending message to virtual agent API.", "Error", err.Error())
+	if err := p.API.DeletePost(postActionIntegrationRequest.PostId); err != nil {
+		p.API.LogError("Error deleting picker/dropdown post.", "Error", err.Error())
 	}
-
-	p.API.DeletePost(postActionIntegrationRequest.PostId)
 
 	newPost := &model.Post{
-		UserId:  r.Header.Get(HeaderMattermostUserID),
-		Message: postActionIntegrationRequest.Context["selected_option"].(string),
+		ChannelId: postActionIntegrationRequest.ChannelId,
+		UserId:    r.Header.Get(HeaderMattermostUserID),
+		Message:   postActionIntegrationRequest.Context["selected_option"].(string),
 	}
-	p.API.CreatePost(newPost)
-
+	if _, err := p.API.CreatePost(newPost); err != nil {
+		p.API.LogError("Error creating new post for replacing the picker/dropdown post.", "Error", err.Error())
+	}
 	ReturnStatusOK(w)
 }
 
