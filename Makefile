@@ -10,11 +10,20 @@ MM_UTILITIES_DIR ?= ../mattermost-utilities
 DLV_DEBUG_PORT := 2346
 DEFAULT_GOOS := $(shell go env GOOS)
 DEFAULT_GOARCH := $(shell go env GOARCH)
-
+# Determine if a server is defined in the manifest.
+HAS_SERVER ?= $(shell build/bin/manifest has_server)
 export GO111MODULE=on
 
 # You can include assets this directory into the bundle. This can be e.g. used to include profile pictures.
 ASSETS_DIR ?= assets
+
+## Generates mock golang interfaces for testing
+.PHONY: mock
+mock:
+ifneq ($(HAS_SERVER),)
+	go install github.com/golang/mock/mockgen@v1.6.0
+	mockgen -destination server/plugin/mocks/mock_va.go github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/plugin Gitlab
+endif
 
 ## Define the default target (make all)
 .PHONY: default
