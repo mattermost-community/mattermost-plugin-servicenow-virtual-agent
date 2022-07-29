@@ -35,6 +35,14 @@ func (p *Plugin) DMWithAttachments(mattermostUserID string, attachments ...*mode
 	return p.dm(mattermostUserID, &post)
 }
 
+// DMWithAttachments emphemeral posts a Direct Message that contains Slack attachments.
+// Often used to include post actions.
+func (p *Plugin) DMEmphemeralWithAttachments(mattermostUserID string, attachments ...*model.SlackAttachment) (string, error) {
+	post := model.Post{}
+	model.ParseSlackAttachment(&post, attachments)
+	return p.dmEmphemeral(mattermostUserID, &post)
+}
+
 func (p *Plugin) dm(mattermostUserID string, post *model.Post) (string, error) {
 	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
 	if err != nil {
@@ -48,6 +56,20 @@ func (p *Plugin) dm(mattermostUserID string, post *model.Post) (string, error) {
 		p.API.LogError("error occurred while creating post", "error", err.Error())
 		return "", err
 	}
+
+	return sentPost.Id, nil
+}
+
+func (p *Plugin) dmEmphemeral(mattermostUserID string, post *model.Post) (string, error) {
+	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
+	if err != nil {
+		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", mattermostUserID, "error", err.Error())
+		return "", err
+	}
+	post.ChannelId = channel.Id
+	post.UserId = p.botUserID
+	sentPost := p.API.SendEphemeralPost(mattermostUserID, post)
+
 	return sentPost.Id, nil
 }
 

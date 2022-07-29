@@ -181,17 +181,14 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := p.API.DeletePost(postActionIntegrationRequest.PostId); err != nil {
-		p.API.LogError("Error deleting picker/dropdown post.", "Error", err.Error())
-	}
-
+	p.API.DeleteEphemeralPost(postActionIntegrationRequest.UserId, postActionIntegrationRequest.PostId)
 	newPost := &model.Post{
 		ChannelId: postActionIntegrationRequest.ChannelId,
 		UserId:    r.Header.Get(HeaderMattermostUserID),
 		Message:   postActionIntegrationRequest.Context["selected_option"].(string),
 	}
 	if _, err := p.API.CreatePost(newPost); err != nil {
-		p.API.LogError("Error creating new post for replacing the picker/dropdown post.", "Error", err.Error())
+		p.API.LogError("Error creating new post for the selection from picker/dropdown post.", "Error", err.Error())
 	}
 	ReturnStatusOK(w)
 }
@@ -204,11 +201,8 @@ func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if data == nil {
-		return
-	}
-
 	if err = p.ProcessResponse(data); err != nil {
+		p.DM(r.Header.Get(HeaderMattermostUserID), "Please enter your request again")
 		p.API.LogError("Error occurred while processing response body.", "Error", err.Error())
 		http.Error(w, "Error occurred while processing response body.", http.StatusInternalServerError)
 		return

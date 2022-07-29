@@ -119,7 +119,7 @@ func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed 
 		RequestID: c.plugin.generateUUID(),
 		UserID:    userID,
 	}
-
+	fmt.Printf("\n\n\nrequestBody %+v\n\n\n", requestBody)
 	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
 		return errors.Wrap(err, "failed to call virtual agent bot integration API")
 	}
@@ -142,6 +142,10 @@ func (c *client) StartConverstaionWithVirtualAgent(userID string) error {
 }
 
 func (p *Plugin) ProcessResponse(data []byte) error {
+	// s := string(data)
+	// fmt.Printf("\n\n\ndata %+v\n\n\n", data)
+	// fmt.Printf("\n\n\nstring %s\n\n\n", s)
+
 	vaResponse := &VirtualAgentResponse{}
 	if err := json.Unmarshal(data, &vaResponse); err != nil {
 		return err
@@ -164,11 +168,14 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				return err
 			}
 		case *TopicPickerControl:
-			if _, err = p.DMWithAttachments(userID, p.CreateTopicPickerControlAttachment(res)); err != nil {
+			if _, err = p.DMEmphemeralWithAttachments(userID, p.CreateTopicPickerControlAttachment(res)); err != nil {
 				return err
 			}
 		case *Picker:
-			if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
+			if _, err = p.DM(userID, res.Label); err != nil {
+				return err
+			}
+			if _, err = p.DMEmphemeralWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
 				return err
 			}
 		case *OutputLink:
@@ -206,7 +213,7 @@ func (p *Plugin) CreateTopicPickerControlAttachment(body *TopicPickerControl) *m
 
 func (p *Plugin) CreatePickerAttachment(body *Picker) *model.SlackAttachment {
 	return &model.SlackAttachment{
-		Text: body.Label,
+		// Text: body.Label,
 		Actions: []*model.PostAction{
 			{
 				Name: "Select an option...",
