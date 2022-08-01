@@ -226,7 +226,9 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	model.ParseSlackAttachment(&newPost, newAttachment)
 	newPost.Id = postActionIntegrationRequest.PostId
 
-	p.API.UpdatePost(&newPost)
+	if _, err := p.API.UpdatePost(&newPost); err != nil {
+		p.API.LogError("Error updating dropdown post.", "Error", err.Error())
+	}
 
 	ReturnStatusOK(w)
 }
@@ -240,7 +242,6 @@ func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err = p.ProcessResponse(data); err != nil {
-		p.DM(r.Header.Get(HeaderMattermostUserID), "Please enter your request again")
 		p.API.LogError("Error occurred while processing response body.", "Error", err.Error())
 		http.Error(w, "Error occurred while processing response body.", http.StatusInternalServerError)
 		return
