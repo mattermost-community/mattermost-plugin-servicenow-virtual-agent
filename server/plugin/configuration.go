@@ -93,6 +93,9 @@ func (c *configuration) IsValid() error {
 	if c.EncryptionSecret == "" {
 		return fmt.Errorf("encryption secret should not be empty")
 	}
+	if c.WebhookSecret == "" {
+		return fmt.Errorf("webhook secret should not be empty")
+	}
 	return nil
 }
 

@@ -22,7 +22,8 @@ ASSETS_DIR ?= assets
 mock:
 ifneq ($(HAS_SERVER),)
 	go install github.com/golang/mock/mockgen@v1.6.0
-	mockgen -destination server/plugin/mocks/mock_va.go github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/plugin Gitlab
+	mockgen -destination server/mocks/mock_store.go github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/plugin Store
+	mockgen -destination server/mocks/mock_client.go github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/plugin Client
 endif
 
 ## Define the default target (make all)
@@ -208,7 +209,7 @@ detach: setup-attach
 .PHONY: test
 test: webapp/node_modules
 ifneq ($(HAS_SERVER),)
-	$(GO) test -v $(GO_TEST_FLAGS) ./server/...
+	$(GO) test -v $(GO_TEST_FLAGS) ./server/plugin/...
 endif
 ifneq ($(HAS_WEBAPP),)
 	cd webapp && $(NPM) run test;
