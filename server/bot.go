@@ -48,6 +48,7 @@ func (p *Plugin) dm(mattermostUserID string, post *model.Post) (string, error) {
 		p.API.LogError("error occurred while creating post", "error", err.Error())
 		return "", err
 	}
+
 	return sentPost.Id, nil
 }
 

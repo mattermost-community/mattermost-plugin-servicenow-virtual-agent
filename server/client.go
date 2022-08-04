@@ -9,7 +9,8 @@ import (
 
 type Client interface {
 	GetMe(mattermostUserID string) (*ServiceNowUser, error)
-	SendMessageToVirtualAgentAPI(userID, messageText string) error
+	StartConverstaionWithVirtualAgent(userID string) error
+	SendMessageToVirtualAgentAPI(userID, messageText string, typed bool) error
 }
 
 type client struct {

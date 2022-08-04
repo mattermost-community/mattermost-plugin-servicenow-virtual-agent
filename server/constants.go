@@ -2,6 +2,10 @@ package main
 
 const (
 	HeaderMattermostUserID = "Mattermost-User-ID"
+	HeaderServiceNowUserID = "ServiceNow-User-ID"
+	// Used for storing the token in the request context to pass from one middleware to another
+	// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
+	ContextTokenKey ServiceNowOAuthToken = "ServiceNow-Oauth-Token"
 
 	ConnectSuccessMessage = "Thanks for linking your ServiceNow account!\n" +
 		"Your ServiceNow account (*%s*) has been connected to Mattermost."
@@ -15,6 +19,7 @@ const (
 	PathGetUser                    = "/api/now/table/sys_user"
 	PathVirtualAgentWebhook        = "/nowbot/processResponse"
 	PathVirtualAgentBotIntegration = "/api/sn_va_as_service/bot/integration"
+	PathActionOptions              = "/action_options"
 
 	SysQueryParam = "sysparm_query"
 
@@ -27,5 +32,17 @@ const (
 	DisconnectUserConfirmationMessge = "Are you sure you want to disconnect your ServiceNow account?"
 	DisconnectUserRejectedMessage    = "You're still connected to your ServiceNow account."
 	DisconnectUserSuccessMessage     = "Successfully disconnected your ServiceNow account."
-	AlreadyDisconnectedMessage       = "You're not connected to your ServiceNow account."
+
+	StartConversationAction    = "START_CONVERSATION"
+	OutputTextUIType           = "OutputText"
+	InputTextUIType            = "InputText"
+	TopicPickerControlUIType   = "TopicPickerControl"
+	PickerUIType               = "Picker"
+	BooleanUIType              = "Boolean"
+	OutputLinkUIType           = "OutputLink"
+	AlreadyDisconnectedMessage = "You're not connected to your ServiceNow account."
+
+	updatedPostBorderColor = "#74ccac"
 )
+
+type ServiceNowOAuthToken string
