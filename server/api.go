@@ -18,9 +18,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// Constants
-const updatedPostBorderColor = "#74ccac"
-
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)
@@ -212,7 +209,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
-
+	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	selectedOption := postActionIntegrationRequest.Context["selected_option"].(string)
 
 	client := p.MakeClient(r.Context(), token)
@@ -228,9 +225,9 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		Color: updatedPostBorderColor,
 	})
 
-	channel, err := p.API.GetDirectChannel(r.Header.Get(HeaderMattermostUserID), p.botUserID)
+	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
 	if err != nil {
-		p.API.LogInfo("Couldn't get bot's DM channel", "user_id")
+		p.API.LogInfo("Couldn't get bot's DM channel with user", "userID", mattermostUserID)
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
