@@ -18,6 +18,9 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// Constants
+const updatedPostBorderColor = "#74ccac"
+
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)
@@ -210,27 +213,40 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
 
+	selectedOption := postActionIntegrationRequest.Context["selected_option"].(string)
+
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, postActionIntegrationRequest.Context["selected_option"].(string), true); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
 
 	newAttachment := []*model.SlackAttachment{}
 	newAttachment = append(newAttachment, &model.SlackAttachment{
-		Text:  fmt.Sprintf("You selected - %s", postActionIntegrationRequest.Context["selected_option"].(string)),
-		Color: "#74ccac",
+		Text:  fmt.Sprintf("You selected: %s", selectedOption),
+		Color: updatedPostBorderColor,
 	})
-
-	newPost := model.Post{}
-	model.ParseSlackAttachment(&newPost, newAttachment)
-	newPost.Id = postActionIntegrationRequest.PostId
-
-	if _, err := p.API.UpdatePost(&newPost); err != nil {
-		p.API.LogError("Error updating dropdown post.", "Error", err.Error())
+	
+	channel, err := p.API.GetDirectChannel(r.Header.Get(HeaderMattermostUserID), p.botUserID)
+	if err != nil {
+		p.API.LogInfo("Couldn't get bot's DM channel", "user_id")
+		p.returnPostActionIntegrationResponse(w, response)
+		return
 	}
 
-	ReturnStatusOK(w)
+	newPost := &model.Post{
+		ChannelId: channel.Id,
+		UserId:    p.botUserID,
+	}
+
+	model.ParseSlackAttachment(newPost, newAttachment)
+
+	response = &model.PostActionIntegrationResponse{
+		Update: newPost,
+	}
+
+	p.returnPostActionIntegrationResponse(w, response)
 }
 
 func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {
