@@ -168,6 +168,9 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				return err
 			}
 		case *Picker:
+			if _, err = p.DM(userID, res.Label); err != nil {
+				return err
+			}
 			if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
 				return err
 			}
@@ -206,7 +209,6 @@ func (p *Plugin) CreateTopicPickerControlAttachment(body *TopicPickerControl) *m
 
 func (p *Plugin) CreatePickerAttachment(body *Picker) *model.SlackAttachment {
 	return &model.SlackAttachment{
-		Text: body.Label,
 		Actions: []*model.PostAction{
 			{
 				Name: "Select an option...",

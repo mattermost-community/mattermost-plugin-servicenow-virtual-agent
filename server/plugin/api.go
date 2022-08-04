@@ -120,7 +120,7 @@ func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		// Adding the ServiceNow User ID in the request headers to pass it to the next handler
-		r.Header.Set("ServiceNow-User-ID", user.UserID)
+		r.Header.Set(HeaderServiceNowUserID, user.UserID)
 
 		token, err := p.ParseAuthToken(user.OAuth2Token)
 		if err != nil {
@@ -208,20 +208,27 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
-	userID := r.Header.Get("ServiceNow-User-ID")
+	userID := r.Header.Get(HeaderServiceNowUserID)
 
-	client := p.MakeClient(ctx, token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, postActionIntegrationRequest.Context["selected_option"].(string), false); err != nil {
-		p.API.LogError("Error sending message to virtual agent API.", "Error", err.Error())
+	client := p.MakeClient(r.Context(), token)
+	if err := client.SendMessageToVirtualAgentAPI(userID, postActionIntegrationRequest.Context["selected_option"].(string), true); err != nil {
+		p.API.LogError("Error sending message to VA.", "Error", err.Error())
+		return
 	}
 
-	p.API.DeletePost(postActionIntegrationRequest.PostId)
+	newAttachment := []*model.SlackAttachment{}
+	newAttachment = append(newAttachment, &model.SlackAttachment{
+		Text:  fmt.Sprintf("You selected - %s", postActionIntegrationRequest.Context["selected_option"].(string)),
+		Color: "#74ccac",
+	})
 
-	newPost := &model.Post{
-		UserId:  r.Header.Get(HeaderMattermostUserID),
-		Message: postActionIntegrationRequest.Context["selected_option"].(string),
+	newPost := model.Post{}
+	model.ParseSlackAttachment(&newPost, newAttachment)
+	newPost.Id = postActionIntegrationRequest.PostId
+
+	if _, err := p.API.UpdatePost(&newPost); err != nil {
+		p.API.LogError("Error updating dropdown post.", "Error", err.Error())
 	}
-	p.API.CreatePost(newPost)
 
 	ReturnStatusOK(w)
 }
@@ -231,10 +238,6 @@ func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		p.API.LogError("Error occurred while reading webhook body.", "Error", err.Error())
 		http.Error(w, "Error occurred while reading webhook body.", http.StatusInternalServerError)
-		return
-	}
-
-	if data == nil {
 		return
 	}
 

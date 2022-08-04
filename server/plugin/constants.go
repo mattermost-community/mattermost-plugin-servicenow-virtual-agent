@@ -2,6 +2,7 @@ package plugin
 
 const (
 	HeaderMattermostUserID = "Mattermost-User-ID"
+	HeaderServiceNowUserID = "ServiceNow-User-ID"
 	// Used for storing the token in the request context to pass from one middleware to another
 	// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
 	ContextTokenKey ServiceNowOAuthToken = "ServiceNow-Oauth-Token"
