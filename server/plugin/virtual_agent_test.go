@@ -20,7 +20,7 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 		errMessage  string
 	}{
 		{
-			description: "Everthing works fine",
+			description: "Everything works fine",
 			userID:      "mockID",
 			message:     "mockMessage",
 			typed:       true,
@@ -39,9 +39,8 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 			monkey.PatchInstanceMethod(reflect.TypeOf(c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
 				if testCase.errMessage != "" {
 					return nil, errors.New(testCase.errMessage)
-				} else {
-					return nil, nil
 				}
+				return nil, nil
 			})
 
 			err := c.SendMessageToVirtualAgentAPI(testCase.userID, testCase.message, testCase.typed)
@@ -62,7 +61,7 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 		errMessage  string
 	}{
 		{
-			description: "Everthing works fine",
+			description: "Everything works fine",
 			userID:      "mockID",
 		},
 		{
@@ -77,9 +76,8 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 			monkey.PatchInstanceMethod(reflect.TypeOf(c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
 				if testCase.errMessage != "" {
 					return nil, errors.New(testCase.errMessage)
-				} else {
-					return nil, nil
 				}
+				return nil, nil
 			})
 
 			err := c.StartConverstaionWithVirtualAgent(testCase.userID)
@@ -99,7 +97,7 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 		body        *OutputLink
 	}{
 		{
-			description: "Everthing works fine",
+			description: "Everything works fine",
 			body: &OutputLink{
 				Header: "mockHeader",
 				Label:  "mockLabel",
@@ -123,7 +121,7 @@ func Test_CreateTopicPickerControlAttachment(t *testing.T) {
 		body        *TopicPickerControl
 	}{
 		{
-			description: "Everthing works fine",
+			description: "Everything works fine",
 			body: &TopicPickerControl{
 				PromptMessage: "mockPrompt",
 				Options: []Option{{
@@ -146,7 +144,7 @@ func Test_CreatePickerAttachment(t *testing.T) {
 		body        *Picker
 	}{
 		{
-			description: "Everthing works fine",
+			description: "Everything works fine",
 			body: &Picker{
 				Label: "mockLabel",
 				Options: []Option{{

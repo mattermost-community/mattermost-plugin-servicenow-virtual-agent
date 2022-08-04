@@ -17,7 +17,7 @@ func TestLogAndSendErrorToUser(t *testing.T) {
 		errMessage  string
 	}{
 		{
-			description: "Everthing works fine",
+			description: "Everything works fine",
 			userID:      "mockID",
 			channelID:   "mockChannelID",
 			errMessage:  "mockErrMessage",

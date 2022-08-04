@@ -106,7 +106,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			GetDisconnectUserPostErr: errors.New("mockErr"),
 			DisconnectUserErr:        nil,
 		},
-		"When user is found but error occured while reading user from KV store": {
+		"When user is found but error occurred while reading user from KV store": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,

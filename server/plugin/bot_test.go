@@ -20,7 +20,7 @@ func TestDM(t *testing.T) {
 		mockPost         *model.Post
 	}{
 		{
-			description:      "Everthing works fine",
+			description:      "Everything works fine",
 			mattermostUserID: "mockID",
 			format:           "mockFormat",
 			mockChannel:      &model.Channel{},
@@ -85,7 +85,7 @@ func TestEphemeral(t *testing.T) {
 		format      string
 	}{
 		{
-			description: "Everthing works fine",
+			description: "Everything works fine",
 			userID:      "mockID",
 			channelID:   "mockChannelID",
 			format:      "mockFormat",
