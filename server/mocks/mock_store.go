@@ -5,7 +5,7 @@
 package mock_plugin
 
 import (
-	plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/plugin"
+	serializer "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -48,10 +48,10 @@ func (mr *MockStoreMockRecorder) DeleteUser(arg0 interface{}) *gomock.Call {
 }
 
 // LoadUser mocks base method
-func (m *MockStore) LoadUser(arg0 string) (*plugin.User, error) {
+func (m *MockStore) LoadUser(arg0 string) (*serializer.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadUser", arg0)
-	ret0, _ := ret[0].(*plugin.User)
+	ret0, _ := ret[0].(*serializer.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -63,10 +63,10 @@ func (mr *MockStoreMockRecorder) LoadUser(arg0 interface{}) *gomock.Call {
 }
 
 // LoadUserWithSysID mocks base method
-func (m *MockStore) LoadUserWithSysID(arg0 string) (*plugin.User, error) {
+func (m *MockStore) LoadUserWithSysID(arg0 string) (*serializer.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadUserWithSysID", arg0)
-	ret0, _ := ret[0].(*plugin.User)
+	ret0, _ := ret[0].(*serializer.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -92,7 +92,7 @@ func (mr *MockStoreMockRecorder) StoreOAuth2State(arg0 interface{}) *gomock.Call
 }
 
 // StoreUser mocks base method
-func (m *MockStore) StoreUser(arg0 *plugin.User) error {
+func (m *MockStore) StoreUser(arg0 *serializer.User) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StoreUser", arg0)
 	ret0, _ := ret[0].(error)

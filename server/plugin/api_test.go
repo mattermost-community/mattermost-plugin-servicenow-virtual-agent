@@ -10,6 +10,11 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
+	mock_plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/mocks"
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/golang/mock/gomock"
+	"golang.org/x/oauth2"
+
 	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
@@ -201,8 +206,8 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 
 			p.initializeAPI()
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(p), "GetUser", func(_ *Plugin, _ string) (*User, error) {
-				return &User{}, test.GetUserErr
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "GetUser", func(_ *Plugin, _ string) (*serializer.User, error) {
+				return &serializer.User{}, test.GetUserErr
 			})
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(p), "GetDisconnectUserPost", func(_ *Plugin, _, _ string) (*model.Post, error) {
@@ -214,7 +219,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			})
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add("Mattermost-User-ID", test.userID)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
@@ -335,7 +340,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			p.initializeAPI()
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add("Mattermost-User-ID", test.userID)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
@@ -357,6 +362,8 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 		GetUserErr               error
 		GetDisconnectUserPostErr error
 		DisconnectUserErr        error
+		ParseAuthTokenErr        error
+		LoadUserErr              error
 	}{
 		"Everything works fine": {
 			httpTest: httpTestJSON,
@@ -376,6 +383,50 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        nil,
+			ParseAuthTokenErr:        nil,
+			LoadUserErr:              nil,
+		},
+		"When user is not present in store": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/action_options",
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						"selected_option": "mockOption",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID:                   "mockUserID",
+			GetUserErr:               nil,
+			GetDisconnectUserPostErr: nil,
+			DisconnectUserErr:        nil,
+			ParseAuthTokenErr:        nil,
+			LoadUserErr:              errors.New("mockErr"),
+		},
+		"When error occurs while parsing OAuth token": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/action_options",
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						"selected_option": "mockOption",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID:                   "mockUserID",
+			GetUserErr:               nil,
+			GetDisconnectUserPostErr: nil,
+			DisconnectUserErr:        nil,
+			ParseAuthTokenErr:        errors.New("mockErr"),
+			LoadUserErr:              nil,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -405,13 +456,19 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 
 			p.initializeAPI()
 
-			// mockCtrl := gomock.NewController(t)
-			// mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+				return &oauth2.Token{}, test.ParseAuthTokenErr
+			})
 
-			// p.store = mockedStore
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+
+			mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, test.LoadUserErr)
+
+			p.store = mockedStore
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add("Mattermost-User-ID", test.userID)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)

@@ -5,7 +5,7 @@
 package mock_plugin
 
 import (
-	plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/plugin"
+	serializer "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -34,10 +34,10 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // GetMe mocks base method
-func (m *MockClient) GetMe(arg0 string) (*plugin.ServiceNowUser, error) {
+func (m *MockClient) GetMe(arg0 string) (*serializer.ServiceNowUser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMe", arg0)
-	ret0, _ := ret[0].(*plugin.ServiceNowUser)
+	ret0, _ := ret[0].(*serializer.ServiceNowUser)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

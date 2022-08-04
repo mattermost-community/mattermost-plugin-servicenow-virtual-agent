@@ -97,7 +97,7 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 			})
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add("Mattermost-User-ID", test.userID)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
@@ -199,7 +199,7 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 			})
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add("Mattermost-User-ID", test.userID)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)

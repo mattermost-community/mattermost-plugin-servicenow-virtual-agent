@@ -3,6 +3,8 @@ package plugin
 import (
 	"time"
 
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+
 	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/store/kvstore"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
@@ -26,10 +28,10 @@ type Store interface {
 }
 
 type UserStore interface {
-	LoadUser(mattermostUserID string) (*User, error)
-	StoreUser(user *User) error
+	LoadUser(mattermostUserID string) (*serializer.User, error)
+	StoreUser(user *serializer.User) error
 	DeleteUser(mattermostUserID string) error
-	LoadUserWithSysID(mattermostUserID string) (*User, error)
+	LoadUserWithSysID(mattermostUserID string) (*serializer.User, error)
 }
 
 // OAuth2StateStore manages OAuth2 state
@@ -55,8 +57,8 @@ func (p *Plugin) NewStore(api plugin.API) Store {
 	}
 }
 
-func (s *pluginStore) LoadUser(mattermostUserID string) (*User, error) {
-	user := User{}
+func (s *pluginStore) LoadUser(mattermostUserID string) (*serializer.User, error) {
+	user := serializer.User{}
 	err := kvstore.LoadJSON(s.userKV, mattermostUserID, &user)
 	if err != nil {
 		return nil, err
@@ -64,8 +66,8 @@ func (s *pluginStore) LoadUser(mattermostUserID string) (*User, error) {
 	return &user, nil
 }
 
-func (s *pluginStore) LoadUserWithSysID(userID string) (*User, error) {
-	user := User{}
+func (s *pluginStore) LoadUserWithSysID(userID string) (*serializer.User, error) {
+	user := serializer.User{}
 	err := kvstore.LoadJSON(s.userKV, userID, &user)
 	if err != nil {
 		return nil, err
@@ -73,7 +75,7 @@ func (s *pluginStore) LoadUserWithSysID(userID string) (*User, error) {
 	return &user, nil
 }
 
-func (s *pluginStore) StoreUser(user *User) error {
+func (s *pluginStore) StoreUser(user *serializer.User) error {
 	err := kvstore.StoreJSON(s.userKV, user.MattermostUserID, user)
 	if err != nil {
 		return err

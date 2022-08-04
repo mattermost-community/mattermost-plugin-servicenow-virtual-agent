@@ -7,26 +7,28 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 )
 
-type UserDetails struct {
-	UserDetails []*ServiceNowUser `json:"result"`
-}
+// type UserDetails struct {
+// 	UserDetails []*ServiceNowUser `json:"result"`
+// }
 
-type ServiceNowUser struct {
-	UserID   string `json:"sys_id"`
-	Email    string `json:"email"`
-	Username string `json:"user_name"`
-}
+// type ServiceNowUser struct {
+// 	UserID   string `json:"sys_id"`
+// 	Email    string `json:"email"`
+// 	Username string `json:"user_name"`
+// }
 
-type User struct {
-	MattermostUserID string
-	OAuth2Token      string
-	ServiceNowUser
-}
+// type User struct {
+// 	MattermostUserID string
+// 	OAuth2Token      string
+// 	ServiceNowUser
+// }
 
 func (p *Plugin) InitOAuth2(mattermostUserID string) (string, error) {
 	_, err := p.GetUser(mattermostUserID)
@@ -78,7 +80,7 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 		return err
 	}
 
-	u := &User{
+	u := &serializer.User{
 		MattermostUserID: mattermostUserID,
 		OAuth2Token:      encryptedToken,
 		ServiceNowUser:   *serviceNowUser,
@@ -102,7 +104,7 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 	return nil
 }
 
-func (p *Plugin) GetUser(mattermostUserID string) (*User, error) {
+func (p *Plugin) GetUser(mattermostUserID string) (*serializer.User, error) {
 	storedUser, err := p.store.LoadUser(mattermostUserID)
 	if err != nil {
 		return nil, err
@@ -165,13 +167,13 @@ func (p *Plugin) GetDisconnectUserPost(mattermostUserID, message string) (*model
 	return post, nil
 }
 
-func (c *client) GetMe(mattermostUserID string) (*ServiceNowUser, error) {
+func (c *client) GetMe(mattermostUserID string) (*serializer.ServiceNowUser, error) {
 	mattermostUser, appErr := c.plugin.API.GetUser(mattermostUserID)
 	if appErr != nil {
 		return nil, errors.Wrap(appErr, fmt.Sprintf("failed to get user details by mattermostUserID. UserID: %s", mattermostUserID))
 	}
 
-	userDetails := &UserDetails{}
+	userDetails := &serializer.UserDetails{}
 	path := fmt.Sprintf("%s%s", c.plugin.getConfiguration().ServiceNowURL, PathGetUser)
 	params := url.Values{}
 	params.Add(SysQueryParam, fmt.Sprintf("email=%s", mattermostUser.Email))
