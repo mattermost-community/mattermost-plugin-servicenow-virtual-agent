@@ -227,7 +227,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		Text:  fmt.Sprintf("You selected: %s", selectedOption),
 		Color: updatedPostBorderColor,
 	})
-	
+
 	channel, err := p.API.GetDirectChannel(r.Header.Get(HeaderMattermostUserID), p.botUserID)
 	if err != nil {
 		p.API.LogInfo("Couldn't get bot's DM channel", "user_id")
