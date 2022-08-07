@@ -1,4 +1,5 @@
 # Mattermost ServiceNow Virtual Agent Plugin
+
 ## Table of Contents
 - [License](#license)
 - [Overview](#overview)
@@ -8,18 +9,19 @@
 - [Setup](#setup)
 - [Connecting to ServiceNow](#connecting-to-servicenow)
 - [Development](#development)
+
 ## License
 
 See the [LICENSE](./LICENSE) file for license rights and limitations.
 
 ## Overview
 
-This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created using the official Virtual Agent Bot API documentation which can be found [here](https://docs.servicenow.com/bundle/sandiego-application-development/page/integrate/inbound-rest/concept/bot-api.html). For a stable production rlease, please download the latest version from the Plugin Marketplace and follow the instructions to [install](#installation) and [configure](#configuration) the plugin.
+This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created using the official Virtual Agent Bot API documentation which can be found [here](https://docs.servicenow.com/bundle/sandiego-application-development/page/integrate/inbound-rest/concept/bot-api.html). For a stable production rlease, please download the latest version from the Plugin Marketplace and follow the instructions to [install](#installation) and [configure](#setup) the plugin.
 
 ## Features
 
-This plugin supports sending text requests to the Virtual Agent API and handling/displaying different type of responses from the API. 
-**Note-** Currently we only support text requests and text, picker/dropdown & link responses from the Virtual Agent API.
+This plugin supports sending text messages to the Virtual Agent through Mattermost and handling/displaying different types of responses from the Virtual Agent.
+**Note-** Currently we only support sending text messages and displaying text, picker/dropdown & link responses from the Virtual Agent API.
 
 ## Basic Knowledge
 
@@ -30,15 +32,14 @@ This plugin supports sending text requests to the Virtual Agent API and handling
 - [Virtual Agent Bot Integration API](https://docs.servicenow.com/bundle/sandiego-application-development/page/integrate/inbound-rest/concept/bot-api.html)
 - **Virtual Agent Designer**
 
-    To start a conversation with a Virtual agent we need to select a conversation topic. Virtual Agent provides variour predefined conversation flows/topics for some common conversations and we can design our own conversation flows as well [here](https://dev90908.service-now.com/now/nav/ui/classic/params/target/%24conversation-builder.do%23%2F).
+    To start a conversation with a Virtual agent we need to select a conversation topic. Virtual Agent provides various predefined conversation flows/topics for some common conversations and we can design our own conversation flows as well as mentioned [here](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/conversation-designer-virtual-agent.html).
     - [Virtual Agent Designer](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/conversation-designer-virtual-agent.html)
     - [Designing a Virtual Agent Topic](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/concept/design-va-topic.html)
 
 - **Pre-defined Conversation Flows/Topics**
 
+    [Pre-defined Conversation Flows/Topics](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/prebuilt-topics-ITSM.html)
     [Additional Plugins](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/reference/additional-va-plugins.html)
-
-
 
 ## Installation
 
@@ -82,7 +83,7 @@ After a successful build, a `.tar.gz` file in `/dist` folder will be created whi
 
 If your Mattermost server is running locally, you can enable [local mode](https://docs.mattermost.com/administration/mmctl-cli-tool.html#local-mode) to streamline deploying your plugin. Edit your server configuration as follows:
 
-```
+```json
 {
     "ServiceSettings": {
         ...
@@ -131,5 +132,3 @@ export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
 export MM_ADMIN_TOKEN=j44acwd8obn78cdcx7koid4jkr
 make deploy
 ```
-
-
