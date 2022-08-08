@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLogAndSendErrorToUser(t *testing.T) {
+func Test_LogAndSendErrorToUser(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
 		userID      string
@@ -17,8 +17,8 @@ func TestLogAndSendErrorToUser(t *testing.T) {
 		errMessage  string
 	}{
 		{
-			description: "Everything works fine",
-			userID:      "mockID",
+			description: "Error is successfully sent to the user",
+			userID:      "mock-userID",
 			channelID:   "mockChannelID",
 			errMessage:  "mockErrMessage",
 		},

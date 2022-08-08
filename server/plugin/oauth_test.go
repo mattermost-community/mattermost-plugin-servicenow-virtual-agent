@@ -28,7 +28,7 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 		userID           string
 		InitOAuth2Err    error
 	}{
-		"Everything works fine": {
+		"httpOAuth2Connect works as expected": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
@@ -37,10 +37,10 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusFound,
 			},
-			userID:        "mockID",
+			userID:        "mock-userID",
 			InitOAuth2Err: nil,
 		},
-		"When userId is absent": {
+		"userId is absent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
@@ -52,7 +52,7 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 			userID:        "",
 			InitOAuth2Err: nil,
 		},
-		"When InitOAuth2 returns error": {
+		"httpOAuth2Connect InitOAuth2 returns error": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
@@ -61,7 +61,7 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
 			},
-			userID:        "mockUserID",
+			userID:        "mock-userID",
 			InitOAuth2Err: errors.New("mockError"),
 		},
 	} {
@@ -118,7 +118,7 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 		userID           string
 		CompleteOAuthErr error
 	}{
-		"Everything works fine": {
+		"httpOAuth2Complete works as expected": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
@@ -127,10 +127,10 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:           "mockID",
+			userID:           "mock-userID",
 			CompleteOAuthErr: nil,
 		},
-		"When query code is mossing": {
+		"Missing query code": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
@@ -139,10 +139,10 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusBadRequest,
 			},
-			userID:           "mockID",
+			userID:           "mock-userID",
 			CompleteOAuthErr: nil,
 		},
-		"When query state is missing": {
+		"Missing query state": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
@@ -151,10 +151,10 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusBadRequest,
 			},
-			userID:           "mockID",
+			userID:           "mock-userID",
 			CompleteOAuthErr: nil,
 		},
-		"When CompleteOAuth returns error": {
+		"httpOAuth2Complete CompleteOAuth returns error": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
@@ -163,7 +163,7 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
 			},
-			userID:           "mockID",
+			userID:           "mock-userID",
 			CompleteOAuthErr: errors.New("mockError"),
 		},
 	} {
@@ -208,7 +208,7 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 }
 
 func TestPlugin_NewOAuth2Config(t *testing.T) {
-	t.Run("Everything works fine", func(t *testing.T) {
+	t.Run("NewOAuth2Config returns proper configuration", func(t *testing.T) {
 		p := Plugin{}
 		p.setConfiguration(
 			&configuration{

@@ -20,7 +20,7 @@ func TestDM(t *testing.T) {
 		mockPost         *model.Post
 	}{
 		{
-			description:      "Everything works fine",
+			description:      "Message is successfully posted",
 			mattermostUserID: "mockID",
 			format:           "mockFormat",
 			mockChannel:      &model.Channel{},
@@ -29,7 +29,7 @@ func TestDM(t *testing.T) {
 			mockPost:         &model.Post{},
 		},
 		{
-			description:      "When channel is not found",
+			description:      "Channel is not found",
 			mattermostUserID: "mockID",
 			format:           "mockFormat",
 			mockChannel:      nil,
@@ -38,7 +38,7 @@ func TestDM(t *testing.T) {
 			mockPost:         &model.Post{},
 		},
 		{
-			description:      "When post is not created",
+			description:      "Post is not created because of error in CreatePost method",
 			mattermostUserID: "mockID",
 			format:           "mockFormat",
 			mockChannel:      &model.Channel{},
@@ -85,8 +85,8 @@ func TestEphemeral(t *testing.T) {
 		format      string
 	}{
 		{
-			description: "Everything works fine",
-			userID:      "mockID",
+			description: "Ephemeral post is successfully created",
+			userID:      "mock-userID",
 			channelID:   "mockChannelID",
 			format:      "mockFormat",
 		},

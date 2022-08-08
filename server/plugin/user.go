@@ -14,32 +14,14 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// type UserDetails struct {
-// 	UserDetails []*ServiceNowUser `json:"result"`
-// }
-
-// type ServiceNowUser struct {
-// 	UserID   string `json:"sys_id"`
-// 	Email    string `json:"email"`
-// 	Username string `json:"user_name"`
-// }
-
-// type User struct {
-// 	MattermostUserID string
-// 	OAuth2Token      string
-// 	ServiceNowUser
-// }
-
 func (p *Plugin) InitOAuth2(mattermostUserID string) (string, error) {
-	_, err := p.GetUser(mattermostUserID)
-	if err == nil {
+	if _, err := p.GetUser(mattermostUserID); err == nil {
 		return "", fmt.Errorf("user is already connected to ServiceNow")
 	}
 
 	conf := p.NewOAuth2Config()
 	state := fmt.Sprintf("%v_%v", model.NewId()[0:15], mattermostUserID)
-	err = p.store.StoreOAuth2State(state)
-	if err != nil {
+	if err := p.store.StoreOAuth2State(state); err != nil {
 		return "", err
 	}
 

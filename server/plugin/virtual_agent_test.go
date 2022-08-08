@@ -1,12 +1,14 @@
 package plugin
 
 import (
+	"fmt"
 	"io"
 	"net/url"
 	"reflect"
 	"testing"
 
 	"bou.ke/monkey"
+	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -17,36 +19,40 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 		userID      string
 		message     string
 		typed       bool
-		errMessage  string
+		errMessage  error
+		expectedErr error
 	}{
 		{
-			description: "Everything works fine",
-			userID:      "mockID",
+			description: "Message is successfully sent to Virtual Agent API",
+			userID:      "mock-userID",
 			message:     "mockMessage",
 			typed:       true,
+			errMessage:  nil,
 		},
 		{
-			description: "Error in 'CallJSON' method",
-			userID:      "mockID",
+			description: "Error while sending message to Virtual Agent API",
+			userID:      "mock-userID",
 			message:     "mockMessage",
 			typed:       true,
-			errMessage:  "mockErrMessage",
+			errMessage:  errors.New("mockErrMessage"),
+			expectedErr: errors.New("failed to call virtual agent bot integration API: mockErrMessage"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			c := new(client)
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
-				if testCase.errMessage != "" {
-					return nil, errors.New(testCase.errMessage)
+				if testCase.errMessage != nil {
+					return nil, testCase.errMessage
 				}
 				return nil, nil
 			})
 
 			err := c.SendMessageToVirtualAgentAPI(testCase.userID, testCase.message, testCase.typed)
 
-			if testCase.errMessage != "" {
+			if testCase.errMessage != nil {
 				require.Error(t, err)
+				require.EqualError(t, testCase.expectedErr, err.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -58,32 +64,36 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
 		userID      string
-		errMessage  string
+		errMessage  error
+		expectedErr error
 	}{
 		{
-			description: "Everything works fine",
-			userID:      "mockID",
+			description: "Conversation is successfully started with VIrtual Agent",
+			userID:      "mock-userID",
+			errMessage:  nil,
 		},
 		{
-			description: "Error in 'CallJSON' method",
-			userID:      "mockID",
-			errMessage:  "mockErrMessage",
+			description: "Error in starting conversation with Virtual Agent",
+			userID:      "mock-userID",
+			errMessage:  errors.New("mockErrMessage"),
+			expectedErr: errors.New("failed to start conversation with virtual agent bot: mockErrMessage"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			c := new(client)
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
-				if testCase.errMessage != "" {
-					return nil, errors.New(testCase.errMessage)
+				if testCase.errMessage != nil {
+					return nil, testCase.errMessage
 				}
 				return nil, nil
 			})
 
 			err := c.StartConverstaionWithVirtualAgent(testCase.userID)
 
-			if testCase.errMessage != "" {
+			if testCase.errMessage != nil {
 				require.Error(t, err)
+				require.EqualError(t, testCase.expectedErr, err.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -95,9 +105,10 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
 		body        *OutputLink
+		response    *model.SlackAttachment
 	}{
 		{
-			description: "Everything works fine",
+			description: "CreateOutputLinkAttachment returns proper slack attachment",
 			body: &OutputLink{
 				Header: "mockHeader",
 				Label:  "mockLabel",
@@ -105,58 +116,105 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 					Action: "mockAction",
 				},
 			},
+			response: &model.SlackAttachment{
+				Pretext: "mockHeader",
+				Text:    fmt.Sprintf("[%s](%s)", "mockLabel", "mockAction"),
+			},
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
 
-			p.CreateOutputLinkAttachment(testCase.body)
+			res := p.CreateOutputLinkAttachment(testCase.body)
+
+			require.EqualValues(t, testCase.response, res)
 		})
 	}
 }
 
 func Test_CreateTopicPickerControlAttachment(t *testing.T) {
+	p := Plugin{}
+
 	for _, testCase := range []struct {
 		description string
 		body        *TopicPickerControl
+		response    *model.SlackAttachment
 	}{
 		{
-			description: "Everything works fine",
+			description: "CreateTopicPickerControlAttachment returns proper slack attachment",
 			body: &TopicPickerControl{
 				PromptMessage: "mockPrompt",
 				Options: []Option{{
 					Label: "mockLabel",
 				}},
 			},
+			response: &model.SlackAttachment{
+				Text: "mockPrompt",
+				Actions: []*model.PostAction{
+					{
+						Name: "Select an option...",
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+						},
+						Type: "select",
+						Options: []*model.PostActionOptions{
+							{
+								Text:  "mockLabel",
+								Value: "mockLabel",
+							},
+						},
+					},
+				},
+			},
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
+			res := p.CreateTopicPickerControlAttachment(testCase.body)
 
-			p.CreateTopicPickerControlAttachment(testCase.body)
+			require.EqualValues(t, testCase.response, res)
 		})
 	}
 }
 
 func Test_CreatePickerAttachment(t *testing.T) {
+	p := Plugin{}
+
 	for _, testCase := range []struct {
 		description string
 		body        *Picker
+		response    *model.SlackAttachment
 	}{
 		{
-			description: "Everything works fine",
+			description: "CreatePickerAttachment returns proper stack attachment",
 			body: &Picker{
 				Label: "mockLabel",
 				Options: []Option{{
 					Label: "mockLabel",
 				}},
 			},
+			response: &model.SlackAttachment{
+				Actions: []*model.PostAction{
+					{
+						Name: "Select an option...",
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+						},
+						Type: "select",
+						Options: []*model.PostActionOptions{
+							{
+								Text:  "mockLabel",
+								Value: "mockLabel",
+							},
+						},
+					},
+				},
+			},
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
+			res := p.CreatePickerAttachment(testCase.body)
 
-			p.CreatePickerAttachment(testCase.body)
+			require.EqualValues(t, testCase.response, res)
 		})
 	}
 }

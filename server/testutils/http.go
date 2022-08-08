@@ -12,17 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	// ContentTypeJSON string associated with content-type json
-	ContentTypeJSON contentType = "application/json"
-
-	// ContentTypePlain
-	ContentTypePlain contentType = "text/plain; charset=utf-8"
-)
-
-// contentType type for http Content-Type
-type contentType string
-
 // Request stores http Request basic data
 type Request struct {
 	Method string
@@ -33,9 +22,7 @@ type Request struct {
 
 // ExpectedResponse stores expected response basic data
 type ExpectedResponse struct {
-	StatusCode   int
-	ResponseType contentType
-	Body         interface{}
+	StatusCode int
 }
 
 // HTTPTest encapsulates data for testing needs
@@ -57,26 +44,13 @@ func EncodeJSON(data interface{}) ([]byte, error) {
 	return b, nil
 }
 
-// EncodeJSON encodes json data in bytes
-func EncodeString(data interface{}) ([]byte, error) {
-	if data == nil {
-		return []byte{}, nil
-	}
-
-	if s, ok := data.(string); ok {
-		return []byte(s), nil
-	}
-
-	return []byte{}, errors.New("error while decoding string")
-}
-
 // CreateHTTPRequest creates http Request with basic data
 func (test *HTTPTest) CreateHTTPRequest(request Request) *http.Request {
 	tassert := assert.New(test.T)
-	var body io.Reader
 	data, err := test.Encoder(request.Body)
 	tassert.NoError(err)
-	body = bytes.NewBuffer(data)
+
+	var body io.Reader = bytes.NewBuffer(data)
 
 	req, err := http.NewRequest(request.Method, request.URL, body)
 	tassert.NoError(err, "Error while creating Request")
@@ -88,17 +62,8 @@ func (test *HTTPTest) CreateHTTPRequest(request Request) *http.Request {
 	return req
 }
 
-// CompareHTTPResponse compares expected response with real one
+// CompareHTTPResponse compares expected response with actual response
 func (test *HTTPTest) CompareHTTPResponse(rr *httptest.ResponseRecorder, expected ExpectedResponse) {
-	tassert := assert.New(test.T)
-	tassert.Equal(expected.StatusCode, rr.Code, "Http status codes are different")
-
-	// expectedBody, err := test.Encoder(expected.Body)
-	// tassert.NoError(err)
-
-	// tassert.Equal(string(expected.ResponseType), rr.Header().Get("Content-Type"))
-
-	// gotBody := rr.Body.Bytes()
-
-	// tassert.Equal(expectedBody, gotBody)
+	testAssert := assert.New(test.T)
+	testAssert.Equal(expected.StatusCode, rr.Code, "Http status codes are different")
 }

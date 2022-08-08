@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -72,7 +73,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 		GetDisconnectUserPostErr error
 		DisconnectUserErr        error
 	}{
-		"Everything works fine": {
+		"User is disconnected successfully": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -86,12 +87,12 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        nil,
 		},
-		"When user not found and failed to create disconnect post": {
+		"User not found and failed to create disconnect post": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -101,12 +102,12 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               ErrNotFound,
 			GetDisconnectUserPostErr: errors.New("mockErr"),
 			DisconnectUserErr:        nil,
 		},
-		"When user is found but error occurred while reading user from KV store": {
+		"User is found but error occurred while reading user from KV store": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -116,12 +117,12 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               errors.New("mockError"),
 			GetDisconnectUserPostErr: errors.New("mockError"),
 			DisconnectUserErr:        nil,
 		},
-		"When user not found and disconnect user post is created successfully": {
+		"User not found and disconnect user post is created successfully": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -135,12 +136,12 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               ErrNotFound,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        nil,
 		},
-		"When DisconnectUserContextName is false": {
+		"DisconnectUserContextName is false": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -154,12 +155,12 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        nil,
 		},
-		"When error occur while disconnecting user": {
+		"Error occur while disconnecting user": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -173,7 +174,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        errors.New("mockError"),
@@ -239,7 +240,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 		expectedResponse testutils.ExpectedResponse
 		userID           string
 	}{
-		"When webhook secret is absent": {
+		"Webhook secret is absent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -251,7 +252,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			},
 			userID: "",
 		},
-		"When webhook secret is present": {
+		"Webhook secret is present": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -263,7 +264,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			},
 			userID: "",
 		},
-		"When body is empty": {
+		"handleVirtualAgentWebhook empty body": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -275,7 +276,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			},
 			userID: "",
 		},
-		"When body is proper": {
+		"Proper response is received from Virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -365,7 +366,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 		ParseAuthTokenErr        error
 		LoadUserErr              error
 	}{
-		"Everything works fine": {
+		"Selected option is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -379,14 +380,14 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        nil,
 			ParseAuthTokenErr:        nil,
 			LoadUserErr:              nil,
 		},
-		"When user is not present in store": {
+		"User is not present in store": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -400,14 +401,14 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        nil,
 			ParseAuthTokenErr:        nil,
 			LoadUserErr:              errors.New("mockErr"),
 		},
-		"When error occurs while parsing OAuth token": {
+		"Error occurs while parsing OAuth token": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -421,7 +422,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mockUserID",
+			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        nil,
@@ -458,6 +459,11 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
 				return &oauth2.Token{}, test.ParseAuthTokenErr
+			})
+
+			var c client
+			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
+				return nil, nil
 			})
 
 			mockCtrl := gomock.NewController(t)
