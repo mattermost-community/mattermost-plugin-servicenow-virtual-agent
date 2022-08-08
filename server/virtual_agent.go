@@ -292,7 +292,7 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	for _, option := range options {
 		postOptions = append(postOptions, &model.PostActionOptions{
 			Text:  option.Label,
-			Value: fmt.Sprintf("%s^%s", option.Label, option.Value),
+			Value: option.Label,
 		})
 	}
 
