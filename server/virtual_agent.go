@@ -52,6 +52,20 @@ type OutputLink struct {
 	Value  OutputLinkValue
 }
 
+type GroupedPartsOutputControl struct {
+	UIType string                           `json:"uiType"`
+	Group  string                           `json:"group"`
+	Header string                           `json:"header"`
+	Type   string                           `json:"type"`
+	Values []GroupedPartsOutputControlValue `json:"values"`
+}
+
+type GroupedPartsOutputControlValue struct {
+	Label       string `json:"label"`
+	Action      string `json:"action"`
+	Description string `json:"description"`
+}
+
 type TopicPickerControl struct {
 	UIType         string   `json:"uiType"`
 	Group          string   `json:"group"`
@@ -59,6 +73,18 @@ type TopicPickerControl struct {
 	PromptMessage  string   `json:"promptMsg"`
 	Label          string   `json:"label"`
 	Options        []Option `json:"options"`
+}
+
+type OutputCard struct {
+	UIType string `json:"uiType"`
+	Group  string `json:"group"`
+	Data   string `json:"data"`
+}
+
+type OutputCardData struct {
+	Subtitle string `json:"subtitle"`
+	Title    string `json:"title"`
+	URL      string `json:"url"`
 }
 
 type Picker struct {
@@ -101,6 +127,10 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(Picker)
 	case OutputLinkUIType:
 		m.Value = new(OutputLink)
+	case GroupedPartsOutputControlUIType:
+		m.Value = new(GroupedPartsOutputControl)
+	case OutputCardUIType:
+		m.Value = new(OutputCard)
 	}
 
 	if m.Value != nil {
@@ -147,6 +177,8 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 		return err
 	}
 
+	fmt.Printf("\n\n\n%s\n\n\n", string(data))
+
 	user, err := p.store.LoadUserWithSysID(vaResponse.UserID)
 	if err != nil {
 		return err
@@ -178,6 +210,26 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			if _, err = p.DMWithAttachments(userID, p.CreateOutputLinkAttachment(res)); err != nil {
 				return err
 			}
+		// TODO: Modify the UI for this later.
+		case *GroupedPartsOutputControl:
+			if _, err = p.DM(userID, res.Header); err != nil {
+				return err
+			}
+			for _, value := range res.Values {
+				if _, err = p.DMWithAttachments(userID, p.CreateGroupedPartsOutputControlAttachment(&value)); err != nil {
+					return err
+				}
+			}
+		//TODO: Modify later to display a proper card.
+		case *OutputCard:
+			var data OutputCardData
+			err := json.Unmarshal([]byte(res.Data), &data)
+			if err != nil {
+				return err
+			}
+			if _, err = p.DMWithAttachments(userID, p.CreateOutputCardAttachment(&data)); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -188,6 +240,20 @@ func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttach
 	return &model.SlackAttachment{
 		Pretext: body.Header,
 		Text:    fmt.Sprintf("[%s](%s)", body.Label, body.Value.Action),
+	}
+}
+
+func (p *Plugin) CreateOutputCardAttachment(body *OutputCardData) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Pretext: body.Title,
+		Text:    fmt.Sprintf("[%s](%s)", body.Subtitle, body.URL),
+	}
+}
+
+func (p *Plugin) CreateGroupedPartsOutputControlAttachment(body *GroupedPartsOutputControlValue) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Title: fmt.Sprintf("[%s](%s)", body.Label, body.Action),
+		Text:  body.Description,
 	}
 }
 
