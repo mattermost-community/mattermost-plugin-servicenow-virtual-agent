@@ -213,16 +213,16 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			if _, err = p.DM(userID, res.Header); err != nil {
 				return err
 			}
-			
+
 			for _, value := range res.Values {
-				if _, err = p.DMWithAttachments(userID, p.CreateGroupedPartsOutputControlAttachment(&value)); err != nil {
+				if _, err = p.DMWithAttachments(userID, p.CreateGroupedPartsOutputControlAttachment(value)); err != nil {
 					return err
 				}
 			}
 		//TODO: Modify later to display a proper card.
 		case *OutputCard:
 			var data OutputCardData
-			if err := json.Unmarshal([]byte(res.Data), &data); err != nil {
+			if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
 				return err
 			}
 
@@ -249,7 +249,7 @@ func (p *Plugin) CreateOutputCardAttachment(body *OutputCardData) *model.SlackAt
 	}
 }
 
-func (p *Plugin) CreateGroupedPartsOutputControlAttachment(body *GroupedPartsOutputControlValue) *model.SlackAttachment {
+func (p *Plugin) CreateGroupedPartsOutputControlAttachment(body GroupedPartsOutputControlValue) *model.SlackAttachment {
 	return &model.SlackAttachment{
 		Title: fmt.Sprintf("[%s](%s)", body.Label, body.Action),
 		Text:  body.Description,
