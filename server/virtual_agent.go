@@ -177,8 +177,6 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 		return err
 	}
 
-	fmt.Printf("\n\n\n%s\n\n\n", string(data))
-
 	user, err := p.store.LoadUserWithSysID(vaResponse.UserID)
 	if err != nil {
 		return err
@@ -215,6 +213,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			if _, err = p.DM(userID, res.Header); err != nil {
 				return err
 			}
+			
 			for _, value := range res.Values {
 				if _, err = p.DMWithAttachments(userID, p.CreateGroupedPartsOutputControlAttachment(&value)); err != nil {
 					return err
@@ -223,10 +222,10 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 		//TODO: Modify later to display a proper card.
 		case *OutputCard:
 			var data OutputCardData
-			err := json.Unmarshal([]byte(res.Data), &data)
-			if err != nil {
+			if err := json.Unmarshal([]byte(res.Data), &data); err != nil {
 				return err
 			}
+
 			if _, err = p.DMWithAttachments(userID, p.CreateOutputCardAttachment(&data)); err != nil {
 				return err
 			}
@@ -293,7 +292,7 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	for _, option := range options {
 		postOptions = append(postOptions, &model.PostActionOptions{
 			Text:  option.Label,
-			Value: option.Label,
+			Value: fmt.Sprintf("%s^%s", option.Label, option.Value),
 		})
 	}
 

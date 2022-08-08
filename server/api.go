@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-server/v5/model"
@@ -210,10 +211,10 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
-	selectedOption := postActionIntegrationRequest.Context["selected_option"].(string)
+	selectedOption := strings.Split(postActionIntegrationRequest.Context["selected_option"].(string), "^")
 
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption[1], true); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
@@ -221,7 +222,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 
 	newAttachment := []*model.SlackAttachment{}
 	newAttachment = append(newAttachment, &model.SlackAttachment{
-		Text:  fmt.Sprintf("You selected: %s", selectedOption),
+		Text:  fmt.Sprintf("You selected: %s", selectedOption[0]),
 		Color: updatedPostBorderColor,
 	})
 
