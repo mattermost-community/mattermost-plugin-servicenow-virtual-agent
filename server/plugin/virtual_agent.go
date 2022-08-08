@@ -111,7 +111,6 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 }
 
 func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed bool) error {
-	fmt.Printf("\n\n\nhere1\n\n\n")
 	requestBody := &VirtualAgentRequestBody{
 		Message: &MessageBody{
 			Text:  messageText,
@@ -120,11 +119,11 @@ func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed 
 		RequestID: c.plugin.generateUUID(),
 		UserID:    userID,
 	}
-	fmt.Printf("\n\n\nhere2\n\n\n")
+
 	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
 		return errors.Wrap(err, "failed to call virtual agent bot integration API")
 	}
-	fmt.Printf("\n\n\nhere3\n\n\n")
+
 	return nil
 }
 
