@@ -40,7 +40,7 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 			userID:        "mock-userID",
 			InitOAuth2Err: nil,
 		},
-		"userId is absent": {
+		"User is unauthorized: userId is a empty string": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,

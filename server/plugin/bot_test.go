@@ -80,15 +80,9 @@ func TestDM(t *testing.T) {
 func TestEphemeral(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		userID      string
-		channelID   string
-		format      string
 	}{
 		{
 			description: "Ephemeral post is successfully created",
-			userID:      "mock-userID",
-			channelID:   "mockChannelID",
-			format:      "mockFormat",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -101,7 +95,9 @@ func TestEphemeral(t *testing.T) {
 
 			p.SetAPI(mockAPI)
 
-			p.Ephemeral(testCase.userID, testCase.channelID, testCase.format)
+			p.Ephemeral("mock-userID", "mockChannelID", "mockFormat")
+
+			mockAPI.AssertNumberOfCalls(t, "SendEphemeralPost", 1)
 		})
 	}
 }

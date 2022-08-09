@@ -10,32 +10,18 @@ import (
 )
 
 func Test_LogAndSendErrorToUser(t *testing.T) {
-	for _, testCase := range []struct {
-		description string
-		userID      string
-		channelID   string
-		errMessage  string
-	}{
-		{
-			description: "Error is successfully sent to the user",
-			userID:      "mock-userID",
-			channelID:   "mockChannelID",
-			errMessage:  "mockErrMessage",
-		},
-	} {
-		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-			mockAPI := &plugintest.API{}
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+	t.Run("Error is successfully sent to the user", func(t *testing.T) {
+		p := Plugin{}
+		mockAPI := &plugintest.API{}
+		mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
 
-			mockAPI.On("SendEphemeralPost", mock.Anything, mock.Anything).Return(&model.Post{})
+		mockAPI.On("SendEphemeralPost", mock.Anything, mock.Anything).Return(&model.Post{})
 
-			p.SetAPI(mockAPI)
+		p.SetAPI(mockAPI)
 
-			p.logAndSendErrorToUser(testCase.userID, testCase.channelID, testCase.errMessage)
+		p.logAndSendErrorToUser("mock-userID", "mock-channelID", "mockErrMesssage")
 
-			res := p.generateUUID()
-			require.NotNil(t, res)
-		})
-	}
+		res := p.generateUUID()
+		require.NotNil(t, res)
+	})
 }

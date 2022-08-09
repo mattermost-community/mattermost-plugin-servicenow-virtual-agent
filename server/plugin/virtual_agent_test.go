@@ -16,24 +16,15 @@ import (
 func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		userID      string
-		message     string
-		typed       bool
 		errMessage  error
 		expectedErr error
 	}{
 		{
 			description: "Message is successfully sent to Virtual Agent API",
-			userID:      "mock-userID",
-			message:     "mockMessage",
-			typed:       true,
 			errMessage:  nil,
 		},
 		{
 			description: "Error while sending message to Virtual Agent API",
-			userID:      "mock-userID",
-			message:     "mockMessage",
-			typed:       true,
 			errMessage:  errors.New("mockErrMessage"),
 			expectedErr: errors.New("failed to call virtual agent bot integration API: mockErrMessage"),
 		},
@@ -48,7 +39,7 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 				return nil, nil
 			})
 
-			err := c.SendMessageToVirtualAgentAPI(testCase.userID, testCase.message, testCase.typed)
+			err := c.SendMessageToVirtualAgentAPI("mock-userID", "mockMessage", true)
 
 			if testCase.errMessage != nil {
 				require.Error(t, err)
@@ -69,12 +60,10 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 	}{
 		{
 			description: "Conversation is successfully started with VIrtual Agent",
-			userID:      "mock-userID",
 			errMessage:  nil,
 		},
 		{
 			description: "Error in starting conversation with Virtual Agent",
-			userID:      "mock-userID",
 			errMessage:  errors.New("mockErrMessage"),
 			expectedErr: errors.New("failed to start conversation with virtual agent bot: mockErrMessage"),
 		},
@@ -89,7 +78,7 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 				return nil, nil
 			})
 
-			err := c.StartConverstaionWithVirtualAgent(testCase.userID)
+			err := c.StartConverstaionWithVirtualAgent("mock-userID")
 
 			if testCase.errMessage != nil {
 				require.Error(t, err)

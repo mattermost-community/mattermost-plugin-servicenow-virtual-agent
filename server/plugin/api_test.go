@@ -73,6 +73,21 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 		GetDisconnectUserPostErr error
 		DisconnectUserErr        error
 	}{
+		"UserID id present in headers does not match and 'CheckAuth' fails": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/user/disconnect",
+				Body:   model.PostActionIntegrationRequest{},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusUnauthorized,
+			},
+			userID:                   "",
+			GetUserErr:               ErrNotFound,
+			GetDisconnectUserPostErr: errors.New("mockErr"),
+			DisconnectUserErr:        nil,
+		},
 		"User is disconnected successfully": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
@@ -238,7 +253,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 		httpTest         testutils.HTTPTest
 		request          testutils.Request
 		expectedResponse testutils.ExpectedResponse
-		userID           string
 	}{
 		"Webhook secret is absent": {
 			httpTest: httpTestJSON,
@@ -250,7 +264,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusForbidden,
 			},
-			userID: "",
 		},
 		"Webhook secret is present": {
 			httpTest: httpTestJSON,
@@ -262,7 +275,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID: "",
 		},
 		"handleVirtualAgentWebhook empty body": {
 			httpTest: httpTestJSON,
@@ -274,7 +286,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
 			},
-			userID: "",
 		},
 		"Proper response is received from Virtual Agent": {
 			httpTest: httpTestJSON,
@@ -310,7 +321,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID: "",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -341,7 +351,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			p.initializeAPI()
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, test.userID)
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
@@ -356,15 +365,12 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 	}
 
 	for name, test := range map[string]struct {
-		httpTest                 testutils.HTTPTest
-		request                  testutils.Request
-		expectedResponse         testutils.ExpectedResponse
-		userID                   string
-		GetUserErr               error
-		GetDisconnectUserPostErr error
-		DisconnectUserErr        error
-		ParseAuthTokenErr        error
-		LoadUserErr              error
+		httpTest          testutils.HTTPTest
+		request           testutils.Request
+		expectedResponse  testutils.ExpectedResponse
+		userID            string
+		ParseAuthTokenErr error
+		LoadUserErr       error
 	}{
 		"Selected option is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
@@ -380,12 +386,9 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
-			GetUserErr:               nil,
-			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        nil,
-			ParseAuthTokenErr:        nil,
-			LoadUserErr:              nil,
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+			LoadUserErr:       nil,
 		},
 		"User is not present in store": {
 			httpTest: httpTestJSON,
@@ -401,12 +404,9 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
-			GetUserErr:               nil,
-			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        nil,
-			ParseAuthTokenErr:        nil,
-			LoadUserErr:              errors.New("mockErr"),
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+			LoadUserErr:       errors.New("mockErr"),
 		},
 		"Error occurs while parsing OAuth token": {
 			httpTest: httpTestJSON,
@@ -422,12 +422,9 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
-			GetUserErr:               nil,
-			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        nil,
-			ParseAuthTokenErr:        errors.New("mockErr"),
-			LoadUserErr:              nil,
+			userID:            "mock-userID",
+			ParseAuthTokenErr: errors.New("mockErr"),
+			LoadUserErr:       nil,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
