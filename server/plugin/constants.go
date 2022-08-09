@@ -1,4 +1,4 @@
-package main
+package plugin
 
 const (
 	HeaderMattermostUserID = "Mattermost-User-ID"
@@ -45,6 +45,15 @@ const (
 	OutputCardUIType                = "OutputCard"
 
 	updatedPostBorderColor = "#74ccac"
+)
+
+// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
+const (
+	EmptyServiceNowURLErrorMessage               = "serviceNow URL should not be empty"
+	EmptyServiceNowOAuthClientIDErrorMessage     = "serviceNow OAuth clientID should not be empty"
+	EmptyServiceNowOAuthClientSecretErrorMessage = "serviceNow OAuth clientSecret should not be empty"
+	EmptyEncryptionSecretErrorMessage            = "encryption secret should not be empty"
+	EmptyWebhookSecretErrorMessage               = "webhook secret should not be empty"
 )
 
 type ServiceNowOAuthToken string
