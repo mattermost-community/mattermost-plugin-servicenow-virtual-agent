@@ -209,28 +209,41 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
+	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+	selectedOption := postActionIntegrationRequest.Context["selected_option"].(string)
 
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, postActionIntegrationRequest.Context["selected_option"].(string), true); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
 
 	newAttachment := []*model.SlackAttachment{}
 	newAttachment = append(newAttachment, &model.SlackAttachment{
-		Text:  fmt.Sprintf("You selected - %s", postActionIntegrationRequest.Context["selected_option"].(string)),
-		Color: "#74ccac",
+		Text:  fmt.Sprintf("You selected: %s", selectedOption),
+		Color: updatedPostBorderColor,
 	})
 
-	newPost := model.Post{}
-	model.ParseSlackAttachment(&newPost, newAttachment)
-	newPost.Id = postActionIntegrationRequest.PostId
-
-	if _, err := p.API.UpdatePost(&newPost); err != nil {
-		p.API.LogError("Error updating dropdown post.", "Error", err.Error())
+	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
+	if err != nil {
+		p.API.LogInfo("Couldn't get bot's DM channel with user", "userID", mattermostUserID)
+		p.returnPostActionIntegrationResponse(w, response)
+		return
 	}
 
-	ReturnStatusOK(w)
+	newPost := &model.Post{
+		ChannelId: channel.Id,
+		UserId:    p.botUserID,
+	}
+
+	model.ParseSlackAttachment(newPost, newAttachment)
+
+	response = &model.PostActionIntegrationResponse{
+		Update: newPost,
+	}
+
+	p.returnPostActionIntegrationResponse(w, response)
 }
 
 func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {

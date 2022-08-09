@@ -56,6 +56,8 @@ const (
 
 	// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
 	EmptyWebhookSecretErrorMessage = "webhook secret should not be empty"
+	
+	updatedPostBorderColor = "#74ccac"
 )
 
 type ServiceNowOAuthToken string
