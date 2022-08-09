@@ -85,9 +85,10 @@ After a successful build, a `.tar.gz` file in `/dist` folder will be created whi
 
 If your Mattermost server is running locally, you can enable [local mode](https://docs.mattermost.com/administration/mmctl-cli-tool.html#local-mode) to streamline deploying your plugin. Edit your server configuration as follows:
 
-```json
+```
 {
     "ServiceSettings": {
+        ...
         "EnableLocalMode": true,
         "LocalModeSocketLocation": "/var/tmp/mattermost_local.socket"
     }
