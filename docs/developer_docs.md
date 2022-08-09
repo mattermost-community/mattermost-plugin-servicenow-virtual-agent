@@ -29,7 +29,9 @@ This plugin supports sending text messages to the Virtual Agent through Mattermo
 - [What is ServiceNow Virtual Agent?](https://www.servicenow.com/products/virtual-agent.html)
     - [Virtual Agent](https://docs.servicenow.com/bundle/paris-now-intelligence/page/administer/virtual-agent/concept/virtual-agent-overview.html)
     - [Activating Virtual Agent](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/task/activate-virtual-agent.html)
+    
 - [Virtual Agent Bot Integration API](https://docs.servicenow.com/bundle/sandiego-application-development/page/integrate/inbound-rest/concept/bot-api.html)
+
 - **Virtual Agent Designer**
 
     To start a conversation with a Virtual agent we need to select a conversation topic. Virtual Agent provides various predefined conversation flows/topics for some common conversations and we can design our own conversation flows as well as mentioned [here](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/conversation-designer-virtual-agent.html).
@@ -38,8 +40,8 @@ This plugin supports sending text messages to the Virtual Agent through Mattermo
 
 - **Pre-defined Conversation Flows/Topics**
 
-    [Pre-defined Conversation Flows/Topics](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/prebuilt-topics-ITSM.html)
-    [Additional Plugins](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/reference/additional-va-plugins.html)
+    - [Pre-defined Conversation Flows/Topics](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/prebuilt-topics-ITSM.html)
+    - [Additional Plugins](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/reference/additional-va-plugins.html)
 
 ## Installation
 
@@ -86,7 +88,6 @@ If your Mattermost server is running locally, you can enable [local mode](https:
 ```json
 {
     "ServiceSettings": {
-        ...
         "EnableLocalMode": true,
         "LocalModeSocketLocation": "/var/tmp/mattermost_local.socket"
     }

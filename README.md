@@ -13,7 +13,7 @@ See the [LICENSE](./LICENSE) file for license rights and limitations.
 
 ## Overview
 
-This plugin integrates the ServiceNow Virtual Agent in Mattermost. For a stable production release, please download the latest version from the Plugin Marketplace and follow the instructions to [install](#installation) and [configure](#setup)) the plugin.
+This plugin integrates the ServiceNow Virtual Agent in Mattermost. For a stable production release, please download the latest version from the Plugin Marketplace and follow the instructions to [install](#installation) and [configure](#setup) the plugin.
 
 ## Features
 
@@ -35,6 +35,6 @@ This plugin supports sending text messages to the Virtual Agent through Mattermo
   - Send any direct message to the `ServiceNow Virtual Agent` bot with the username `servicenow-virtual-agent`.
   - You will get a response with a link to connect your ServiceNow account if you haven't already connected.
 
-  ![Screenshot from 2022-07-26 14-55-24](https://user-images.githubusercontent.com/55234496/181167065-f1b93e3b-8963-484a-8dda-a980173191a0.png)
+    ![Screenshot from 2022-07-26 14-55-24](https://user-images.githubusercontent.com/55234496/181167065-f1b93e3b-8963-484a-8dda-a980173191a0.png)
   
   - Click on that link. If it asks for login, enter your ServiceNow credentials and click `Allow` to connect your account.

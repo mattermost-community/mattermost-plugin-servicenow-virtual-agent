@@ -1,6 +1,7 @@
 # Setting up your ServiceNow instance
 
 We need to set up the virtual agent on a ServiceNow instance, to which we will send our API requests.
+
 ## 1. Create your ServiceNow instance 
   - Log in to [ServiceNow](https://developer.servicenow.com).
   - Then click on Create Instance in the top right corner. Basically, ServiceNow itself provides developer instances to anyone who wishes to develop on ServiceNow.
