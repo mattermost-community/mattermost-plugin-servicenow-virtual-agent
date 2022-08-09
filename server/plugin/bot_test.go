@@ -11,40 +11,32 @@ import (
 
 func TestDM(t *testing.T) {
 	for _, testCase := range []struct {
-		description      string
-		mattermostUserID string
-		format           string
-		mockChannel      *model.Channel
-		mockChannelErr   *model.AppError
-		mockPostErr      *model.AppError
-		mockPost         *model.Post
+		description    string
+		mockChannel    *model.Channel
+		mockChannelErr *model.AppError
+		mockPostErr    *model.AppError
+		mockPost       *model.Post
 	}{
 		{
-			description:      "Message is successfully posted",
-			mattermostUserID: "mockID",
-			format:           "mockFormat",
-			mockChannel:      &model.Channel{},
-			mockChannelErr:   nil,
-			mockPostErr:      nil,
-			mockPost:         &model.Post{},
+			description:    "Message is successfully posted",
+			mockChannel:    &model.Channel{},
+			mockChannelErr: nil,
+			mockPostErr:    nil,
+			mockPost:       &model.Post{},
 		},
 		{
-			description:      "Channel is not found",
-			mattermostUserID: "mockID",
-			format:           "mockFormat",
-			mockChannel:      nil,
-			mockChannelErr:   &model.AppError{},
-			mockPostErr:      nil,
-			mockPost:         &model.Post{},
+			description:    "Channel is not found",
+			mockChannel:    nil,
+			mockChannelErr: &model.AppError{},
+			mockPostErr:    nil,
+			mockPost:       &model.Post{},
 		},
 		{
-			description:      "Post is not created because of error in CreatePost method",
-			mattermostUserID: "mockID",
-			format:           "mockFormat",
-			mockChannel:      &model.Channel{},
-			mockChannelErr:   nil,
-			mockPostErr:      &model.AppError{},
-			mockPost:         nil,
+			description:    "Post is not created because of error in CreatePost method",
+			mockChannel:    &model.Channel{},
+			mockChannelErr: nil,
+			mockPostErr:    &model.AppError{},
+			mockPost:       nil,
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -59,7 +51,7 @@ func TestDM(t *testing.T) {
 
 			p.SetAPI(mockAPI)
 
-			_, err := p.DM(testCase.mattermostUserID, testCase.format)
+			_, err := p.DM("mock-userID", "mockFormat")
 
 			if testCase.mockChannel == nil || testCase.mockPost == nil {
 				require.Error(t, err)
@@ -67,7 +59,7 @@ func TestDM(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			_, err = p.DMWithAttachments(testCase.mattermostUserID, &model.SlackAttachment{})
+			_, err = p.DMWithAttachments("mock-userID", &model.SlackAttachment{})
 			if testCase.mockChannel == nil || testCase.mockPost == nil {
 				require.Error(t, err)
 			} else {

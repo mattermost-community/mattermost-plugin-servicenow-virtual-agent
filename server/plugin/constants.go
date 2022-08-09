@@ -42,22 +42,16 @@ const (
 	OutputLinkUIType           = "OutputLink"
 	AlreadyDisconnectedMessage = "You're not connected to your ServiceNow account."
 
-	// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
-	EmptyServiceNowURLErrorMessage = "serviceNow URL should not be empty"
-
-	// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
-	EmptyServiceNowOAuthClientIDErrorMessage = "serviceNow OAuth clientID should not be empty"
-
-	// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
-	EmptyServiceNowOAuthClientSecretErrorMessage = "serviceNow OAuth clientSecret should not be empty"
-
-	// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
-	EmptyEncryptionSecretErrorMessage = "encryption secret should not be empty"
-
-	// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
-	EmptyWebhookSecretErrorMessage = "webhook secret should not be empty"
-	
 	updatedPostBorderColor = "#74ccac"
+)
+
+// #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
+const (
+	EmptyServiceNowURLErrorMessage               = "serviceNow URL should not be empty"
+	EmptyServiceNowOAuthClientIDErrorMessage     = "serviceNow OAuth clientID should not be empty"
+	EmptyServiceNowOAuthClientSecretErrorMessage = "serviceNow OAuth clientSecret should not be empty"
+	EmptyEncryptionSecretErrorMessage            = "encryption secret should not be empty"
+	EmptyWebhookSecretErrorMessage               = "webhook secret should not be empty"
 )
 
 type ServiceNowOAuthToken string

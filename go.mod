@@ -3,7 +3,7 @@ module github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent
 go 1.16
 
 require (
-	bou.ke/monkey v1.0.2 // indirect
+	bou.ke/monkey v1.0.2
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0

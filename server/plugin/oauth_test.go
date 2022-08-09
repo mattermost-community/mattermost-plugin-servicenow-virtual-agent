@@ -130,6 +130,17 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 			userID:           "mock-userID",
 			CompleteOAuthErr: nil,
 		},
+		"User is unauthorized: userId is a empty string": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    "/api/v1/oauth2/complete?code=mockCode&state=mockState",
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusUnauthorized,
+			},
+			userID: "",
+		},
 		"Missing query code": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
