@@ -21,6 +21,8 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 		Encoder: testutils.EncodeJSON,
 	}
 
+	defer monkey.UnpatchAll()
+
 	for name, test := range map[string]struct {
 		httpTest         testutils.HTTPTest
 		request          testutils.Request
@@ -110,6 +112,8 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 		T:       t,
 		Encoder: testutils.EncodeJSON,
 	}
+
+	defer monkey.UnpatchAll()
 
 	for name, test := range map[string]struct {
 		httpTest         testutils.HTTPTest

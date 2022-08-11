@@ -59,6 +59,8 @@ func TestWithRecovery(t *testing.T) {
 }
 
 func TestPlugin_handleUserDisconnect(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	httpTestJSON := testutils.HTTPTest{
 		T:       t,
 		Encoder: testutils.EncodeJSON,
@@ -363,6 +365,8 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 		T:       t,
 		Encoder: testutils.EncodeJSON,
 	}
+
+	defer monkey.UnpatchAll()
 
 	for name, test := range map[string]struct {
 		httpTest          testutils.HTTPTest

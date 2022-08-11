@@ -14,6 +14,8 @@ import (
 )
 
 func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	for _, testCase := range []struct {
 		description string
 		errMessage  error
@@ -52,6 +54,8 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 }
 
 func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	for _, testCase := range []struct {
 		description string
 		userID      string

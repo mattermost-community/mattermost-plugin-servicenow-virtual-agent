@@ -159,6 +159,7 @@ func (c *client) GetMe(mattermostUserID string) (*serializer.ServiceNowUser, err
 	path := fmt.Sprintf("%s%s", c.plugin.getConfiguration().ServiceNowURL, PathGetUser)
 	params := url.Values{}
 	params.Add(SysQueryParam, fmt.Sprintf("email=%s", mattermostUser.Email))
+
 	_, err := c.CallJSON(http.MethodGet, path, nil, userDetails, params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get user details")
