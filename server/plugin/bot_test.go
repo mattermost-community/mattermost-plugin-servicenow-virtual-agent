@@ -83,7 +83,7 @@ func TestEphemeral(t *testing.T) {
 
 			mockAPI.On("LogInfo", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
 			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
-			
+
 			mockAPI.On("SendEphemeralPost", mock.Anything, mock.Anything).Return(&model.Post{})
 
 			p.SetAPI(mockAPI)

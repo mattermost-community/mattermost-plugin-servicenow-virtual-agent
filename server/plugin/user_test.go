@@ -205,7 +205,7 @@ func Test_InitOAuth2(t *testing.T) {
 			loadUserError: errors.New("mockErrMessage"),
 		},
 		{
-			description:   "Error occured while storing oauth2 state",
+			description:   "Error occurred while storing oauth2 state",
 			errMessage:    errors.New("mockErrMessage"),
 			expectedErr:   "mockErrMessage",
 			loadedUser:    nil,
@@ -391,8 +391,9 @@ func Test_CompleteOAuth2(t *testing.T) {
 
 			if testCase.expectedErr != "" {
 				require.EqualError(t, err, testCase.expectedErr)
+			} else {
+				require.Nil(t, err)
 			}
-
 		})
 	}
 }
