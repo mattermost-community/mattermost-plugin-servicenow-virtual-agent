@@ -1,4 +1,4 @@
-package main
+package plugin
 
 import (
 	"fmt"
@@ -82,16 +82,19 @@ func (p *Plugin) setConfiguration(configuration *configuration) {
 // IsValid checks if all needed fields are set.
 func (c *configuration) IsValid() error {
 	if c.ServiceNowURL == "" {
-		return fmt.Errorf("serviceNow URL should not be empty")
+		return fmt.Errorf(EmptyServiceNowURLErrorMessage)
 	}
 	if c.ServiceNowOAuthClientID == "" {
-		return fmt.Errorf("serviceNow OAuth clientID should not be empty")
+		return fmt.Errorf(EmptyServiceNowOAuthClientIDErrorMessage)
 	}
 	if c.ServiceNowOAuthClientSecret == "" {
-		return fmt.Errorf("serviceNow OAuth clientSecret should not be empty")
+		return fmt.Errorf(EmptyServiceNowOAuthClientSecretErrorMessage)
 	}
 	if c.EncryptionSecret == "" {
-		return fmt.Errorf("encryption secret should not be empty")
+		return fmt.Errorf(EmptyEncryptionSecretErrorMessage)
+	}
+	if c.WebhookSecret == "" {
+		return fmt.Errorf(EmptyWebhookSecretErrorMessage)
 	}
 	return nil
 }

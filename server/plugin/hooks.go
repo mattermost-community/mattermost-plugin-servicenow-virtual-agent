@@ -1,4 +1,4 @@
-package main
+package plugin
 
 import (
 	"context"
@@ -85,8 +85,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 	}
 
 	client := p.MakeClient(context.Background(), token)
-	err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message, true, attachment)
-	if err != nil {
+	if err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message, true, attachment); err != nil {
 		p.logAndSendErrorToUser(mattermostUserID, channel.Id, err.Error())
 	}
 }

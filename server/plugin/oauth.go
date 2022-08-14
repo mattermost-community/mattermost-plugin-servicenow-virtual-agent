@@ -1,4 +1,4 @@
-package main
+package plugin
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 )
 
 func (p *Plugin) httpOAuth2Connect(w http.ResponseWriter, r *http.Request) {
-	mattermostUserID := r.Header.Get("Mattermost-User-ID")
+	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	if mattermostUserID == "" {
 		http.Error(w, "Not authorized", http.StatusUnauthorized)
 		return

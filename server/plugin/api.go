@@ -1,4 +1,4 @@
-package main
+package plugin
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
+	"golang.org/x/oauth2"
 )
 
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
@@ -35,14 +36,14 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.handlePickerSelection)).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.handleAuthRequired(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
 }
 
-func (p *Plugin) handleAuthRequired(handleFunc func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+func (p *Plugin) checkAuthBySecret(handleFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, r.FormValue("secret")); err != nil {
 			p.API.LogError("Invalid secret", "Error", err.Error())
@@ -88,9 +89,9 @@ func (p *Plugin) withRecovery(next http.Handler) http.Handler {
 		defer func() {
 			if x := recover(); x != nil {
 				p.API.LogError("Recovered from a panic",
-					"url", r.URL.String(),
-					"error", x,
-					"stack", string(debug.Stack()))
+					"URL", r.URL.String(),
+					"Error", x,
+					"Stack", string(debug.Stack()))
 			}
 		}()
 
@@ -110,27 +111,49 @@ func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := r.Header.Get(HeaderMattermostUserID)
+		user, err := p.store.LoadUser(userID)
+		if err != nil {
+			p.API.LogError("Error loading user from KV store.", "Error", err.Error())
+			return
+		}
+		// Adding the ServiceNow User ID in the request headers to pass it to the next handler
+		r.Header.Set(HeaderServiceNowUserID, user.UserID)
+
+		token, err := p.ParseAuthToken(user.OAuth2Token)
+		if err != nil {
+			p.API.LogError("Error parsing OAuth2 token.", "Error", err.Error())
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), ContextTokenKey, token)
+		r = r.Clone(ctx)
+		handler(w, r)
+	}
+}
+
 func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	response := &model.PostActionIntegrationResponse{}
 	decoder := json.NewDecoder(r.Body)
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
-		p.API.LogError("error decoding PostActionIntegrationRequest params.", "error", err.Error())
+		p.API.LogError("Error decoding PostActionIntegrationRequest params.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
 
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	// Check if the user is connected to ServiceNow
-	_, err := p.GetUser(mattermostUserID)
-	if err != nil {
+	if _, err := p.GetUser(mattermostUserID); err != nil {
 		if err != ErrNotFound {
-			p.API.LogError("error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error())
+			p.API.LogError("Error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error())
 		} else {
 			var notConnectedPost *model.Post
 			notConnectedPost, err = p.GetDisconnectUserPost(mattermostUserID, AlreadyDisconnectedMessage)
 			if err != nil {
-				p.API.LogError("error occurred while creating user not connected post", "error", err.Error())
+				p.API.LogError("Error occurred while creating user not connected post", "Error", err.Error())
 			} else {
 				response = &model.PostActionIntegrationResponse{
 					Update: notConnectedPost,
@@ -144,9 +167,9 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	disconnectUser := postActionIntegrationRequest.Context[DisconnectUserContextName].(bool)
 	if !disconnectUser {
 		var rejectionPost *model.Post
-		rejectionPost, err = p.GetDisconnectUserPost(mattermostUserID, DisconnectUserRejectedMessage)
+		rejectionPost, err := p.GetDisconnectUserPost(mattermostUserID, DisconnectUserRejectedMessage)
 		if err != nil {
-			p.API.LogError("error occurred while creating disconnect user rejection post.", "error", err.Error())
+			p.API.LogError("Error occurred while creating disconnect user rejection post.", "Error", err.Error())
 		} else {
 			response = &model.PostActionIntegrationResponse{
 				Update: rejectionPost,
@@ -156,15 +179,15 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = p.DisconnectUser(mattermostUserID); err != nil {
-		p.API.LogError("error occurred while disconnecting user. UserID: %s. Error: %s", mattermostUserID, err.Error())
+	if err := p.DisconnectUser(mattermostUserID); err != nil {
+		p.API.LogError("Error occurred while disconnecting user. UserID: %s. Error: %s", mattermostUserID, err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
 
 	successPost, err := p.GetDisconnectUserPost(mattermostUserID, DisconnectUserSuccessMessage)
 	if err != nil {
-		p.API.LogError("error occurred while creating disconnect user success post", "error", err.Error())
+		p.API.LogError("Error occurred while creating disconnect user success post", "Error", err.Error())
 	} else {
 		response = &model.PostActionIntegrationResponse{
 			Update: successPost,
@@ -178,46 +201,62 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
-		p.API.LogError("Error decoding PostActionIntegrationRequest params.", "error", err.Error())
+		p.API.LogError("Error decoding PostActionIntegrationRequest params.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
 
+	ctx := r.Context()
+	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
+	userID := r.Header.Get(HeaderServiceNowUserID)
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
-	user, err := p.store.LoadUser(mattermostUserID)
-	if err != nil {
-		p.API.LogError("Error loading user from KV store.", "error", err.Error())
-	}
+	selectedOption := postActionIntegrationRequest.Context["selected_option"].(string)
+	attachment := &MessageAttachment{}
 
-	token, err := p.ParseAuthToken(user.OAuth2Token)
-	if err != nil {
-		p.API.LogError("Error parsing OAuth2 token.", "error", err.Error())
+	client := p.MakeClient(r.Context(), token)
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, attachment); err != nil {
+		p.API.LogError("Error sending message to VA.", "Error", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
 
-	attachment := &MessageAttachment{}
+	newAttachment := []*model.SlackAttachment{}
+	newAttachment = append(newAttachment, &model.SlackAttachment{
+		Text:  fmt.Sprintf("You selected: %s", selectedOption),
+		Color: updatedPostBorderColor,
+	})
 
-	ctx := context.Background()
-	client := p.MakeClient(ctx, token)
-	err = client.SendMessageToVirtualAgentAPI(user.UserID, postActionIntegrationRequest.Context["selected_option"].(string), false, attachment)
+	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
 	if err != nil {
-		p.API.LogError("Error sending message to virtual agent API.", "error", err.Error())
+		p.API.LogInfo("Couldn't get bot's DM channel with user", "userID", mattermostUserID)
+		p.returnPostActionIntegrationResponse(w, response)
+		return
 	}
+
+	newPost := &model.Post{
+		ChannelId: channel.Id,
+		UserId:    p.botUserID,
+	}
+
+	model.ParseSlackAttachment(newPost, newAttachment)
+
+	response = &model.PostActionIntegrationResponse{
+		Update: newPost,
+	}
+
+	p.returnPostActionIntegrationResponse(w, response)
 }
 
 func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		p.API.LogError("error occurred while reading webhook body.", "error", err.Error())
+		p.API.LogError("Error occurred while reading webhook body.", "Error", err.Error())
 		http.Error(w, "Error occurred while reading webhook body.", http.StatusInternalServerError)
 		return
 	}
-	if data == nil {
-		return
-	}
-	err = p.ProcessResponse(data)
-	if err != nil {
-		p.API.LogError("error occurred while processing response body.", "error", err.Error())
+
+	if err = p.ProcessResponse(data); err != nil {
+		p.API.LogError("Error occurred while processing response body.", "Error", err.Error())
 		http.Error(w, "Error occurred while processing response body.", http.StatusInternalServerError)
 		return
 	}
@@ -227,6 +266,6 @@ func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Reques
 func (p *Plugin) returnPostActionIntegrationResponse(w http.ResponseWriter, res *model.PostActionIntegrationResponse) {
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write(res.ToJson()); err != nil {
-		p.API.LogWarn("failed to write PostActionIntegrationResponse", "Error", err.Error())
+		p.API.LogWarn("Failed to write PostActionIntegrationResponse", "Error", err.Error())
 	}
 }
