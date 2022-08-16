@@ -90,6 +90,18 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			GetDisconnectUserPostErr: errors.New("mockErr"),
 			DisconnectUserErr:        nil,
 		},
+		"Error decoding request body": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/user/disconnect",
+				Body:   nil,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID: "mock-userID",
+		},
 		"User is disconnected successfully": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
@@ -361,6 +373,8 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 }
 
 func TestPlugin_handlePickerSelection(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	httpTestJSON := testutils.HTTPTest{
 		T:       t,
 		Encoder: testutils.EncodeJSON,
@@ -369,12 +383,13 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 	defer monkey.UnpatchAll()
 
 	for name, test := range map[string]struct {
-		httpTest          testutils.HTTPTest
-		request           testutils.Request
-		expectedResponse  testutils.ExpectedResponse
-		userID            string
-		ParseAuthTokenErr error
-		LoadUserErr       error
+		httpTest              testutils.HTTPTest
+		request               testutils.Request
+		expectedResponse      testutils.ExpectedResponse
+		ParseAuthTokenErr     error
+		LoadUserErr           error
+		getDirectChannelError *model.AppError
+		callError             error
 	}{
 		"Selected option is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
@@ -390,9 +405,39 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:            "mock-userID",
 			ParseAuthTokenErr: nil,
 			LoadUserErr:       nil,
+		},
+		"Error while decoding response body": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/action_options",
+				Body:   nil,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			ParseAuthTokenErr: nil,
+			LoadUserErr:       nil,
+		},
+		"Failed to get direct channel": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/action_options",
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						"selected_option": "mockOption",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			getDirectChannelError: &model.AppError{},
+			ParseAuthTokenErr:     nil,
+			LoadUserErr:           nil,
 		},
 		"User is not present in store": {
 			httpTest: httpTestJSON,
@@ -408,7 +453,6 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:            "mock-userID",
 			ParseAuthTokenErr: nil,
 			LoadUserErr:       errors.New("mockErr"),
 		},
@@ -426,8 +470,25 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:            "mock-userID",
 			ParseAuthTokenErr: errors.New("mockErr"),
+			LoadUserErr:       nil,
+		},
+		"Error while sending selected option to Virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/action_options",
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						"selected_option": "mockOption",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			callError:         errors.New("mockError"),
+			ParseAuthTokenErr: nil,
 			LoadUserErr:       nil,
 		},
 	} {
@@ -454,6 +515,10 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 
 			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
 
+			mockAPI.On("GetDirectChannel", mock.Anything, mock.Anything).Return(&model.Channel{
+				Id: "mock-channelID",
+			}, test.getDirectChannelError)
+
 			p.SetAPI(mockAPI)
 
 			p.initializeAPI()
@@ -464,18 +529,18 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 
 			var c client
 			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
-				return nil, nil
+				return nil, test.callError
 			})
 
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
 
-			mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, test.LoadUserErr)
+			mockedStore.EXPECT().LoadUser("mock-userID").Return(&serializer.User{}, test.LoadUserErr)
 
 			p.store = mockedStore
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, test.userID)
+			req.Header.Add(HeaderMattermostUserID, "mock-userID")
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
