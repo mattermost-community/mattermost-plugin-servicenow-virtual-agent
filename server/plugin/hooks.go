@@ -73,14 +73,10 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 			return
 		}
 
-		fmt.Printf("\n\n\n\n link    %s \n\n\n\n\n", fileLink)
-		fmt.Printf("\n\n\n\n type    %s \n\n\n\n\n", fileInfo.MimeType)
-		fmt.Printf("\n\n\n\n name    %s \n\n\n\n\n", strings.Split(fileInfo.Name, ".")[0])
-
 		attachment = &MessageAttachment{
-			URL:         "https://www.google.com/imgres?imgurl=https%3A%2F%2Fwww.simplilearn.com%2Fice9%2Ffree_resources_article_thumb%2Fwhat_is_image_Processing.jpg&imgrefurl=https%3A%2F%2Fwww.simplilearn.com%2Fimage-processing-article&tbnid=Bx81dUgHmqLhzM&vet=12ahUKEwi5ubn3oYf5AhVdNLcAHQbgAawQMygCegUIARCMAQ..i&docid=NMmM-IXyCkU2hM&w=848&h=477&q=image&ved=2ahUKEwi5ubn3oYf5AhVdNLcAHQbgAawQMygCegUIARCMAQ",
-			ContentType: "image/jpeg",
-			FileName:    "what_is_image_Processing.jpeg",
+			URL:         fileLink,
+			ContentType: fileInfo.MimeType,
+			FileName:    fileInfo.Name,
 		}
 	}
 

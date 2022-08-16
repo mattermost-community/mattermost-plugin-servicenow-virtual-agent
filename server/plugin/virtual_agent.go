@@ -127,6 +127,8 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(OutputText)
 	case InputTextUIType:
 		m.Value = new(OutputText)
+	case FileUploadUIType:
+		m.Value = new(OutputText)
 	case TopicPickerControlUIType:
 		m.Value = new(TopicPickerControl)
 	case PickerUIType:

@@ -37,6 +37,7 @@ const (
 	StartConversationAction         = "START_CONVERSATION"
 	OutputTextUIType                = "OutputText"
 	InputTextUIType                 = "InputText"
+	FileUploadUIType                = "FileUpload"
 	TopicPickerControlUIType        = "TopicPickerControl"
 	PickerUIType                    = "Picker"
 	BooleanUIType                   = "Boolean"
