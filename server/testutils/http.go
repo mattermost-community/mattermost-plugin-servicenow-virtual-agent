@@ -44,6 +44,19 @@ func EncodeJSON(data interface{}) ([]byte, error) {
 	return b, nil
 }
 
+// EncodeString encodes json data in bytes
+func EncodeString(data interface{}) ([]byte, error) {
+	if data == nil {
+		return []byte{}, nil
+	}
+
+	if s, ok := data.(string); ok {
+		return []byte(s), nil
+	}
+
+	return []byte{}, errors.New("error while decoding string")
+}
+
 // CreateHTTPRequest creates http Request with basic data
 func (test *HTTPTest) CreateHTTPRequest(request Request) *http.Request {
 	tassert := assert.New(test.T)

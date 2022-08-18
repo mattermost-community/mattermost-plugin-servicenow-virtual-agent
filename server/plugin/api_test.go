@@ -267,18 +267,8 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 		httpTest         testutils.HTTPTest
 		request          testutils.Request
 		expectedResponse testutils.ExpectedResponse
+		isErrorExpected  bool
 	}{
-		"Webhook secret is absent": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    "/api/v1/nowbot/processResponse",
-				Body:   VirtualAgentResponse{},
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusForbidden,
-			},
-		},
 		"Webhook secret is present": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
@@ -289,6 +279,19 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
+			isErrorExpected: false,
+		},
+		"Webhook secret is absent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/nowbot/processResponse",
+				Body:   VirtualAgentResponse{},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusForbidden,
+			},
+			isErrorExpected: true,
 		},
 		"handleVirtualAgentWebhook empty body": {
 			httpTest: httpTestJSON,
@@ -300,37 +303,270 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
 			},
+			isErrorExpected: true,
 		},
-		"Proper response is received from Virtual Agent": {
-			httpTest: httpTestJSON,
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := Plugin{}
+			p.setConfiguration(
+				&configuration{
+					ServiceNowURL:               "mockURL",
+					ServiceNowOAuthClientID:     "mockCLientID",
+					ServiceNowOAuthClientSecret: "mockClientSecret",
+					EncryptionSecret:            "mockEncryptionSecret",
+					WebhookSecret:               "mockWebhookSecret",
+					MattermostSiteURL:           "mockSiteURL",
+					PluginID:                    "mockPluginID",
+					PluginURL:                   "mockPluginURL",
+					PluginURLPath:               "mockPluginURLPath",
+				})
+
+			mockAPI := &plugintest.API{}
+
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+
+			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+
+			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+
+			if !test.isErrorExpected {
+				mockedStore.EXPECT().LoadUserWithSysID(gomock.Any()).Return(&serializer.User{}, nil)
+			}
+
+			p.store = mockedStore
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			rr := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, rr, req)
+			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+		})
+	}
+}
+
+func TestPlugin_handleVirtualAgentWebhook2(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	httpTestString := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeString,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest         testutils.HTTPTest
+		request          testutils.Request
+		expectedResponse testutils.ExpectedResponse
+	}{
+		"OutputLink response is received from Virtual Agent": {
+			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    "/api/v1/nowbot/processResponse?secret=mockWebhookSecret",
-				Body: VirtualAgentResponse{
-					VirtualAgentRequestBody: VirtualAgentRequestBody{
-						Action:    "mockAction",
-						RequestID: "mockRequestID",
-						UserID:    "mockUserID",
-						Message: &MessageBody{
-							Text:  "mockText",
-							Typed: true,
-						},
+				Body: `{
+					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"message": {
+					  "attachment": {
+						"url": "https://908e-103-68-34-69.in.ngrok.io/plugins/mattermost-plugin-servicenow-virtual-agent/static/gitlabAssignmentsLink.png.png",
+						"contentType": "image/png",
+						"fileName": "gitlabAssignmentsLink.png"
+					  },
+					  "text": "",
+					  "typed": true
 					},
-					Body: []MessageResponseBody{
+					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"body": [
+					  {
+						"uiType": "OutputLink",
+						"group": "DefaultText",
+						"label": "Successful",
+						"header": "header",
+						"value": {
+							"action": "action"
+						}
+					  }
+					],
+					"score": 1
+				  }`,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"TopicPickerControl response is received from Virtual Agent": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/nowbot/processResponse?secret=mockWebhookSecret",
+				Body: `{
+					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"message": {
+					  "attachment": {
+						"url": "https://908e-103-68-34-69.in.ngrok.io/plugins/mattermost-plugin-servicenow-virtual-agent/static/gitlabAssignmentsLink.png.png",
+						"contentType": "image/png",
+						"fileName": "gitlabAssignmentsLink.png"
+					  },
+					  "text": "",
+					  "typed": true
+					},
+					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"body": [
+					  { 
+						"uiType":"TopicPickerControl", 
+						"group":"DefaultPicker", 
+						"nluTextEnabled":false, 
+						"promptMsg":"Hi guest, please enter your request or make a selection of what I can help with. You can type help any time when you need help.", 
+						"label":"Show me everything", 
+						"options":[ 
+						  { 
+							"label":"b2b topic", 
+							"value":"2bb7bd7670de6010f877c7f188266fc7", 
+							"enabled":true 
+						  }, 
+						  { 
+							 "label":"Live Agent Support.", 
+							 "value":"ce2ee85053130010cf8cddeeff7b12bf", 
+							 "enabled":true 
+						  } 
+						] 
+					  }
+					],
+					"score": 1
+				  }`,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"OutputText response is received from Virtual Agent": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/nowbot/processResponse?secret=mockWebhookSecret",
+				Body: `{
+					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"message": {
+					  "attachment": {
+						"url": "https://908e-103-68-34-69.in.ngrok.io/plugins/mattermost-plugin-servicenow-virtual-agent/static/gitlabAssignmentsLink.png.png",
+						"contentType": "image/png",
+						"fileName": "gitlabAssignmentsLink.png"
+					  },
+					  "text": "",
+					  "typed": true
+					},
+					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"body": [
+					  {
+						"uiType": "OutputText",
+						"group": "DefaultText",
+						"value": "Successful",
+						"maskType": "NONE"
+					  }
+					],
+					"score": 1
+				  }`,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"Picker response is received from Virtual Agent": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/nowbot/processResponse?secret=mockWebhookSecret",
+				Body: `{
+					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"message": {
+					  "attachment": {
+						"url": "https://908e-103-68-34-69.in.ngrok.io/plugins/mattermost-plugin-servicenow-virtual-agent/static/gitlabAssignmentsLink.png.png",
+						"contentType": "image/png",
+						"fileName": "gitlabAssignmentsLink.png"
+					  },
+					  "text": "",
+					  "typed": true
+					},
+					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"body": [
 						{
-							Value: OutputLink{
-								UIType: "mockUIType",
-								Group:  "mockGroup",
-								Label:  "mockLabel",
-								Header: "mockHeader",
-								Type:   "mockType",
-								Value: OutputLinkValue{
-									Action: "mockAction",
-								},
-							},
-						},
+							"uiType":"Picker",
+							"group":"DefaultPicker",
+							"required":true,
+							"nluTextEnabled":false,
+							"label":"I want to be sure I got this right. What item best describes what you want to do?",
+							"itemType":"List",
+							"style":"list",
+							"multiSelect":false,
+							"options":[
+							  {
+								"label":"Live Agent Support.",
+								"value":"Live Agent Support.",
+								"renderStyle":"data",
+								"enabled":false
+							  },
+							  {
+								"label":"Virtual Agent Capabilities.",
+								"value":"Virtual Agent Capabilities.",
+								"renderStyle":"data",
+								"enabled":false
+							  },
+							  {
+								"label":"I want something else",
+								"value":"-1",
+								"renderStyle":"data",
+								"enabled":false
+							  }
+							],
+							"scriptedData":null
+						  }
+					],
+					"score": 1
+				  }`,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"GroupedPartsOutputControl response is received from Virtual Agent": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    "/api/v1/nowbot/processResponse?secret=mockWebhookSecret",
+				Body: `{
+					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"message": {
+					  "attachment": {
+						"url": "https://908e-103-68-34-69.in.ngrok.io/plugins/mattermost-plugin-servicenow-virtual-agent/static/gitlabAssignmentsLink.png.png",
+						"contentType": "image/png",
+						"fileName": "gitlabAssignmentsLink.png"
+					  },
+					  "text": "",
+					  "typed": true
 					},
-				},
+					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"body": [
+						{
+							"uiType": "GroupedPartsOutputControl",
+							"group": "DefaultGroupedPartsOutputContro",
+							"groupPartType": "Link",
+							"header": "header message",
+							"values": [
+							  {
+								"action": "www.foo",
+								"description": "description",
+								"label": "link_1 label",
+								"context": "ITSM"
+							  }
+							]
+						  }
+					],
+					"score": 1
+				  }`,
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -360,9 +596,20 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 
 			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
 
+			mockAPI.On("DM", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil, nil)
+
+			mockAPI.On("DMWithAttachments", mock.AnythingOfType("string"), &model.SlackAttachment{}).Return(nil, nil)
+
 			p.SetAPI(mockAPI)
 
 			p.initializeAPI()
+
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+
+			mockedStore.EXPECT().LoadUserWithSysID(gomock.Any()).Return(&serializer.User{}, nil)
+
+			p.store = mockedStore
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
 			rr := httptest.NewRecorder()

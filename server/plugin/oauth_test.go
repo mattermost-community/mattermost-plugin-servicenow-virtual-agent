@@ -16,6 +16,8 @@ import (
 )
 
 func TestPlugin_httpOAuth2Connect(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	httpTestJSON := testutils.HTTPTest{
 		T:       t,
 		Encoder: testutils.EncodeJSON,
