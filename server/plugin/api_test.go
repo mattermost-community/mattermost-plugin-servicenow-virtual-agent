@@ -263,6 +263,11 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 		Encoder: testutils.EncodeJSON,
 	}
 
+	httpTestString := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeString,
+	}
+
 	for name, test := range map[string]struct {
 		httpTest         testutils.HTTPTest
 		request          testutils.Request
@@ -305,64 +310,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			},
 			isErrorExpected: true,
 		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			p := Plugin{}
-			p.setConfiguration(
-				&configuration{
-					ServiceNowURL:               "mockURL",
-					ServiceNowOAuthClientID:     "mockCLientID",
-					ServiceNowOAuthClientSecret: "mockClientSecret",
-					EncryptionSecret:            "mockEncryptionSecret",
-					WebhookSecret:               "mockWebhookSecret",
-					MattermostSiteURL:           "mockSiteURL",
-					PluginID:                    "mockPluginID",
-					PluginURL:                   "mockPluginURL",
-					PluginURLPath:               "mockPluginURLPath",
-				})
-
-			mockAPI := &plugintest.API{}
-
-			mockAPI.On("GetBundlePath").Return("mockString", nil)
-
-			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
-
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
-
-			p.SetAPI(mockAPI)
-
-			p.initializeAPI()
-
-			mockCtrl := gomock.NewController(t)
-			mockedStore := mock_plugin.NewMockStore(mockCtrl)
-
-			if !test.isErrorExpected {
-				mockedStore.EXPECT().LoadUserWithSysID(gomock.Any()).Return(&serializer.User{}, nil)
-			}
-
-			p.store = mockedStore
-
-			req := test.httpTest.CreateHTTPRequest(test.request)
-			rr := httptest.NewRecorder()
-			p.ServeHTTP(&plugin.Context{}, rr, req)
-			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
-		})
-	}
-}
-
-func TestPlugin_handleVirtualAgentWebhook2(t *testing.T) {
-	defer monkey.UnpatchAll()
-
-	httpTestString := testutils.HTTPTest{
-		T:       t,
-		Encoder: testutils.EncodeString,
-	}
-
-	for name, test := range map[string]struct {
-		httpTest         testutils.HTTPTest
-		request          testutils.Request
-		expectedResponse testutils.ExpectedResponse
-	}{
 		"OutputLink response is received from Virtual Agent": {
 			httpTest: httpTestString,
 			request: testutils.Request{
@@ -607,7 +554,9 @@ func TestPlugin_handleVirtualAgentWebhook2(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
 
-			mockedStore.EXPECT().LoadUserWithSysID(gomock.Any()).Return(&serializer.User{}, nil)
+			if !test.isErrorExpected {
+				mockedStore.EXPECT().LoadUserWithSysID(gomock.Any()).Return(&serializer.User{}, nil)
+			}
 
 			p.store = mockedStore
 
