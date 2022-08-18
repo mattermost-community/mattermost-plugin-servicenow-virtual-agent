@@ -80,29 +80,3 @@ func Test_StoreUser(t *testing.T) {
 		})
 	}
 }
-
-// func Test_DeleteUser(t *testing.T) {
-// 	for _, testCase := range []struct {
-// 		description string
-// 	}{
-// 		{
-// 			description: "Ephemeral post is successfully created",
-// 		},
-// 	} {
-// 		t.Run(testCase.description, func(t *testing.T) {
-// 			s := pluginStore{}
-
-// 			monkey.PatchInstanceMethod(reflect.TypeOf(&s), "LoadUser", func(_ *pluginStore, _ string) (*serializer.User, error) {
-// 				return &serializer.User{}, nil
-// 			})
-
-// 			monkey.Patch(kvstore.StoreJSON, func(_ kvstore.KVStore, _ string, _ interface{}) error {
-// 				return nil
-// 			})
-
-// 			_, err := s.LoadUserWithSysID("mock-userID")
-
-// 			require.Nil(t, err)
-// 		})
-// 	}
-// }
