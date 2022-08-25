@@ -2,9 +2,9 @@
 
 We need to set up the virtual agent on a ServiceNow instance, to which we will send our API requests.
 
-## 1. Create your ServiceNow instance 
-  - Log in to [ServiceNow](https://developer.servicenow.com).
-  - Then click on Create Instance in the top right corner. Basically, ServiceNow itself provides developer instances to anyone who wishes to develop on ServiceNow.
+## 1. Get your ServiceNow developer instance (only for developers)
+  - Log in to [ServiceNow](https://developer.servicenow.com) developer account.
+  - Then click on Request Instance in the top right corner. Basically, ServiceNow itself provides developer instances to anyone who wishes to develop on ServiceNow.
   - Once the instance is created, open the menu from the top right corner, navigate to `Manage Instance Password`, and log in to your dev instance in a new tab.
 
 ## 2. Install Glide Virtual Agent and Virtual Agent
@@ -14,12 +14,19 @@ We need to set up the virtual agent on a ServiceNow instance, to which we will s
 
   - Navigate to **System Web Services > Outbound > Rest Message**
   - Go to **VA Bot to Bot > postMessage**.
-  - Update the endpoint -> `https://<your-mattermost-url>/plugins/mattermost-plugin-servicenow-virtual-agent/api/v1/nowbot/processResponse?secret=<your-webhook-secret>`.
-  Note: (Webhook secret can be generated from the Mattermost system console settings of virtual agent plugin.)
+  - Update the endpoint:
+    ```
+    https://<your-mattermost-url>/plugins/mattermost-plugin-servicenow-virtual-agent/api/v1/nowbot/processResponse?secret=<your-webhook-secret>
+    ```
+    **Note**: (Webhook secret can be generated from the Mattermost system console settings of the Virtual agent plugin.)
  
 ## 4. Creating an OAuth app in ServiceNow
-  - Navigate to **All > System OAuth > Application Registry.**
-  - Create on the New button on the top right corner and then go to "Create an OAuth API endpoint for external clients".
-  - Enter the name for your app and set the redirect URL to `https://<your-mattermost-url>/plugins/mattermost-plugin-servicenow-virtual-agent/api/v1/oauth2/complete`.
-  - The client secret will be generated automatically.
-  - You will need the values `ClientID` and `ClientSecret` while configuring the plugin.
+
+- Go to your ServiceNow instance and navigate to **All > System OAuth > Application Registry.**
+- Click on the New button on the top right corner and then go to "Create an OAuth API endpoint for external clients".
+- Enter the name for your app and set the redirect URL to:
+    ```
+    https://<your-mattermost-url>/plugins/mattermost-plugin-servicenow/api/v1/oauth2/complete
+    ````
+- The client secret will be generated automatically.
+- You will need the values `ClientID` and `ClientSecret` while configuring the plugin.
