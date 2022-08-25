@@ -110,7 +110,7 @@ func (p *Plugin) handleFilesAttachments(w http.ResponseWriter, r *http.Request) 
 		p.API.LogError("Error occurred while unmarshaling file. Error: %s", err.Error())
 		return
 	}
-	
+
 	if time.Now().After(t.Expiry) {
 		http.NotFound(w, r)
 		return
@@ -119,6 +119,7 @@ func (p *Plugin) handleFilesAttachments(w http.ResponseWriter, r *http.Request) 
 	data, appErr := p.API.GetFile(t.ID)
 	if appErr != nil {
 		p.API.LogInfo("Couldn't get file data")
+		return
 	}
 
 	w.Header().Set("Content-Type", http.DetectContentType(data))
