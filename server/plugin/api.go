@@ -97,17 +97,20 @@ func (p *Plugin) handleFilesAttachments(w http.ResponseWriter, r *http.Request) 
 	decoded, err := decode(id)
 	if err != nil {
 		p.API.LogError("Error occurred while decoding file. Error: %s", err.Error())
+		return
 	}
 
 	jsonBytes, err := decrypt(decoded, []byte(p.getConfiguration().EncryptionSecret))
 	if err != nil {
 		p.API.LogError("Error occurred while decrypting file. Error: %s", err.Error())
+		return
 	}
 
-	err = json.Unmarshal(jsonBytes, &t)
-	if err != nil {
+	if err = json.Unmarshal(jsonBytes, &t); err != nil {
 		p.API.LogError("Error occurred while unmarshaling file. Error: %s", err.Error())
+		return
 	}
+	
 	if time.Now().After(t.Expiry) {
 		http.NotFound(w, r)
 		return
@@ -119,7 +122,10 @@ func (p *Plugin) handleFilesAttachments(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", http.DetectContentType(data))
-	_, _ = w.Write(data)
+	if _, err = w.Write(data); err != nil {
+		p.API.LogError("Error occurred writing file content in response. Error: %s", err.Error())
+		return
+	}
 }
 
 func (p *Plugin) withRecovery(next http.Handler) http.Handler {

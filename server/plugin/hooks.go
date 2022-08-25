@@ -86,20 +86,18 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		jsonBytes, err = json.Marshal(file)
 		if err != nil {
 			p.API.LogError("Error occurred while mashaling file. Error: %s", err.Error())
+			return
 		}
 
 		var encrypted []byte
 		encrypted, err = encrypt(jsonBytes, []byte(p.getConfiguration().EncryptionSecret))
 		if err != nil {
 			p.API.LogError("Error occurred while encrpting file. Error: %s", err.Error())
+			return
 		}
 
-		encoded := encode(encrypted)
-
-		fileLink := p.GetPluginURL() + "/file/" + encoded
-
 		attachment = &MessageAttachment{
-			URL:         fileLink,
+			URL:         p.GetPluginURL() + "/file/" + encode(encrypted),
 			ContentType: fileInfo.MimeType,
 			FileName:    fileInfo.Name,
 		}

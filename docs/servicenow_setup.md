@@ -27,5 +27,4 @@ We need to set up the virtual agent on a ServiceNow instance, to which we will s
 ## 5. Setting up trusted domains for file uploads
   - Navigate to **sys_cs_provider_application.list > VA Bot to Bot Provider Application**.
   - Add your Mattermost URL in the "Trusted media domain" field.
-  **Note-** The Provider Channel Identity form may not show the Trusted media domains field. Click on the menu icon in top left and select "Configure -> Form Layout" to make it visible before proceeding to add trusted domains.
-  
+  **Note-** The Provider Channel Identity form may not show the Trusted media domains field. Click on the menu icon in the top left and select "Configure -> Form Layout" to make it visible before adding trusted domains.
