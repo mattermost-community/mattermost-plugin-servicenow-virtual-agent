@@ -2,16 +2,22 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 )
 
+type FileStruct struct {
+	ID     string
+	Expiry time.Time
+}
+
 func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 	// If the message is posted by bot simply return
-	// fmt.Printf("\n\n\n\n\npost %+v\n\n\n\n\n", post)
 	if post.UserId == p.botUserID {
 		return
 	}
@@ -61,17 +67,36 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	var attachment *MessageAttachment
 	if len(post.FileIds) == 1 {
-		fileInfo, err := p.API.GetFileInfo(post.FileIds[0])
-		if err != nil {
-			p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("Error getting file info. Error: %s", err.Error()))
+		fileInfo, appErr := p.API.GetFileInfo(post.FileIds[0])
+		if appErr != nil {
+			p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("Error getting file info. Error: %s", appErr.Message))
 			return
 		}
 
-		fileLink, err := p.API.GetFileLink(post.FileIds[0])
-		if err != nil {
-			p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("Error getting file link. Error: %s", err.Error()))
-			return
+		date := time.Now()
+		//TODO: Add a configuration setting for expiry time
+		expiryTime := date.Add(time.Minute * 15)
+
+		file := &FileStruct{
+			ID:     post.FileIds[0],
+			Expiry: expiryTime,
 		}
+
+		var jsonBytes []byte
+		jsonBytes, err = json.Marshal(file)
+		if err != nil {
+			p.API.LogError("Error occurred while mashaling file. Error: %s", err.Error())
+		}
+
+		var encrypted []byte
+		encrypted, err = encrypt(jsonBytes, []byte(p.getConfiguration().EncryptionSecret))
+		if err != nil {
+			p.API.LogError("Error occurred while encrpting file. Error: %s", err.Error())
+		}
+
+		encoded := encode(encrypted)
+
+		fileLink := p.GetPluginURL() + "/file/" + encoded
 
 		attachment = &MessageAttachment{
 			URL:         fileLink,

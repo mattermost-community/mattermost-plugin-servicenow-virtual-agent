@@ -23,3 +23,9 @@ We need to set up the virtual agent on a ServiceNow instance, to which we will s
   - Enter the name for your app and set the redirect URL to `https://<your-mattermost-url>/plugins/mattermost-plugin-servicenow-virtual-agent/api/v1/oauth2/complete`.
   - The client secret will be generated automatically.
   - You will need the values `ClientID` and `ClientSecret` while configuring the plugin.
+
+## 5. Setting up trusted domains for file uploads
+  - Navigate to **sys_cs_provider_application.list > VA Bot to Bot Provider Application**.
+  - Add your Mattermost URL in the "Trusted media domain" field.
+  **Note-** The Provider Channel Identity form may not show the Trusted media domains field. Click on the menu icon in top left and select "Configure -> Form Layout" to make it visible before proceeding to add trusted domains.
+  

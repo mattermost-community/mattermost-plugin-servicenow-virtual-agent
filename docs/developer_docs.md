@@ -43,6 +43,12 @@ This plugin supports sending text messages to the Virtual Agent through Mattermo
     - [Pre-defined Conversation Flows/Topics](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/prebuilt-topics-ITSM.html)
     - [Additional Plugins](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/reference/additional-va-plugins.html)
 
+- **File Upload**
+
+    For sending file attachment to the Virtual Agent or the Live Agent we need to send a public link of the file in the request from where Virtual Agent can download the file. Virtual Agent does not support sending file attachment from any source, we have to specify the trusted domains ourselves so that the Virtual Agent knows that these domains can be trusted.
+    - [Set up trusted media domains](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/task/ccif-secure-file-upload.html)
+      - [Configuring the form layout](https://docs.servicenow.com/en-US/bundle/sandiego-platform-administration/page/administer/form-administration/concept/configure-form-layout.html)
+
 ## Installation
 
 1. Go to the [releases page of this GitHub repository](https://github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/releases) and download the latest release for your Mattermost server.

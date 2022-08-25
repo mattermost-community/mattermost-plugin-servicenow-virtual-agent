@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"runtime/debug"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-server/v5/model"
@@ -38,6 +39,8 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
+	apiRouter.HandleFunc("/file/{fileID}", p.handleFilesAttachments).Methods(http.MethodGet)
+
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
@@ -82,6 +85,41 @@ func (p *Plugin) handleStaticFiles(r *mux.Router) {
 
 	// This will serve static files from the 'assets' directory under '/static/<filename>'
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(bundlePath, "assets")))))
+}
+
+// handleFilesAttachments returns the data of the file id passed in the request URL.
+func (p *Plugin) handleFilesAttachments(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["fileID"]
+
+	t := FileStruct{}
+
+	decoded, err := decode(id)
+	if err != nil {
+		p.API.LogError("Error occurred while decoding file. Error: %s", err.Error())
+	}
+
+	jsonBytes, err := decrypt(decoded, []byte(p.getConfiguration().EncryptionSecret))
+	if err != nil {
+		p.API.LogError("Error occurred while decrypting file. Error: %s", err.Error())
+	}
+
+	err = json.Unmarshal(jsonBytes, &t)
+	if err != nil {
+		p.API.LogError("Error occurred while unmarshaling file. Error: %s", err.Error())
+	}
+	if time.Now().After(t.Expiry) {
+		http.NotFound(w, r)
+		return
+	}
+
+	data, appErr := p.API.GetFile(t.ID)
+	if appErr != nil {
+		p.API.LogInfo("Couldn't get file data")
+	}
+
+	w.Header().Set("Content-Type", http.DetectContentType(data))
+	_, _ = w.Write(data)
 }
 
 func (p *Plugin) withRecovery(next http.Handler) http.Handler {

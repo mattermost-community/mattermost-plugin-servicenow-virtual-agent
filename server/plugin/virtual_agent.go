@@ -41,7 +41,7 @@ type OutputText struct {
 	UIType   string `json:"uiType"`
 	Group    string `json:"group"`
 	Value    string `json:"value"`
-	ItemType string `json:"itemType"`
+	ItemType string `json:"type"`
 	MaskType string `json:"maskType"`
 	Label    string `json:"label"`
 }
@@ -200,7 +200,13 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			message := res.Value
 			if res.Label != "" {
 				message = res.Label
+				if res.ItemType == "image" {
+					message += "\n(**Note:** Please upload an image using the mattermost `Upload files` OR use the shorthand `Ctrl+U`.)"
+				} else if res.ItemType == "file" {
+					message += "\n(**Note:** Please upload a file using the mattermost `Upload files` OR use the shorthand `Ctrl+U`.)"
+				}
 			}
+
 			if _, err = p.DM(userID, message); err != nil {
 				return err
 			}
