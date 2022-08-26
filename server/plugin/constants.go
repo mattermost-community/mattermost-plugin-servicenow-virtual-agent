@@ -51,6 +51,8 @@ const (
 	UploadImageMessage = "\n(**Note:** Please upload an image using the mattermost `Upload files` OR use the shorthand `Ctrl+U`.)"
 	UploadFileMessage  = "\n(**Note:** Please upload a file using the mattermost `Upload files` OR use the shorthand `Ctrl+U`.)"
 
+	PathParamEncryptedFileInfo = "encryptedFileInfo"
+
 	updatedPostBorderColor = "#74ccac"
 )
 

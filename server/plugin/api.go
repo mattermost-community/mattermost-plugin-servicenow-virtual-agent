@@ -39,7 +39,7 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
-	apiRouter.HandleFunc("/file/{encryptedFileInfo}", p.handleFileAttachments).Methods(http.MethodGet)
+	apiRouter.HandleFunc(fmt.Sprintf("/file/{%s}", PathParamEncryptedFileInfo), p.handleFileAttachments).Methods(http.MethodGet)
 
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
@@ -90,7 +90,7 @@ func (p *Plugin) handleStaticFiles(r *mux.Router) {
 // handleFileAttachments returns the data of the fileID passed in the request URL.
 func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	encryptedFileInfo := vars["encryptedFileInfo"]
+	encryptedFileInfo := vars[PathParamEncryptedFileInfo]
 
 	fileInfo := FileStruct{}
 
