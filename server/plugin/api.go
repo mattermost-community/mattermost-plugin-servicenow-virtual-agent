@@ -39,7 +39,7 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
-	apiRouter.HandleFunc("/file/{fileID}", p.handleFilesAttachments).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/file/{encryptedFileInfo}", p.handleFileAttachments).Methods(http.MethodGet)
 
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
@@ -87,44 +87,44 @@ func (p *Plugin) handleStaticFiles(r *mux.Router) {
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(bundlePath, "assets")))))
 }
 
-// handleFilesAttachments returns the data of the file id passed in the request URL.
-func (p *Plugin) handleFilesAttachments(w http.ResponseWriter, r *http.Request) {
+// handleFileAttachments returns the data of the fileID passed in the request URL.
+func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id := vars["fileID"]
+	encryptedFileInfo := vars["encryptedFileInfo"]
 
-	t := FileStruct{}
+	fileInfo := FileStruct{}
 
-	decoded, err := decode(id)
+	decoded, err := decode(encryptedFileInfo)
 	if err != nil {
-		p.API.LogError("Error occurred while decoding file. Error: %s", err.Error())
+		p.API.LogError("Error occurred while decoding the file. Error: %s", err.Error())
 		return
 	}
 
 	jsonBytes, err := decrypt(decoded, []byte(p.getConfiguration().EncryptionSecret))
 	if err != nil {
-		p.API.LogError("Error occurred while decrypting file. Error: %s", err.Error())
+		p.API.LogError("Error occurred while decrypting the file. Error: %s", err.Error())
 		return
 	}
 
-	if err = json.Unmarshal(jsonBytes, &t); err != nil {
-		p.API.LogError("Error occurred while unmarshaling file. Error: %s", err.Error())
+	if err = json.Unmarshal(jsonBytes, &fileInfo); err != nil {
+		p.API.LogError("Error occurred while unmarshaling the file. Error: %s", err.Error())
 		return
 	}
 
-	if time.Now().After(t.Expiry) {
+	if time.Now().After(fileInfo.Expiry) {
 		http.NotFound(w, r)
 		return
 	}
 
-	data, appErr := p.API.GetFile(t.ID)
+	data, appErr := p.API.GetFile(fileInfo.ID)
 	if appErr != nil {
-		p.API.LogInfo("Couldn't get file data")
+		p.API.LogInfo("Couldn't get file data. FileID: %s", fileInfo.ID)
 		return
 	}
 
 	w.Header().Set("Content-Type", http.DetectContentType(data))
 	if _, err = w.Write(data); err != nil {
-		p.API.LogError("Error occurred writing file content in response. Error: %s", err.Error())
+		p.API.LogError("Error occurred writing the file content in response. Error: %s", err.Error())
 		return
 	}
 }

@@ -24,7 +24,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	channel, appErr := p.API.GetChannel(post.ChannelId)
 	if appErr != nil {
-		p.API.LogError("error occurred while fetching channel by ID. ChannelID: %s. Error: %s", post.ChannelId, appErr.Error())
+		p.API.LogError("Error occurred while fetching channel by ID. ChannelID: %s. Error: %s", post.ChannelId, appErr.Error())
 		return
 	}
 
@@ -44,7 +44,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		if err == ErrNotFound {
 			_, _ = p.DM(mattermostUserID, WelcomePretextMessage, fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Connect))
 		} else {
-			p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error()))
+			p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("Error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error()))
 		}
 		return
 	}
@@ -61,7 +61,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	token, err := p.ParseAuthToken(user.OAuth2Token)
 	if err != nil {
-		p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("error occurred while decrypting token. Error: %s", err.Error()))
+		p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("Error occurred while decrypting token. Error: %s", err.Error()))
 		return
 	}
 

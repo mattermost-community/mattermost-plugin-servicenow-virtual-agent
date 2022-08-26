@@ -200,10 +200,10 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			message := res.Value
 			if res.Label != "" {
 				message = res.Label
-				if res.ItemType == "image" {
-					message += "\n(**Note:** Please upload an image using the mattermost `Upload files` OR use the shorthand `Ctrl+U`.)"
-				} else if res.ItemType == "file" {
-					message += "\n(**Note:** Please upload a file using the mattermost `Upload files` OR use the shorthand `Ctrl+U`.)"
+				if res.ItemType == ItemTypeImage {
+					message += UploadImageMessage
+				} else if res.ItemType == ItemTypeFile {
+					message += UploadFileMessage
 				}
 			}
 
