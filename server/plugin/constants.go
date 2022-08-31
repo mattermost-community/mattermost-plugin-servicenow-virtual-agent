@@ -44,6 +44,7 @@ const (
 	OutputLinkUIType                = "OutputLink"
 	GroupedPartsOutputControlUIType = "GroupedPartsOutputControl"
 	OutputCardUIType                = "OutputCard"
+	OutputImageUIType               = "OutputImage"
 
 	ItemTypeImage = "image"
 	ItemTypeFile  = "file"
