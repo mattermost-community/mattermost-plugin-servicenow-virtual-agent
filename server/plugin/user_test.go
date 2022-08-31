@@ -37,7 +37,7 @@ func Test_GetUser(t *testing.T) {
 			expectedErr: "mockErrMessage",
 		},
 	} {
-		t.Run("User is loaded successfully from KV store using mattermostID", func(t *testing.T) {
+		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
 
 			mockCtrl := gomock.NewController(t)
@@ -151,7 +151,7 @@ func Test_GetDisconnectUserPost(t *testing.T) {
 			expectedErr:                      "",
 		},
 		{
-			description:                      "GetDisconnectUserPost return error because GetDirectChannel return error dur to invalid userID",
+			description:                      "GetDisconnectUserPost return error because GetDirectChannel return error due to invalid userID",
 			errMessage:                       &model.AppError{},
 			expectedErr:                      "mockErrMessage",
 			userID:                           "invalid-UserID",
@@ -263,7 +263,7 @@ func Test_CompleteOAuth2(t *testing.T) {
 			state:        "mockState_mock-authedUserID",
 		},
 		{
-			description:  "OAuth2 fails because autherUserID is empty string",
+			description:  "OAuth2 fails because authedUserID is empty string",
 			authedUserID: "",
 			code:         "mockCode",
 			state:        "mockState_mock-authedUserID",

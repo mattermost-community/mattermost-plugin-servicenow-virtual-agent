@@ -16,7 +16,7 @@ func Test_LoadUser(t *testing.T) {
 		description string
 	}{
 		{
-			description: "User is loaded successfully from KV store usind mattermostID",
+			description: "User is loaded successfully from KV store using mattermostID",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {

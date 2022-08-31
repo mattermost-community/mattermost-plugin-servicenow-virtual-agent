@@ -50,8 +50,8 @@ func EncodeString(data interface{}) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	if s, ok := data.(string); ok {
-		return []byte(s), nil
+	if body, ok := data.(string); ok {
+		return []byte(body), nil
 	}
 
 	return []byte{}, errors.New("error while decoding string")

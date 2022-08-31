@@ -90,7 +90,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			GetDisconnectUserPostErr: errors.New("mockErr"),
 			DisconnectUserErr:        nil,
 		},
-		"Error decoding request body": {
+		"Error while decoding request body": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -575,8 +575,6 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 		T:       t,
 		Encoder: testutils.EncodeJSON,
 	}
-
-	defer monkey.UnpatchAll()
 
 	for name, test := range map[string]struct {
 		httpTest              testutils.HTTPTest
