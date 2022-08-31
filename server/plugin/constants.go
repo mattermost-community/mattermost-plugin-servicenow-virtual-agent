@@ -43,6 +43,7 @@ const (
 	OutputLinkUIType                = "OutputLink"
 	GroupedPartsOutputControlUIType = "GroupedPartsOutputControl"
 	OutputCardUIType                = "OutputCard"
+	OutputImageUIType               = "OutputImage"
 
 	updatedPostBorderColor = "#74ccac"
 )

@@ -3,7 +3,9 @@ package plugin
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
@@ -105,6 +107,13 @@ type Option struct {
 	Enabled bool   `json:"enabled"`
 }
 
+type OutputImage struct {
+	UIType  string `json:"uiType"`
+	Group   string `json:"group"`
+	Value   string `json:"value"`
+	AltText string `json:"altText"`
+}
+
 func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	var uiType struct {
 		UIType string `json:"uiType"`
@@ -131,6 +140,8 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(GroupedPartsOutputControl)
 	case OutputCardUIType:
 		m.Value = new(OutputCard)
+	case OutputImageUIType:
+		m.Value = new(OutputImage)
 	}
 
 	if m.Value != nil {
@@ -229,10 +240,53 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			if _, err = p.DMWithAttachments(userID, p.CreateOutputCardAttachment(&data)); err != nil {
 				return err
 			}
+		case *OutputImage:
+			post, err := p.CreateOutputImagePost(res, userID)
+			if err != nil {
+				return err
+			}
+
+			_, err = p.dm(userID, post)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
+}
+
+func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model.Post, error) {
+	channel, appErr := p.API.GetDirectChannel(userID, p.botUserID)
+	if appErr != nil {
+		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", userID, "error", appErr.Message)
+		return nil, appErr
+	}
+
+	resp, err := http.Get(body.Value)
+	if err != nil {
+		p.API.LogInfo("Error getting file data from link", "error", err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		p.API.LogInfo("Error reading file data", "error", err.Error())
+		return nil, err
+	}
+
+	filename := strings.Split(body.Value, "/")
+	post := &model.Post{}
+	file, appErr := p.API.UploadFile(data, channel.Id, filename[len(filename)-1])
+	if appErr != nil {
+		post.Message = body.AltText
+		p.API.LogInfo("Couldn't upload file on mattermost", "channel_id", channel.Id, "error", appErr.Message)
+	} else {
+		post.FileIds = model.StringArray{file.Id}
+	}
+
+	return post, nil
 }
 
 func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttachment {
