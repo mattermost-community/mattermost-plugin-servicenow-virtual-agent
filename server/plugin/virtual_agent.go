@@ -265,20 +265,34 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 
 	resp, err := http.Get(body.Value)
 	if err != nil {
-		p.API.LogInfo("Error getting file data from link", "error", err.Error())
+		p.API.LogInfo("Error in getting file data from link", "error", err.Error())
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		p.API.LogInfo("Error reading file data", "error", err.Error())
+		p.API.LogInfo("Error in reading file data", "error", err.Error())
 		return nil, err
 	}
 
-	filename := strings.Split(body.Value, "/")
+	linkContents := strings.Split(body.Value, "/")
+	completeFilename := linkContents[len(linkContents)-1]
+	filenameContents := strings.Split(completeFilename, ".")
+
+	if len(filenameContents) > 1 {
+		fileExtention := filenameContents[1]
+		fileExtentionInHeaders := strings.Split(resp.Header["Content-Type"][0], "/")[1]
+		if fileExtention != fileExtentionInHeaders {
+			fileExtention = fileExtentionInHeaders
+		}
+		filename := filenameContents[0]
+
+		completeFilename = fmt.Sprintf("%s.%s", filename, fileExtention)
+	}
+
 	post := &model.Post{}
-	file, appErr := p.API.UploadFile(data, channel.Id, filename[len(filename)-1])
+	file, appErr := p.API.UploadFile(data, channel.Id, completeFilename)
 	if appErr != nil {
 		post.Message = body.AltText
 		p.API.LogInfo("Couldn't upload file on mattermost", "channel_id", channel.Id, "error", appErr.Message)
