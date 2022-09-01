@@ -85,10 +85,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusUnauthorized,
 			},
-			userID:                   "",
-			GetUserErr:               ErrNotFound,
-			GetDisconnectUserPostErr: errors.New("mockErr"),
-			DisconnectUserErr:        nil,
+			userID: "",
 		},
 		"Error while decoding request body": {
 			httpTest: httpTestJSON,
@@ -253,6 +250,10 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+
+			if (test.GetUserErr != ErrNotFound && test.GetUserErr != nil) || test.GetDisconnectUserPostErr != nil || test.DisconnectUserErr != nil {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
 		})
 	}
 }
@@ -599,8 +600,6 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			ParseAuthTokenErr: nil,
-			LoadUserErr:       nil,
 		},
 		"Error while decoding response body": {
 			httpTest: httpTestJSON,
@@ -612,8 +611,6 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			ParseAuthTokenErr: nil,
-			LoadUserErr:       nil,
 		},
 		"Failed to get direct channel": {
 			httpTest: httpTestJSON,
@@ -630,8 +627,6 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 			getDirectChannelError: &model.AppError{},
-			ParseAuthTokenErr:     nil,
-			LoadUserErr:           nil,
 		},
 		"User is not present in store": {
 			httpTest: httpTestJSON,
@@ -647,8 +642,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			ParseAuthTokenErr: nil,
-			LoadUserErr:       errors.New("mockErr"),
+			LoadUserErr: errors.New("mockErr"),
 		},
 		"Error occurs while parsing OAuth token": {
 			httpTest: httpTestJSON,
@@ -665,7 +659,6 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 			ParseAuthTokenErr: errors.New("mockErr"),
-			LoadUserErr:       nil,
 		},
 		"Error while sending selected option to Virtual Agent": {
 			httpTest: httpTestJSON,
@@ -738,6 +731,10 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+
+			if test.ParseAuthTokenErr != nil || test.callError != nil || test.LoadUserErr != nil {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
 		})
 	}
 }
