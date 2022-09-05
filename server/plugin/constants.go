@@ -20,6 +20,8 @@ const (
 	PathVirtualAgentWebhook        = "/nowbot/processResponse"
 	PathVirtualAgentBotIntegration = "/api/sn_va_as_service/bot/integration"
 	PathActionOptions              = "/action_options"
+	PathDateTimeSelectionDialog    = "/date"
+	PathDateTimeSelection          = "/selected_date"
 
 	SysQueryParam = "sysparm_query"
 
@@ -43,6 +45,9 @@ const (
 	OutputLinkUIType                = "OutputLink"
 	GroupedPartsOutputControlUIType = "GroupedPartsOutputControl"
 	OutputCardUIType                = "OutputCard"
+	DateUIType                      = "Date"
+	TimeUIType                      = "Time"
+	DateTimeUIType                  = "DateTime"
 
 	updatedPostBorderColor = "#74ccac"
 )

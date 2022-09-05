@@ -105,6 +105,14 @@ type Option struct {
 	Enabled bool   `json:"enabled"`
 }
 
+type DefaultDate struct {
+	UIType         string `json:"uiType"`
+	Group          string `json:"group"`
+	Required       bool   `json:"required"`
+	NLUTextEnabled bool   `json:"nluTextEnabled"`
+	Label          string `json:"label"`
+}
+
 func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	var uiType struct {
 		UIType string `json:"uiType"`
@@ -131,6 +139,12 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(GroupedPartsOutputControl)
 	case OutputCardUIType:
 		m.Value = new(OutputCard)
+	case DateTimeUIType:
+		m.Value = new(DefaultDate)
+	case DateUIType:
+		m.Value = new(DefaultDate)
+	case TimeUIType:
+		m.Value = new(DefaultDate)
 	}
 
 	if m.Value != nil {
@@ -229,10 +243,32 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			if _, err = p.DMWithAttachments(userID, p.CreateOutputCardAttachment(&data)); err != nil {
 				return err
 			}
+		case *DefaultDate:
+			if _, err = p.DMWithAttachments(userID, p.CreateDefaultDateAttachment(res)); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
+}
+
+func (p *Plugin) CreateDefaultDateAttachment(body *DefaultDate) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Text: body.Label,
+		Actions: []*model.PostAction{
+			{
+				Name: fmt.Sprintf("Select %s", body.UIType),
+				Integration: &model.PostActionIntegration{
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
+					Context: map[string]interface{}{
+						"type": body.UIType,
+					},
+				},
+				Type: "button",
+			},
+		},
+	}
 }
 
 func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttachment {
