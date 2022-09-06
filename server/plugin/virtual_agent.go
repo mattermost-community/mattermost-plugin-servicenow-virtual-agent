@@ -273,9 +273,11 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				}
 
 				URL := url.URL{RawQuery: data.Link}
-				p.dm(userID, &model.Post{
+				if _, err = p.dm(userID, &model.Post{
 					Message: URL.Query().Get(VideoQueryParam),
-				})
+				}); err != nil {
+					return err
+				}
 			case OutputCardRecordType:
 				var data OutputCardRecordData
 				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
