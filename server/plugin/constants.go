@@ -23,6 +23,7 @@ const (
 
 	SysQueryParam   = "sysparm_query"
 	VideoQueryParam = "target_url"
+	SecretParam     = "secret"
 
 	BotUsername    = "servicenow-virtual-agent"
 	BotDisplayName = "ServiceNow Virtual Agent"

@@ -274,13 +274,12 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 
 				channel, err := p.API.GetDirectChannel(userID, p.botUserID)
 				if err != nil {
-					p.API.LogInfo("Couldn't get bot's DM channel with user", "userID", user)
+					p.API.LogInfo("Couldn't get bot's DM channel with user", "userID", userID)
 					return err
 				}
 
 				URL := url.URL{RawQuery: data.Link}
-				targetURL := URL.Query().Get(VideoQueryParam)
-				p.Ephemeral(userID, channel.Id, targetURL)
+				p.Ephemeral(userID, channel.Id, URL.Query().Get(VideoQueryParam))
 			case OutputCardRecordType:
 				var data OutputCardRecordData
 				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
