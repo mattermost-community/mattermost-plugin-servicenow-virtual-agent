@@ -4,7 +4,7 @@
 - [License](#license)
 - [Overview](#overview)
 - [Features](#features)
-- [Basic Knowkedge](#basic-knowledge)
+- [Basic Knowledge](#basic-knowledge)
 - [Installation](#installation)
 - [Setup](#setup)
 - [Connecting to ServiceNow](#connecting-to-servicenow)
@@ -16,7 +16,7 @@ See the [LICENSE](./LICENSE) file for license rights and limitations.
 
 ## Overview
 
-This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created using the official Virtual Agent Bot API documentation which can be found [here](https://docs.servicenow.com/bundle/sandiego-application-development/page/integrate/inbound-rest/concept/bot-api.html). For a stable production rlease, please download the latest version from the Plugin Marketplace and follow the instructions to [install](#installation) and [configure](#setup) the plugin.
+This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created using the official Virtual Agent Bot API documentation which can be found [here](https://docs.servicenow.com/bundle/sandiego-application-development/page/integrate/inbound-rest/concept/bot-api.html). For a stable production release, please download the latest version from the Plugin Marketplace and follow the instructions to [install](#installation) and [configure](#setup) the plugin.
 
 ## Features
 
@@ -46,7 +46,7 @@ This plugin supports sending text messages to the Virtual Agent through Mattermo
 ## Installation
 
 1. Go to the [releases page of this GitHub repository](https://github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/releases) and download the latest release for your Mattermost server.
-2. Upload this file in the Mattermost **System Console > Plugins > Management** page to install the plugin. To learn more about how to upload a plugin, [see the documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
+2. Upload this file on the Mattermost **System Console > Plugins > Management** page to install the plugin. To learn more about how to upload a plugin, [see the documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
 3. Enable the plugin from **System Console > Plugins > ServiceNow Virtual Agent**.
 
 ## Setup
