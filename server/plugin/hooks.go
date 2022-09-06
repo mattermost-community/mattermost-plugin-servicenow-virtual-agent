@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -67,44 +66,17 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	var attachment *MessageAttachment
 	if len(post.FileIds) == 1 {
-		fileInfo, appErr := p.API.GetFileInfo(post.FileIds[0])
-		if appErr != nil {
-			p.logAndSendErrorToUser(mattermostUserID, channel.Id, fmt.Sprintf("Error getting file info. Error: %s", appErr.Message))
+		var errMessage string
+		attachment, errMessage = p.createMessageAttchment(post.FileIds[0])
+		if errMessage != "" {
+			p.logAndSendErrorToUser(mattermostUserID, channel.Id, errMessage)
 			return
-		}
-
-		date := time.Now()
-		//TODO: Add a configuration setting for expiry time
-		expiryTime := date.Add(time.Minute * 15)
-
-		file := &FileStruct{
-			ID:     post.FileIds[0],
-			Expiry: expiryTime,
-		}
-
-		var jsonBytes []byte
-		jsonBytes, err = json.Marshal(file)
-		if err != nil {
-			p.API.LogError("Error occurred while mashaling file. Error: %s", err.Error())
-			return
-		}
-
-		var encrypted []byte
-		encrypted, err = encrypt(jsonBytes, []byte(p.getConfiguration().EncryptionSecret))
-		if err != nil {
-			p.API.LogError("Error occurred while encrpting file. Error: %s", err.Error())
-			return
-		}
-
-		attachment = &MessageAttachment{
-			URL:         p.GetPluginURL() + "/file/" + encode(encrypted),
-			ContentType: fileInfo.MimeType,
-			FileName:    fileInfo.Name,
 		}
 	}
 
 	client := p.MakeClient(context.Background(), token)
 	if err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message, true, attachment); err != nil {
 		p.logAndSendErrorToUser(mattermostUserID, channel.Id, err.Error())
+		return
 	}
 }

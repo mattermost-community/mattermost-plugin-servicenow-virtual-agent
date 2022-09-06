@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
@@ -314,4 +315,41 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	}
 
 	return postOptions
+}
+
+func (p *Plugin) createMessageAttchment(fileID string) (*MessageAttachment, string) {
+	var attachment *MessageAttachment
+	fileInfo, appErr := p.API.GetFileInfo(fileID)
+	if appErr != nil {
+		return nil, fmt.Sprintf("Error getting file info. Error: %s", appErr.Message)
+	}
+
+	date := time.Now().UTC()
+	//TODO: Add a configuration setting for expiry time
+	expiryTime := date.Add(time.Second * 30)
+
+	file := &FileStruct{
+		ID:     fileID,
+		Expiry: expiryTime,
+	}
+
+	var jsonBytes []byte
+	jsonBytes, err := json.Marshal(file)
+	if err != nil {
+		return nil, fmt.Sprintf("Error occurred while mashaling file. Error: %s", err.Error())
+	}
+
+	var encrypted []byte
+	encrypted, err = encrypt(jsonBytes, []byte(p.getConfiguration().EncryptionSecret))
+	if err != nil {
+		return nil, fmt.Sprintf("Error occurred while encrypting file. Error: %s", err.Error())
+	}
+
+	attachment = &MessageAttachment{
+		URL:         p.GetPluginURL() + "/file/" + encode(encrypted),
+		ContentType: fileInfo.MimeType,
+		FileName:    fileInfo.Name,
+	}
+
+	return attachment, ""
 }

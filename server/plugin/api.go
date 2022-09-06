@@ -89,29 +89,31 @@ func (p *Plugin) handleStaticFiles(r *mux.Router) {
 
 // handleFileAttachments returns the data of the fileID passed in the request URL.
 func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	encryptedFileInfo := vars[PathParamEncryptedFileInfo]
+	pathParams := mux.Vars(r)
+	encryptedFileInfo := pathParams[PathParamEncryptedFileInfo]
 
 	fileInfo := FileStruct{}
-
 	decoded, err := decode(encryptedFileInfo)
 	if err != nil {
 		p.API.LogError("Error occurred while decoding the file. Error: %s", err.Error())
+		http.Error(w, "Error occurred while decoding the file.", http.StatusInternalServerError)
 		return
 	}
 
 	jsonBytes, err := decrypt(decoded, []byte(p.getConfiguration().EncryptionSecret))
 	if err != nil {
 		p.API.LogError("Error occurred while decrypting the file. Error: %s", err.Error())
+		http.Error(w, "Error occurred while decrypting the file.", http.StatusInternalServerError)
 		return
 	}
 
 	if err = json.Unmarshal(jsonBytes, &fileInfo); err != nil {
 		p.API.LogError("Error occurred while unmarshaling the file. Error: %s", err.Error())
+		http.Error(w, "Error occurred while unmarshaling the file.", http.StatusInternalServerError)
 		return
 	}
 
-	if time.Now().After(fileInfo.Expiry) {
+	if time.Now().UTC().After(fileInfo.Expiry) {
 		http.NotFound(w, r)
 		return
 	}
@@ -119,12 +121,14 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	data, appErr := p.API.GetFile(fileInfo.ID)
 	if appErr != nil {
 		p.API.LogInfo("Couldn't get file data. FileID: %s", fileInfo.ID)
+		http.Error(w, "Couldn't get file data.", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", http.DetectContentType(data))
 	if _, err = w.Write(data); err != nil {
 		p.API.LogError("Error occurred writing the file content in response. Error: %s", err.Error())
+		http.Error(w, "Error occurred writing the file content in response.", http.StatusInternalServerError)
 		return
 	}
 }

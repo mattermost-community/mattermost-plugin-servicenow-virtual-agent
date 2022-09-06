@@ -22,7 +22,7 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
 
 This plugin supports sending text messages to the Virtual Agent through Mattermost and handling/displaying different types of responses from the Virtual Agent.
 **Note-** Currently we only support sending text messages and displaying text, picker/dropdown & link responses from the Virtual Agent API.
-**Note-** For sending file attachment to the Live Agent other than a image, you need to have ServiceNow version >= "San Diego Patch 4". The link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
+**Note-** For sending file attachments to the Live Agent other than an image, you need to have ServiceNow version >= "San Diego Patch 4". Also, the link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
 
 ## Basic Knowledge
 
@@ -46,7 +46,7 @@ This plugin supports sending text messages to the Virtual Agent through Mattermo
 
 - **File Upload**
 
-    For sending file attachments to the Virtual Agent or the Live Agent we need to send a public link of the file in the request from where Virtual Agent can download the file. Virtual Agent does not support sending file attachments from any source, we have to specify the trusted domains ourselves so that the Virtual Agent knows that these domains can be trusted.
+    For sending file attachments to the Virtual Agent or the Live Agent we need to send a public link of the file in the request from where the Virtual Agent can download the file. Virtual Agent does not support sending file attachments from any source, we have to specify the trusted domains ourselves so that the Virtual Agent knows that these domains can be trusted.
     - [Set up trusted media domains](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/task/ccif-secure-file-upload.html)
       - [Configuring the form layout](https://docs.servicenow.com/en-US/bundle/sandiego-platform-administration/page/administer/form-administration/concept/configure-form-layout.html)
 
