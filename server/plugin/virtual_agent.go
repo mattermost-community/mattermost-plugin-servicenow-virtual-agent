@@ -321,11 +321,11 @@ func (p *Plugin) createMessageAttachment(fileID string) (*MessageAttachment, err
 	var attachment *MessageAttachment
 	fileInfo, appErr := p.API.GetFileInfo(fileID)
 	if appErr != nil {
-		return nil, fmt.Errorf("error getting file info. Error: %s", appErr.Error())
+		return nil, fmt.Errorf("error getting file info. Error: %w", appErr)
 	}
 
 	//TODO: Add a configuration setting for expiry time
-	expiryTime := time.Now().UTC().Add(time.Second * 30)
+	expiryTime := time.Now().UTC().Add(time.Minute * 15)
 
 	file := &FileStruct{
 		ID:     fileID,
@@ -335,13 +335,13 @@ func (p *Plugin) createMessageAttachment(fileID string) (*MessageAttachment, err
 	var jsonBytes []byte
 	jsonBytes, err := json.Marshal(file)
 	if err != nil {
-		return nil, fmt.Errorf("error occurred while marshaling the file. Error: %s", err.Error())
+		return nil, fmt.Errorf("error occurred while marshaling the file. Error: %w", err)
 	}
 
 	var encrypted []byte
 	encrypted, err = encrypt(jsonBytes, []byte(p.getConfiguration().EncryptionSecret))
 	if err != nil {
-		return nil, fmt.Errorf("error occurred while encrypting the file. Error: %s", err.Error())
+		return nil, fmt.Errorf("error occurred while encrypting the file. Error: %w", err)
 	}
 
 	attachment = &MessageAttachment{

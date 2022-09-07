@@ -102,7 +102,7 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	jsonBytes, err := decrypt(decoded, []byte(p.getConfiguration().EncryptionSecret))
 	if err != nil {
 		p.API.LogError("Error occurred while decrypting the file. Error: %s", err.Error())
-		http.Error(w, "Error occurred while decrypting the file.", http.StatusUnauthorized)
+		http.Error(w, "Error occurred while decrypting the file.", http.StatusInternalServerError)
 		return
 	}
 
