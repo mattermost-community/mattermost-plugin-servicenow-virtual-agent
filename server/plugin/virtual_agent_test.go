@@ -40,8 +40,9 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 				}
 				return nil, nil
 			})
+			attachment := &MessageAttachment{}
 
-			err := c.SendMessageToVirtualAgentAPI("mock-userID", "mockMessage", true)
+			err := c.SendMessageToVirtualAgentAPI("mock-userID", "mockMessage", true, attachment)
 
 			if testCase.errMessage != nil {
 				require.Error(t, err)
