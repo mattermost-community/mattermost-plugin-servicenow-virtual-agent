@@ -23,7 +23,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 		Message                           string
 		getChannelError                   *model.AppError
 		getUserError                      error
-		parseAuthTOkenError               error
+		parseAuthTokenError               error
 		sendMessageToVirtualAgentAPIError error
 	}{
 		{
@@ -31,31 +31,31 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			Message:     "mockMessage",
 		},
 		{
-			description:     "Message is posted and failed to get current channel",
+			description:     "Message is posted but failed to get current channel",
 			getChannelError: &model.AppError{},
 			Message:         "mockMessage",
 		},
 		{
-			description:  "Message is posted and failed to get user from KV store",
+			description:  "Message is posted but failed to get user from KV store",
 			getUserError: errors.New("mockError"),
 			Message:      "mockMessage",
 		},
 		{
-			description:  "Message is posted and user is not connected to ServiceNow",
+			description:  "Message is posted but user is not connected to ServiceNow",
 			getUserError: ErrNotFound,
 			Message:      "mockMessage",
 		},
 		{
-			description: "Message is posted and user is not connected to ServiceNow",
+			description: "Message is posted but user is not connected to ServiceNow",
 			Message:     "disconnect",
 		},
 		{
-			description:         "Message is posted and failed to parse auth token",
-			parseAuthTOkenError: errors.New("mockError"),
+			description:         "Message is posted but failed to parse auth token",
+			parseAuthTokenError: errors.New("mockError"),
 			Message:             "mockMessage",
 		},
 		{
-			description:                       "Message is posted and failed to parse auth token",
+			description:                       "Message is posted but failed to parse auth token",
 			sendMessageToVirtualAgentAPIError: errors.New("mockError"),
 			Message:                           "mockMessage",
 		},
@@ -88,7 +88,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			})
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
-				return &oauth2.Token{}, testCase.parseAuthTOkenError
+				return &oauth2.Token{}, testCase.parseAuthTokenError
 			})
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "MakeClient", func(_ *Plugin, _ context.Context, _ *oauth2.Token) Client {
@@ -108,6 +108,12 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			}
 
 			p.MessageHasBeenPosted(&plugin.Context{}, post)
+
+			mockAPI.AssertNumberOfCalls(t, "GetChannel", 1)
+
+			if testCase.getChannelError != nil || testCase.parseAuthTokenError != nil || testCase.sendMessageToVirtualAgentAPIError != nil || (testCase.getUserError != nil && testCase.getUserError != ErrNotFound) {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
 		})
 	}
 }

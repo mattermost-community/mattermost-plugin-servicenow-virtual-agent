@@ -15,7 +15,7 @@ import (
 
 type mockBLock struct{}
 
-func (b *mockBLock) BlockSize() int { return 1 }
+func (b *mockBLock) BlockSize() int { return 0 }
 
 func (b *mockBLock) Encrypt(_, _ []byte) {}
 
@@ -47,17 +47,17 @@ func Test_NewEncodedAuthToken(t *testing.T) {
 			description: "OAuth token is encoded successfully",
 		},
 		{
-			description:    "Failed to create oauth token because aes.NewCipher gives error",
+			description:    "Failed to create oAuth token because aes.NewCipher gives error",
 			expectedError:  "failed to create auth token: mockError",
 			newCipherError: errors.New("mockError"),
 		},
 		{
-			description:   "Failed to create oauth token because cipher.NewGCM gives error",
+			description:   "Failed to create oAuth token because cipher.NewGCM gives error",
 			expectedError: "failed to create auth token: mockError",
 			newGCMError:   errors.New("mockError"),
 		},
 		{
-			description:   "Failed to create oauth token because io.ReadFull gives error",
+			description:   "Failed to create oAuth token because io.ReadFull gives error",
 			expectedError: "failed to create auth token: mockError",
 			resdFullError: errors.New("mockError"),
 		},
@@ -113,24 +113,24 @@ func Test_ParseAuthToken(t *testing.T) {
 			encodedToken: "mockEncodedToken",
 		},
 		{
-			description:    "Failed to decode oauth token because aes.NewCipher gives error",
+			description:    "Failed to decode oAuth token because aes.NewCipher gives error",
 			expectedError:  "mockError",
 			newCipherError: errors.New("mockError"),
 			encodedToken:   "mockEncodedToken",
 		},
 		{
-			description:   "Failed to decode oauth token because cipher.NewGCM gives error",
+			description:   "Failed to decode oAuth token because cipher.NewGCM gives error",
 			expectedError: "mockError",
 			newGCMError:   errors.New("mockError"),
 			encodedToken:  "mockEncodedToken",
 		},
 		{
-			description:   "Failed to decode oauth token because token is too short",
+			description:   "Failed to decode oAuth token because token is too short",
 			expectedError: "token too short",
 			encodedToken:  "",
 		},
 		{
-			description:    "Failed to decode oauth token because json.Unmarshal gives error",
+			description:    "Failed to decode oAuth token because json.Unmarshal gives error",
 			expectedError:  "mockError",
 			unmarshalError: errors.New("mockError"),
 			encodedToken:   "mockEncodedToken",
@@ -157,7 +157,6 @@ func Test_ParseAuthToken(t *testing.T) {
 			})
 
 			res, err := p.ParseAuthToken(testCase.encodedToken)
-
 			if testCase.expectedError != "" {
 				require.EqualError(t, err, testCase.expectedError)
 				require.Nil(t, res)

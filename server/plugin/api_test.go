@@ -32,6 +32,8 @@ func (ph panicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	panic("bad handler")
 }
 
+const pathPrefix = "/api/v1"
+
 func TestWithRecovery(t *testing.T) {
 	defer func() {
 		if x := recover(); x != nil {
@@ -80,7 +82,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body:   model.PostActionIntegrationRequest{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -92,7 +94,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body:   nil,
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -104,7 +106,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						DisconnectUserContextName: true,
@@ -123,7 +125,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body:   model.PostActionIntegrationRequest{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -138,7 +140,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body:   model.PostActionIntegrationRequest{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -153,7 +155,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						DisconnectUserContextName: "mockContextName",
@@ -172,7 +174,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						DisconnectUserContextName: false,
@@ -191,7 +193,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						DisconnectUserContextName: true,
@@ -280,7 +282,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s?secret=mockWebhookSecret", PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body:   VirtualAgentResponse{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -292,7 +294,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathVirtualAgentWebhook),
 				Body:   VirtualAgentResponse{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -304,7 +306,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s?secret=mockWebhookSecret", PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body:   nil,
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -312,18 +314,18 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			},
 			isErrorExpected: true,
 		},
-		"OutputLink response is received from Virtual Agent": {
+		"OutputLink response received from Virtual Agent": {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s?secret=mockWebhookSecret", PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body: `{
-					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"requestId": "mock-requestId",
 					"message": {
 					  "text": "",
 					  "typed": true
 					},
-					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"userId": "mock-userId",
 					"body": [
 					  {
 						"uiType": "OutputLink",
@@ -342,18 +344,18 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 		},
-		"TopicPickerControl response is received from Virtual Agent": {
+		"TopicPickerControl response received from Virtual Agent": {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s?secret=mockWebhookSecret", PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body: `{
-					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"requestId": "mock-requestId",
 					"message": {
 					  "text": "",
 					  "typed": true
 					},
-					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"userId": "mock-userId",
 					"body": [
 					  { 
 						"uiType":"TopicPickerControl", 
@@ -382,18 +384,18 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 		},
-		"OutputText response is received from Virtual Agent": {
+		"OutputText response received from Virtual Agent": {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s?secret=mockWebhookSecret", PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body: `{
-					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"requestId": "mock-requestId",
 					"message": {
 					  "text": "",
 					  "typed": true
 					},
-					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"userId": "mock-userId",
 					"body": [
 					  {
 						"uiType": "OutputText",
@@ -409,18 +411,18 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 		},
-		"Picker response is received from Virtual Agent": {
+		"Picker response received from Virtual Agent": {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s?secret=mockWebhookSecret", PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body: `{
-					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"requestId": "mock-requestId",
 					"message": {
 					  "text": "",
 					  "typed": true
 					},
-					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"userId": "mock-userId",
 					"body": [
 						{
 							"uiType":"Picker",
@@ -461,18 +463,18 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 		},
-		"GroupedPartsOutputControl response is received from Virtual Agent": {
+		"GroupedPartsOutputControl response received from Virtual Agent": {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s?secret=mockWebhookSecret", PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body: `{
-					"requestId": "9ff925c1-893f-4a46-baa5-a64f4d8c89b1",
+					"requestId": "mock-requestId",
 					"message": {
 					  "text": "",
 					  "typed": true
 					},
-					"userId": "6816f79cc0a8016401c5a33be04be441",
+					"userId": "mock-userID",
 					"body": [
 						{
 							"uiType": "GroupedPartsOutputControl",
@@ -566,7 +568,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						"selected_option": "mockOption",
@@ -581,7 +583,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body:   nil,
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -592,7 +594,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						"selected_option": "mockOption",
@@ -608,7 +610,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						"selected_option": "mockOption",
@@ -624,7 +626,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						"selected_option": "mockOption",
@@ -640,7 +642,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						"selected_option": "mockOption",
