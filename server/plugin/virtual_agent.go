@@ -317,16 +317,15 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	return postOptions
 }
 
-func (p *Plugin) createMessageAttchment(fileID string) (*MessageAttachment, string) {
+func (p *Plugin) createMessageAttachment(fileID string) (*MessageAttachment, error) {
 	var attachment *MessageAttachment
 	fileInfo, appErr := p.API.GetFileInfo(fileID)
 	if appErr != nil {
-		return nil, fmt.Sprintf("Error getting file info. Error: %s", appErr.Message)
+		return nil, fmt.Errorf("error getting file info. Error: %s", appErr.Error())
 	}
 
-	date := time.Now().UTC()
 	//TODO: Add a configuration setting for expiry time
-	expiryTime := date.Add(time.Second * 30)
+	expiryTime := time.Now().UTC().Add(time.Second * 30)
 
 	file := &FileStruct{
 		ID:     fileID,
@@ -336,13 +335,13 @@ func (p *Plugin) createMessageAttchment(fileID string) (*MessageAttachment, stri
 	var jsonBytes []byte
 	jsonBytes, err := json.Marshal(file)
 	if err != nil {
-		return nil, fmt.Sprintf("Error occurred while mashaling file. Error: %s", err.Error())
+		return nil, fmt.Errorf("error occurred while marshaling the file. Error: %s", err.Error())
 	}
 
 	var encrypted []byte
 	encrypted, err = encrypt(jsonBytes, []byte(p.getConfiguration().EncryptionSecret))
 	if err != nil {
-		return nil, fmt.Sprintf("Error occurred while encrypting file. Error: %s", err.Error())
+		return nil, fmt.Errorf("error occurred while encrypting the file. Error: %s", err.Error())
 	}
 
 	attachment = &MessageAttachment{
@@ -351,5 +350,5 @@ func (p *Plugin) createMessageAttchment(fileID string) (*MessageAttachment, stri
 		FileName:    fileInfo.Name,
 	}
 
-	return attachment, ""
+	return attachment, nil
 }

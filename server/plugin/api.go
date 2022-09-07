@@ -92,21 +92,21 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	pathParams := mux.Vars(r)
 	encryptedFileInfo := pathParams[PathParamEncryptedFileInfo]
 
-	fileInfo := FileStruct{}
 	decoded, err := decode(encryptedFileInfo)
 	if err != nil {
 		p.API.LogError("Error occurred while decoding the file. Error: %s", err.Error())
-		http.Error(w, "Error occurred while decoding the file.", http.StatusInternalServerError)
+		http.Error(w, "Error occurred while decoding the file.", http.StatusBadRequest)
 		return
 	}
 
 	jsonBytes, err := decrypt(decoded, []byte(p.getConfiguration().EncryptionSecret))
 	if err != nil {
 		p.API.LogError("Error occurred while decrypting the file. Error: %s", err.Error())
-		http.Error(w, "Error occurred while decrypting the file.", http.StatusInternalServerError)
+		http.Error(w, "Error occurred while decrypting the file.", http.StatusUnauthorized)
 		return
 	}
 
+	fileInfo := FileStruct{}
 	if err = json.Unmarshal(jsonBytes, &fileInfo); err != nil {
 		p.API.LogError("Error occurred while unmarshaling the file. Error: %s", err.Error())
 		http.Error(w, "Error occurred while unmarshaling the file.", http.StatusInternalServerError)

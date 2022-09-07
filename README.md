@@ -18,7 +18,7 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. For a stable 
 ## Features
 
 This plugin supports sending text messages to the Virtual Agent through Mattermost and handling/displaying different types of responses from the Virtual Agent.
-**Note-** Currently we only support sending text messages & file attachments and displaying text, picker/dropdown & link responses from the Virtual Agent API.
+**Note-** Currently we only support sending text messages and file attachments and displaying text, picker/dropdown and link responses from the Virtual Agent API.
 **Note-** For sending file attachments to the Live Agent other than an image, you need to have ServiceNow version >= "San Diego Patch 4". Also, the link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
 
 ## Installation

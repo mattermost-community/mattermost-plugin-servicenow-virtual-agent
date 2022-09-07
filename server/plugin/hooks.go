@@ -66,10 +66,9 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	var attachment *MessageAttachment
 	if len(post.FileIds) == 1 {
-		var errMessage string
-		attachment, errMessage = p.createMessageAttchment(post.FileIds[0])
-		if errMessage != "" {
-			p.logAndSendErrorToUser(mattermostUserID, channel.Id, errMessage)
+		attachment, err = p.createMessageAttachment(post.FileIds[0])
+		if err != nil {
+			p.logAndSendErrorToUser(mattermostUserID, channel.Id, err.Error())
 			return
 		}
 	}
@@ -77,6 +76,5 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 	client := p.MakeClient(context.Background(), token)
 	if err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message, true, attachment); err != nil {
 		p.logAndSendErrorToUser(mattermostUserID, channel.Id, err.Error())
-		return
 	}
 }
