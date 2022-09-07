@@ -325,7 +325,7 @@ func (p *Plugin) createMessageAttachment(fileID string) (*MessageAttachment, err
 	}
 
 	//TODO: Add a configuration setting for expiry time
-	expiryTime := time.Now().UTC().Add(time.Minute * 15)
+	expiryTime := time.Now().UTC().Add(time.Minute * AttachmentLinkExpiryTimeInMinutes)
 
 	file := &FileStruct{
 		ID:     fileID,
