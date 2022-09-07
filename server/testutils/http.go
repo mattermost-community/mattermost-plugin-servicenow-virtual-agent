@@ -44,17 +44,18 @@ func EncodeJSON(data interface{}) ([]byte, error) {
 	return b, nil
 }
 
-// EncodeString encodes json data in bytes
+// EncodeString encodes string data in bytes
 func EncodeString(data interface{}) ([]byte, error) {
 	if data == nil {
-		return []byte{}, nil
+		return nil, nil
 	}
 
-	if body, ok := data.(string); ok {
-		return []byte(body), nil
+	body, ok := data.(string)
+	if !ok {
+		return []byte{}, errors.New("error while encoding string")
 	}
 
-	return []byte{}, errors.New("error while decoding string")
+	return []byte(body), nil
 }
 
 // CreateHTTPRequest creates http Request with basic data
