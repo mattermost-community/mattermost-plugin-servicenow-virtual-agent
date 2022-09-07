@@ -95,7 +95,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 				return &client{}
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool) error {
+			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *MessageAttachment) error {
 				return testCase.sendMessageToVirtualAgentAPIError
 			})
 
