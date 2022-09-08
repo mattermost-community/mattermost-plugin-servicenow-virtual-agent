@@ -20,6 +20,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type Post struct {
+	Body string `json:"body"`
+}
+
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)
@@ -143,7 +147,7 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
-		p.API.LogError("Error decoding PostActionIntegrationRequest params.", "Error", err.Error())
+		p.API.LogError("Error decoding PostActionIntegrationRequest.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
@@ -204,11 +208,10 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	decoder := json.NewDecoder(r.Body)
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
-		p.API.LogError("Error decoding PostActionIntegrationRequest params.", "Error", err.Error())
+		p.API.LogError("Error decoding PostActionIntegrationRequest.", "Error", err.Error())
+		http.Error(w, "Error decoding PostActionIntegrationRequest.", http.StatusBadRequest)
 		return
 	}
-
-	inputType := fmt.Sprintf("%v", postActionIntegrationRequest.Context["type"])
 
 	var elements []model.DialogElement
 
@@ -234,6 +237,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 		MaxLength:   5,
 	}
 
+	inputType := fmt.Sprintf("%v", postActionIntegrationRequest.Context["type"])
 	switch inputType {
 	case DateUIType:
 		elements = append(elements, date)
@@ -243,7 +247,6 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 		elements = append(elements, date, time)
 	}
 
-	posturl := fmt.Sprintf("%s/api/v4/actions/dialogs/open", p.getConfiguration().MattermostSiteURL)
 	requestBody := model.OpenDialogRequest{
 		TriggerId: postActionIntegrationRequest.TriggerId,
 		URL:       fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelection),
@@ -256,40 +259,45 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	}
 
 	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(requestBody)
-	if err != nil {
+	if err := json.NewEncoder(buf).Encode(requestBody); err != nil {
 		p.API.LogError("Error encoding request body. Error: %s", err.Error())
+		http.Error(w, "Error encoding request body.", http.StatusInternalServerError)
 		return
 	}
 
-	rr, err := http.NewRequest("POST", posturl, buf)
+	postURL := fmt.Sprintf("%s%s", p.getConfiguration().MattermostSiteURL, PathOpenDialog)
+	req, err := http.NewRequest(http.MethodPost, postURL, buf)
 	if err != nil {
-		p.API.LogError("Error creating a POST request to open date selection dialog. Error: %s", err.Error())
+		p.API.LogError("Error creating a POST request to open date/time selection dialog. Error: %s", err.Error())
+		http.Error(w, "Error creating a POST request to open date/time selection dialog.", http.StatusInternalServerError)
 		return
 	}
 
 	client := &http.Client{}
-	res, err := client.Do(rr)
+	res, err := client.Do(req)
 	if err != nil {
-		p.API.LogError("Error sending request to open date selection dialog. Error: %s", err.Error())
+		p.API.LogError("Error sending request to open date/time selection dialog. Error: %s", err.Error())
+		http.Error(w, "Error sending request to open date/time selection dialog.", http.StatusInternalServerError)
 		return
 	}
 
 	defer res.Body.Close()
 
-	type Post struct {
-		Body string `json:"body"`
-	}
 	post := &Post{}
 	if err = json.NewDecoder(res.Body).Decode(post); err != nil {
 		p.API.LogError("Error decoding response body. Error: %s", err.Error())
+		http.Error(w, "Error decoding response body.", http.StatusInternalServerError)
 		return
 	}
 
 	if res.StatusCode != http.StatusOK {
 		p.API.LogInfo("Request failed with status code %s", res.StatusCode)
+		http.Error(w, "Request failed", res.StatusCode)
 		return
 	}
+
+	response := &model.PostActionIntegrationResponse{}
+	p.returnPostActionIntegrationResponse(w, response)
 }
 
 func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request) {
@@ -307,6 +315,13 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 	userID := r.Header.Get(HeaderServiceNowUserID)
 	var selectedOption string
 
+	if len(strings.Split(submitRequest.CallbackId, "__")) != 2 {
+		p.API.LogError("Invalid callback ID.")
+		response.Error = "Invalid callback ID"
+		p.returnSubmitDialogResponse(w, response)
+		return
+	}
+
 	postID := strings.Split(submitRequest.CallbackId, "__")[0]
 	inputType := strings.Split(submitRequest.CallbackId, "__")[1]
 
@@ -316,9 +331,7 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 
 		dateValidationError := p.validateDate(fmt.Sprintf("%v", submitRequest.Submission["date"]))
 
-		response = &model.SubmitDialogResponse{
-			Errors: map[string]string{},
-		}
+		response.Errors = map[string]string{}
 
 		if dateValidationError != "" {
 			response.Errors["date"] = dateValidationError
@@ -340,10 +353,8 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 		dateValidationError := p.validateDate(fmt.Sprintf("%v", submitRequest.Submission["date"]))
 
 		if dateValidationError != "" {
-			response = &model.SubmitDialogResponse{
-				Errors: map[string]string{
-					"date": dateValidationError,
-				},
+			response.Errors = map[string]string{
+				"date": dateValidationError,
 			}
 			p.returnSubmitDialogResponse(w, response)
 			return
@@ -354,10 +365,8 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 		timeValidationError := p.validateTime(fmt.Sprintf("%v", submitRequest.Submission["time"]))
 
 		if timeValidationError != "" {
-			response = &model.SubmitDialogResponse{
-				Errors: map[string]string{
-					"time": timeValidationError,
-				},
+			response.Errors = map[string]string{
+				"time": timeValidationError,
 			}
 			p.returnSubmitDialogResponse(w, response)
 			return
@@ -385,8 +394,7 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 
 	model.ParseSlackAttachment(newPost, newAttachment)
 
-	_, appErr := p.API.UpdatePost(newPost)
-	if appErr != nil {
+	if _, appErr := p.API.UpdatePost(newPost); appErr != nil {
 		p.API.LogError("Error updating the post.", "Error", appErr.Message)
 		p.returnSubmitDialogResponse(w, response)
 		return
@@ -442,7 +450,7 @@ func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Error occurred while reading webhook body.", http.StatusInternalServerError)
 		return
 	}
-	fmt.Printf("\n\n\n\nresponse from VA    %+v\n\n\n\n", string(data))
+
 	if err = p.ProcessResponse(data); err != nil {
 		p.API.LogError("Error occurred while processing response body.", "Error", err.Error())
 		http.Error(w, "Error occurred while processing response body.", http.StatusInternalServerError)

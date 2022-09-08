@@ -20,6 +20,7 @@ const (
 	PathVirtualAgentWebhook        = "/nowbot/processResponse"
 	PathVirtualAgentBotIntegration = "/api/sn_va_as_service/bot/integration"
 	PathActionOptions              = "/action_options"
+	PathOpenDialog                 = "/api/v4/actions/dialogs/open"
 	PathDateTimeSelectionDialog    = "/date"
 	PathDateTimeSelection          = "/selected_date"
 
@@ -50,6 +51,9 @@ const (
 	DateTimeUIType                  = "DateTime"
 
 	updatedPostBorderColor = "#74ccac"
+
+	DateValidationError = "Please enter a valid date"
+	TimeValidationError = "Please enter a valid time"
 )
 
 // #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
