@@ -8,10 +8,10 @@ import (
 
 	"bou.ke/monkey"
 	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
-	"github.com/stretchr/testify/mock"
 	"golang.org/x/oauth2"
 )
 
@@ -66,7 +66,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			p.botUserID = "mock-botID"
 			mockAPI := &plugintest.API{}
 
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
 
 			mockAPI.On("GetChannel", "mockChannelID").Return(&model.Channel{
 				Type: "D",

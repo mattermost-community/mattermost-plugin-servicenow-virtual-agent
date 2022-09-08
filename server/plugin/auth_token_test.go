@@ -41,7 +41,7 @@ func Test_NewEncodedAuthToken(t *testing.T) {
 		expectedError  string
 		newCipherError error
 		newGCMError    error
-		resdFullError  error
+		readFullError  error
 	}{
 		{
 			description: "OAuth token is encoded successfully",
@@ -59,7 +59,7 @@ func Test_NewEncodedAuthToken(t *testing.T) {
 		{
 			description:   "Failed to create oAuth token because io.ReadFull gives error",
 			expectedError: "failed to create auth token: mockError",
-			resdFullError: errors.New("mockError"),
+			readFullError: errors.New("mockError"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -79,13 +79,12 @@ func Test_NewEncodedAuthToken(t *testing.T) {
 			})
 
 			monkey.Patch(io.ReadFull, func(_ io.Reader, _ []byte) (int, error) {
-				return 1, testCase.resdFullError
+				return 1, testCase.readFullError
 			})
 
 			tok := &oauth2.Token{}
 
 			res, err := p.NewEncodedAuthToken(tok)
-
 			if testCase.expectedError != "" {
 				require.EqualError(t, err, testCase.expectedError)
 				require.EqualValues(t, "", res)

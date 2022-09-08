@@ -130,7 +130,6 @@ func Test_CreateDisconnectUserAttachment(t *testing.T) {
 		}
 
 		res := p.CreateDisconnectUserAttachment()
-
 		require.EqualValues(t, res, expectedResponse)
 	})
 }

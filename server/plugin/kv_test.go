@@ -27,7 +27,6 @@ func Test_LoadUser(t *testing.T) {
 			})
 
 			_, err := s.LoadUser("mock-userID")
-
 			require.Nil(t, err)
 		})
 	}
