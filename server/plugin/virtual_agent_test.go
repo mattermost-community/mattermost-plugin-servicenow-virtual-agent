@@ -121,6 +121,107 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 	}
 }
 
+func Test_CreateOutputCardImageAttachment(t *testing.T) {
+	for _, testCase := range []struct {
+		description string
+		body        *OutputCardImageData
+		response    *model.SlackAttachment
+	}{
+		{
+			description: "CreateOutputLinkAttachment returns proper slack attachment",
+			body: &OutputCardImageData{
+				Image:       "mockImage",
+				Title:       "mockTitle",
+				Description: "mockDescription",
+			},
+			response: &model.SlackAttachment{
+				Text:     "**mockTitle**\nmockDescription",
+				ImageURL: "mockImage",
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			p := Plugin{}
+
+			res := p.CreateOutputCardImageAttachment(testCase.body)
+
+			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
+
+func Test_CreateOutputCardVideoAttachment(t *testing.T) {
+	for _, testCase := range []struct {
+		description string
+		body        *OutputCardVideoData
+		response    *model.SlackAttachment
+	}{
+		{
+			description: "CreateOutputLinkAttachment returns proper slack attachment",
+			body: &OutputCardVideoData{
+				Title:       "mockTitle",
+				Link:        "mockLink",
+				URL:         "mockURL",
+				Description: "mockDescription",
+			},
+			response: &model.SlackAttachment{
+				Text: fmt.Sprintf("**[%s](%s)**\n%s\n%s", "mockTitle", "mockLink", "mockDescription", "mockURL"),
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			p := Plugin{}
+
+			res := p.CreateOutputCardVideoAttachment(testCase.body)
+
+			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
+
+func Test_CreateOutputCardRecordAttachment(t *testing.T) {
+	for _, testCase := range []struct {
+		description string
+		body        *OutputCardRecordData
+		response    *model.SlackAttachment
+	}{
+		{
+			description: "CreateOutputLinkAttachment returns proper slack attachment",
+			body: &OutputCardRecordData{
+				Title:    "mockTitle",
+				Subtitle: "mockSubtitle",
+				URL:      "mockURL",
+				Fields: []RecordFields{
+					{
+						FieldLabel: "mockLabel",
+						FieldValue: "mockValue",
+					},
+				},
+			},
+			response: &model.SlackAttachment{
+				Fields: []*model.SlackAttachmentField{
+					{
+						Title: "mockTitle",
+						Value: fmt.Sprintf("[%s](%s)", "mockSubtitle", "mockURL"),
+					},
+					{
+						Title: "mockLabel",
+						Value: "mockValue",
+					},
+				},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			p := Plugin{}
+
+			res := p.CreateOutputCardRecordAttachment(testCase.body)
+
+			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
+
 func Test_CreateTopicPickerControlAttachment(t *testing.T) {
 	p := Plugin{}
 
