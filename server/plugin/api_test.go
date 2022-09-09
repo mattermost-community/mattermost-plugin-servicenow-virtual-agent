@@ -682,3 +682,77 @@ func Test_handleDateTimeSelection(t *testing.T) {
 		})
 	}
 }
+
+func Test_handleDateTimeSelectionDialog(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	httpTestJSON := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeJSON,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest          testutils.HTTPTest
+		request           testutils.Request
+		expectedResponse  testutils.ExpectedResponse
+		userID            string
+		ParseAuthTokenErr error
+	}{
+		"Selected date is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				Body: model.PostActionIntegrationRequest{
+					TriggerId: "mockTriggerId",
+					PostId:    "mockPostId",
+					Context: map[string]interface{}{
+						"type": "Date",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusOK,
+				Body:         &model.PostActionIntegrationResponse{},
+				ResponseType: "application/json",
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := new(Plugin)
+
+			mockAPI := &plugintest.API{}
+
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+
+			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+
+			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+				return &oauth2.Token{}, test.ParseAuthTokenErr
+			})
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "OpenDialogRequest", func(_ *Plugin, _ http.ResponseWriter, _ model.OpenDialogRequest) {})
+
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+
+			mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
+
+			p.store = mockedStore
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
+			rr := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, rr, req)
+			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+		})
+	}
+}
