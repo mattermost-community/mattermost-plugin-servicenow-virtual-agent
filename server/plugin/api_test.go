@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"bou.ke/monkey"
 	mock_plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/mocks"
@@ -711,6 +713,149 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
 
 			if test.ParseAuthTokenErr != nil || test.callError != nil || test.LoadUserErr != nil {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
+		})
+	}
+}
+
+func TestPlugin_handleFileAttachments(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	httpTestJSON := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeJSON,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest         testutils.HTTPTest
+		request          testutils.Request
+		expectedResponse testutils.ExpectedResponse
+		decodeError      error
+		decryptError     error
+		unmarshalError   error
+		getFileError     *model.AppError
+		isErrorExpected  bool
+		isExpired        bool
+	}{
+		"File data is written in response": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			isErrorExpected: false,
+		},
+		"Error decoding encrypted file info": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusBadRequest,
+			},
+			decodeError:     errors.New("mockError"),
+			isErrorExpected: true,
+		},
+		"Error decrypting file info": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusInternalServerError,
+			},
+			decryptError:    errors.New("mockError"),
+			isErrorExpected: true,
+		},
+		"Error unmarshaling file info": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusInternalServerError,
+			},
+			unmarshalError:  errors.New("mockError"),
+			isErrorExpected: true,
+		},
+		"Error getting file data": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusInternalServerError,
+			},
+			getFileError: &model.AppError{
+				Message: "mockError",
+			},
+			isErrorExpected: true,
+		},
+		"File link is expired": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusNotFound,
+			},
+			isExpired: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := new(Plugin)
+			p.setConfiguration(
+				&configuration{
+					EncryptionSecret: "mockEncryptionSecret",
+				})
+
+			mockAPI := &plugintest.API{}
+
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
+
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
+
+			mockAPI.On("GetFile", mock.AnythingOfType("string")).Return([]byte{}, test.getFileError)
+
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			monkey.Patch(decode, func(_ string) ([]byte, error) {
+				return []byte{}, test.decodeError
+			})
+
+			monkey.Patch(decrypt, func(_, _ []byte) ([]byte, error) {
+				return []byte{}, test.decryptError
+			})
+
+			monkey.Patch(json.Unmarshal, func(_ []byte, _ interface{}) error {
+				return test.unmarshalError
+			})
+
+			currentTime := time.Now().UTC()
+			monkey.PatchInstanceMethod(reflect.TypeOf(currentTime), "After", func(_ time.Time, _ time.Time) bool {
+				return test.isExpired
+			})
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(HeaderMattermostUserID, "mock-userID")
+			rr := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, rr, req)
+			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+
+			if test.isErrorExpected {
 				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
 			}
 		})

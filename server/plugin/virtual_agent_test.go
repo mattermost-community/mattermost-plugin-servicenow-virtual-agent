@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -9,7 +10,10 @@ import (
 
 	"bou.ke/monkey"
 	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
+	"github.com/mattermost/mattermost-server/v5/plugin/plugintest/mock"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -64,7 +68,7 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			description: "Conversation is successfully started with VIrtual Agent",
+			description: "Conversation is successfully started with Virtual Agent",
 			errMessage:  nil,
 		},
 		{
@@ -179,7 +183,7 @@ func Test_CreatePickerAttachment(t *testing.T) {
 		response    *model.SlackAttachment
 	}{
 		{
-			description: "CreatePickerAttachment returns proper stack attachment",
+			description: "CreatePickerAttachment returns proper slack attachment",
 			body: &Picker{
 				Label: "mockLabel",
 				Options: []Option{{
@@ -209,6 +213,89 @@ func Test_CreatePickerAttachment(t *testing.T) {
 			res := p.CreatePickerAttachment(testCase.body)
 
 			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
+
+func Test_CreateMessageAttachment(t *testing.T) {
+	p := Plugin{}
+
+	defer monkey.UnpatchAll()
+
+	for _, testCase := range []struct {
+		description      string
+		fileID           string
+		response         *MessageAttachment
+		getFileInfoError *model.AppError
+		marshalError     error
+		encryptError     error
+		expectedError    string
+	}{
+		{
+			description: "CreateMessageAttachment returns proper attachment",
+			fileID:      "mockFileID",
+			response: &MessageAttachment{
+				URL:         "mockSiteURL" + p.GetPluginURLPath() + "/file/" + encode([]byte{}),
+				ContentType: "mockMimeType",
+				FileName:    "mockName",
+			},
+		},
+		{
+			description: "CreateMessageAttachment returns error while getting file info",
+			fileID:      "mockFileID",
+			response:    nil,
+			getFileInfoError: &model.AppError{
+				Message: "mockError",
+			},
+			expectedError: "error getting file info. Error: : mockError, ",
+		},
+		{
+			description:   "CreateMessageAttachment returns error while marshalling file",
+			fileID:        "mockFileID",
+			response:      nil,
+			marshalError:  errors.New("mockError"),
+			expectedError: "error occurred while marshaling the file. Error: mockError",
+		},
+		{
+			description:   "CreateMessageAttachment returns error while encrypting file",
+			fileID:        "mockFileID",
+			response:      nil,
+			encryptError:  errors.New("mockError"),
+			expectedError: "error occurred while encrypting the file. Error: mockError",
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+
+			p.setConfiguration(
+				&configuration{
+					EncryptionSecret:  "mockEncryptionSecret",
+					MattermostSiteURL: "mockSiteURL",
+				})
+
+			mockAPI := plugintest.API{}
+
+			mockAPI.On("GetFileInfo", mock.AnythingOfType("string")).Return(&model.FileInfo{
+				MimeType: "mockMimeType",
+				Name:     "mockName",
+			}, testCase.getFileInfoError)
+
+			p.SetAPI(&mockAPI)
+
+			monkey.Patch(json.Marshal, func(_ interface{}) ([]byte, error) {
+				return []byte{}, testCase.marshalError
+			})
+
+			monkey.Patch(encrypt, func(_, _ []byte) ([]byte, error) {
+				return []byte{}, testCase.encryptError
+			})
+
+			res, err := p.CreateMessageAttachment(testCase.fileID)
+
+			assert.EqualValues(t, testCase.response, res)
+
+			if testCase.expectedError != "" {
+				assert.EqualError(t, err, testCase.expectedError)
+			}
 		})
 	}
 }

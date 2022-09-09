@@ -317,7 +317,7 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	return postOptions
 }
 
-func (p *Plugin) createMessageAttachment(fileID string) (*MessageAttachment, error) {
+func (p *Plugin) CreateMessageAttachment(fileID string) (*MessageAttachment, error) {
 	var attachment *MessageAttachment
 	fileInfo, appErr := p.API.GetFileInfo(fileID)
 	if appErr != nil {

@@ -25,6 +25,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 		getUserError                      error
 		parseAuthTokenError               error
 		sendMessageToVirtualAgentAPIError error
+		createMessageAttachmentError      error
 	}{
 		{
 			description: "Message is posted and successfully sent to Virtual Agent",
@@ -58,6 +59,11 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			description:                       "Message is posted but failed to parse auth token",
 			sendMessageToVirtualAgentAPIError: errors.New("mockError"),
 			Message:                           "mockMessage",
+		},
+		{
+			description:                  "Message is posted but failed to create message attachment",
+			createMessageAttachmentError: errors.New("mockError"),
+			Message:                      "mockMessage",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -95,6 +101,10 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 				return &client{}
 			})
 
+			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "CreateMessageAttachment", func(_ *Plugin, _ string) (*MessageAttachment, error) {
+				return &MessageAttachment{}, testCase.createMessageAttachmentError
+			})
+
 			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *MessageAttachment) error {
 				return testCase.sendMessageToVirtualAgentAPIError
 			})
@@ -105,6 +115,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 				ChannelId: "mockChannelID",
 				UserId:    "mock-userID",
 				Message:   testCase.Message,
+				FileIds:   []string{"mockFileID"},
 			}
 
 			p.MessageHasBeenPosted(&plugin.Context{}, post)
