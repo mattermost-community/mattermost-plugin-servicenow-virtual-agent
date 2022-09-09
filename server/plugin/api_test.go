@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -359,6 +360,8 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 }
 
 func TestPlugin_handlePickerSelection(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	httpTestJSON := testutils.HTTPTest{
 		T:       t,
 		Encoder: testutils.EncodeJSON,
@@ -467,6 +470,207 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
 
 			mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, test.LoadUserErr)
+
+			p.store = mockedStore
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
+			rr := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, rr, req)
+			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+		})
+	}
+}
+
+func Test_handleDateTimeSelection(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	httpTestJSON := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeJSON,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest          testutils.HTTPTest
+		request           testutils.Request
+		expectedResponse  testutils.ExpectedResponse
+		userID            string
+		ParseAuthTokenErr error
+	}{
+		"Selected date is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body: model.SubmitDialogRequest{
+					CallbackId: "mockPostID__Date",
+					Submission: map[string]interface{}{
+						"date": "2022-09-23",
+					},
+					ChannelId: "mockChannelID",
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusOK,
+				Body:         &model.SubmitDialogResponse{},
+				ResponseType: "application/json",
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+		},
+		"Selected date is invalid": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body: model.SubmitDialogRequest{
+					CallbackId: "mockPostID__Date",
+					Submission: map[string]interface{}{
+						"date": "2022-23-23",
+					},
+					ChannelId: "mockChannelID",
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+				Body: &model.SubmitDialogResponse{
+					Errors: map[string]string{
+						"date": "Please enter a valid date",
+					},
+				},
+				ResponseType: "application/json",
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+		},
+		"Selected time is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body: model.SubmitDialogRequest{
+					CallbackId: "mockPostID__Time",
+					Submission: map[string]interface{}{
+						"time": "22:12",
+					},
+					ChannelId: "mockChannelID",
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusOK,
+				Body:         &model.SubmitDialogResponse{},
+				ResponseType: "application/json",
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+		},
+		"Selected time is invalid": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body: model.SubmitDialogRequest{
+					CallbackId: "mockPostID__Time",
+					Submission: map[string]interface{}{
+						"time": "25:12",
+					},
+					ChannelId: "mockChannelID",
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+				Body: &model.SubmitDialogResponse{
+					Errors: map[string]string{
+						"time": "Please enter a valid time",
+					},
+				},
+				ResponseType: "application/json",
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+		},
+		"Selected date-time is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body: model.SubmitDialogRequest{
+					CallbackId: "mockPostID__DateTime",
+					Submission: map[string]interface{}{
+						"date": "2022-09-23",
+						"time": "22:12",
+					},
+					ChannelId: "mockChannelID",
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+				Body: &model.SubmitDialogResponse{
+					Errors: map[string]string{},
+				},
+				ResponseType: "application/json",
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+		},
+		"Selected date-time is invalid": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body: model.SubmitDialogRequest{
+					CallbackId: "mockPostID__DateTime",
+					Submission: map[string]interface{}{
+						"date": "2022-13-23",
+						"time": "24:12",
+					},
+					ChannelId: "mockChannelID",
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+				Body: &model.SubmitDialogResponse{
+					Errors: map[string]string{
+						"date": "Please enter a valid date",
+						"time": "Please enter a valid time",
+					},
+				},
+				ResponseType: "application/json",
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: nil,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := new(Plugin)
+
+			mockAPI := &plugintest.API{}
+
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+
+			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+
+			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+
+			mockAPI.On("UpdatePost", mock.AnythingOfType("*model.Post")).Return(nil, nil)
+
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			var c client
+			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool) error {
+				return nil
+			})
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+				return &oauth2.Token{}, test.ParseAuthTokenErr
+			})
+
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+
+			mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
 
 			p.store = mockedStore
 

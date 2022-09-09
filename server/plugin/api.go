@@ -399,6 +399,8 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 		p.returnSubmitDialogResponse(w, response)
 		return
 	}
+
+	p.returnSubmitDialogResponse(w, response)
 }
 
 func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {

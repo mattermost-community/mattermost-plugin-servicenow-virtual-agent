@@ -207,3 +207,42 @@ func Test_CreatePickerAttachment(t *testing.T) {
 		})
 	}
 }
+
+func Test_CreateDefaultDateAttachment(t *testing.T) {
+	p := Plugin{}
+
+	for _, testCase := range []struct {
+		description string
+		body        *DefaultDate
+		response    *model.SlackAttachment
+	}{
+		{
+			description: "CreateDefaultDateAttachment returns proper slack attachment",
+			body: &DefaultDate{
+				UIType: "mockUIType",
+				Label:  "mockLabel",
+			},
+			response: &model.SlackAttachment{
+				Text: "mockLabel",
+				Actions: []*model.PostAction{
+					{
+						Name: "Select mockUIType",
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
+							Context: map[string]interface{}{
+								"type": "mockUIType",
+							},
+						},
+						Type: "button",
+					},
+				},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			res := p.CreateDefaultDateAttachment(testCase.body)
+
+			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
