@@ -246,8 +246,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				return err
 			}
 
-			_, err = p.dm(userID, post)
-			if err != nil {
+			if _, err = p.dm(userID, post); err != nil {
 				return err
 			}
 		}
@@ -277,18 +276,31 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 	}
 
 	linkContents := strings.Split(body.Value, "/")
+
+	if len(linkContents) < 1 {
+		p.API.LogInfo("Invalid image link.")
+		return nil, errors.New("invalid image link")
+	}
+
 	completeFilename := linkContents[len(linkContents)-1]
+
 	filenameContents := strings.Split(completeFilename, ".")
 
-	if len(filenameContents) > 1 {
-		fileExtention := filenameContents[1]
-		fileExtentionInHeaders := strings.Split(resp.Header["Content-Type"][0], "/")[1]
-		if fileExtention != fileExtentionInHeaders {
-			fileExtention = fileExtentionInHeaders
-		}
-		filename := filenameContents[0]
+	ContentTypeInHeaders := resp.Header["Content-Type"][0]
 
-		completeFilename = fmt.Sprintf("%s.%s", filename, fileExtention)
+	if len(strings.Split(ContentTypeInHeaders, "/")) == 2 {
+		fileExtension := ""
+		if len(filenameContents) == 2 {
+			fileExtension = filenameContents[1]
+		}
+
+		fileExtensionInHeaders := strings.Split(ContentTypeInHeaders, "/")[1]
+		if fileExtension != fileExtensionInHeaders {
+			fileExtension = fileExtensionInHeaders
+		}
+
+		filename := filenameContents[0]
+		completeFilename = fmt.Sprintf("%s.%s", filename, fileExtension)
 	}
 
 	post := &model.Post{}
