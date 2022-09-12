@@ -721,7 +721,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 func TestPlugin_handleFileAttachments(t *testing.T) {
 	defer monkey.UnpatchAll()
 
-	httpTestJSON := testutils.HTTPTest{
+	httpTestString := testutils.HTTPTest{
 		T:       t,
 		Encoder: testutils.EncodeString,
 	}
@@ -738,7 +738,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 		isExpired        bool
 	}{
 		"File data is written in response": {
-			httpTest: httpTestJSON,
+			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
@@ -748,7 +748,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			},
 		},
 		"Error decoding encrypted file info": {
-			httpTest: httpTestJSON,
+			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
@@ -761,7 +761,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			decodeError: errors.New("mockError"),
 		},
 		"Error decrypting file info": {
-			httpTest: httpTestJSON,
+			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
@@ -775,7 +775,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			isErrorExpected: true,
 		},
 		"Error unmarshaling file info": {
-			httpTest: httpTestJSON,
+			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
@@ -789,7 +789,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			isErrorExpected: true,
 		},
 		"Error getting file data": {
-			httpTest: httpTestJSON,
+			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
@@ -805,7 +805,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			isErrorExpected: true,
 		},
 		"File link is expired": {
-			httpTest: httpTestJSON,
+			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
