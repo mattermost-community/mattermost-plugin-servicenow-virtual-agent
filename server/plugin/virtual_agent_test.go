@@ -232,7 +232,7 @@ func Test_CreateMessageAttachment(t *testing.T) {
 		expectedError    string
 	}{
 		{
-			description: "CreateMessageAttachment returns proper attachment",
+			description: "CreateMessageAttachment returns valid attachment",
 			fileID:      "mockFileID",
 			response: &MessageAttachment{
 				URL:         "mockSiteURL" + p.GetPluginURLPath() + "/file/" + encode([]byte{}),
@@ -243,29 +243,25 @@ func Test_CreateMessageAttachment(t *testing.T) {
 		{
 			description: "CreateMessageAttachment returns error while getting file info",
 			fileID:      "mockFileID",
-			response:    nil,
 			getFileInfoError: &model.AppError{
 				Message: "mockError",
 			},
 			expectedError: "error getting file info. Error: : mockError, ",
 		},
 		{
-			description:   "CreateMessageAttachment returns error while marshalling file",
+			description:   "CreateMessageAttachment returns error while marshaling file",
 			fileID:        "mockFileID",
-			response:      nil,
 			marshalError:  errors.New("mockError"),
 			expectedError: "error occurred while marshaling the file. Error: mockError",
 		},
 		{
 			description:   "CreateMessageAttachment returns error while encrypting file",
 			fileID:        "mockFileID",
-			response:      nil,
 			encryptError:  errors.New("mockError"),
 			expectedError: "error occurred while encrypting the file. Error: mockError",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-
 			p.setConfiguration(
 				&configuration{
 					EncryptionSecret:  "mockEncryptionSecret",

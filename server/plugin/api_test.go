@@ -290,7 +290,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			isErrorExpected: false,
 		},
 		"Webhook secret is absent": {
 			httpTest: httpTestJSON,
@@ -724,7 +723,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 
 	httpTestJSON := testutils.HTTPTest{
 		T:       t,
-		Encoder: testutils.EncodeJSON,
+		Encoder: testutils.EncodeString,
 	}
 
 	for name, test := range map[string]struct {
@@ -747,7 +746,6 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			isErrorExpected: false,
 		},
 		"Error decoding encrypted file info": {
 			httpTest: httpTestJSON,
@@ -756,10 +754,11 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusBadRequest,
+				StatusCode:   http.StatusBadRequest,
+				Body:         "Error occurred while decoding the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
 			},
-			decodeError:     errors.New("mockError"),
-			isErrorExpected: true,
+			decodeError: errors.New("mockError"),
 		},
 		"Error decrypting file info": {
 			httpTest: httpTestJSON,
@@ -768,7 +767,9 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusInternalServerError,
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Error occurred while decrypting the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
 			},
 			decryptError:    errors.New("mockError"),
 			isErrorExpected: true,
@@ -780,7 +781,9 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusInternalServerError,
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Error occurred while unmarshaling the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
 			},
 			unmarshalError:  errors.New("mockError"),
 			isErrorExpected: true,
@@ -792,7 +795,9 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusInternalServerError,
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Couldn't get file data.\n",
+				ResponseType: "text/plain; charset=utf-8",
 			},
 			getFileError: &model.AppError{
 				Message: "mockError",
@@ -851,9 +856,9 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
 			req.Header.Add(HeaderMattermostUserID, "mock-userID")
-			rr := httptest.NewRecorder()
-			p.ServeHTTP(&plugin.Context{}, rr, req)
-			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+			resp := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, resp, req)
+			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
 
 			if test.isErrorExpected {
 				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
