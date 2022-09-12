@@ -269,7 +269,7 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 	response := &model.SubmitDialogResponse{}
 	submitRequest := &model.SubmitDialogRequest{}
 	if err := decoder.Decode(&submitRequest); err != nil {
-		p.API.LogError("Error decoding SubmitDialogRequest	.", "Error", err.Error())
+		p.API.LogError("Error decoding SubmitDialogRequest.", "Error", err.Error())
 		p.returnSubmitDialogResponse(w, response)
 		return
 	}
