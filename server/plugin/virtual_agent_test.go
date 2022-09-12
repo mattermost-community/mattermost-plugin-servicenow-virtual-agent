@@ -3,13 +3,17 @@ package plugin
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"reflect"
 	"testing"
 
 	"bou.ke/monkey"
 	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
+	"github.com/mattermost/mattermost-server/v5/plugin/plugintest/mock"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -204,6 +208,91 @@ func Test_CreatePickerAttachment(t *testing.T) {
 			res := p.CreatePickerAttachment(testCase.body)
 
 			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
+
+func Test_CreateOutputImagePost(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	for _, testCase := range []struct {
+		description           string
+		body                  *OutputImage
+		getDirectChannelError *model.AppError
+		uploadFileError       *model.AppError
+		isErrorExpected       bool
+		expectedError         string
+		readAllError          error
+	}{
+		{
+			description: "Image post is created",
+			body: &OutputImage{
+				Value:   "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				AltText: "mockAltText",
+			},
+		},
+		{
+			description: "Image post is not created because of invalid image URL",
+			body: &OutputImage{
+				Value:   "htps://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				AltText: "mockAltText",
+			},
+			isErrorExpected: true,
+			expectedError:   "unsupported protocol scheme",
+		},
+		{
+			description: "Not able to get direct channel",
+			body: &OutputImage{
+				Value:   "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				AltText: "mockAltText",
+			},
+			getDirectChannelError: &model.AppError{
+				Message: "mockErrorMessage",
+			},
+			isErrorExpected: true,
+			expectedError:   "mockErrorMessage",
+		},
+		{
+			description: "Not able to upload file on Mattermost",
+			body: &OutputImage{
+				Value:   "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				AltText: "mockAltText",
+			},
+			uploadFileError: &model.AppError{},
+		},
+		{
+			description: "Error reading file data",
+			body: &OutputImage{
+				Value:   "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				AltText: "mockAltText",
+			},
+			readAllError:    errors.New("mockError"),
+			isErrorExpected: true,
+			expectedError:   "mockError",
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			p := Plugin{}
+			mockAPI := &plugintest.API{}
+
+			mockAPI.On("LogInfo", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+
+			mockAPI.On("GetDirectChannel", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.Channel{}, testCase.getDirectChannelError)
+
+			mockAPI.On("UploadFile", []byte{}, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.FileInfo{}, testCase.uploadFileError)
+
+			p.SetAPI(mockAPI)
+
+			monkey.Patch(ioutil.ReadAll, func(_ io.Reader) ([]byte, error) {
+				return []byte{}, testCase.readAllError
+			})
+
+			post, err := p.CreateOutputImagePost(testCase.body, "mockUserID")
+			if testCase.isErrorExpected {
+				assert.Contains(t, err.Error(), testCase.expectedError)
+			} else {
+				assert.NotNil(t, post)
+			}
 		})
 	}
 }
