@@ -509,7 +509,6 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusUnauthorized,
 			},
-			userID: "",
 		},
 		"Error parsing OAuth token": {
 			httpTest: httpTestJSON,
@@ -743,7 +742,6 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusUnauthorized,
 			},
-			userID: "",
 		},
 		"Selected date is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,

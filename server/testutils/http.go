@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 // Request stores http Request basic data
@@ -73,10 +74,18 @@ func (test *HTTPTest) CompareHTTPResponse(rr *httptest.ResponseRecorder, expecte
 		expectedBody, err := test.Encoder(expected.Body)
 		testAssert.NoError(err)
 
-		testAssert.Equal(string(expected.ResponseType), rr.Header().Get("Content-Type"))
+		testAssert.Equal(expected.ResponseType, rr.Header().Get("Content-Type"))
 
 		gotBody := rr.Body.Bytes()
 
 		testAssert.Equal(expectedBody, gotBody)
 	}
+}
+
+func GetMockArgumentsWithType(typeString string, num int) []interface{} {
+	ret := make([]interface{}, num)
+	for i := 0; i < len(ret); i++ {
+		ret[i] = mock.AnythingOfTypeArgument(typeString)
+	}
+	return ret
 }
