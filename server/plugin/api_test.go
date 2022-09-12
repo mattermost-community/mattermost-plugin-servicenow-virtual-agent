@@ -389,9 +389,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
-			LoadUserErr:       nil,
+			userID: "mock-userID",
 		},
 		"User is not present in store": {
 			httpTest: httpTestJSON,
@@ -407,9 +405,8 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
-			LoadUserErr:       errors.New("mockErr"),
+			userID:      "mock-userID",
+			LoadUserErr: errors.New("mockErr"),
 		},
 		"Error occurs while parsing OAuth token": {
 			httpTest: httpTestJSON,
@@ -427,7 +424,6 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			},
 			userID:            "mock-userID",
 			ParseAuthTokenErr: errors.New("mockErr"),
-			LoadUserErr:       nil,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -497,6 +493,43 @@ func Test_handleDateTimeSelection(t *testing.T) {
 		userID            string
 		ParseAuthTokenErr error
 	}{
+		"User is unauthorized": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body: model.SubmitDialogRequest{
+					CallbackId: "mockPostID__Date",
+					Submission: map[string]interface{}{
+						"date": "2022-09-23",
+					},
+					ChannelId: "mockChannelID",
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusUnauthorized,
+			},
+			userID: "",
+		},
+		"Error parsing OAuth token": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body: model.SubmitDialogRequest{
+					CallbackId: "mockPostID__Date",
+					Submission: map[string]interface{}{
+						"date": "2022-09-23",
+					},
+					ChannelId: "mockChannelID",
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: errors.New("mockError"),
+		},
 		"Selected date is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
@@ -515,8 +548,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				Body:         &model.SubmitDialogResponse{},
 				ResponseType: "application/json",
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
+			userID: "mock-userID",
 		},
 		"Selected date is invalid": {
 			httpTest: httpTestJSON,
@@ -540,8 +572,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
+			userID: "mock-userID",
 		},
 		"Selected time is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
@@ -561,8 +592,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				Body:         &model.SubmitDialogResponse{},
 				ResponseType: "application/json",
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
+			userID: "mock-userID",
 		},
 		"Selected time is invalid": {
 			httpTest: httpTestJSON,
@@ -586,8 +616,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
+			userID: "mock-userID",
 		},
 		"Selected date-time is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
@@ -610,8 +639,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
+			userID: "mock-userID",
 		},
 		"Selected date-time is invalid": {
 			httpTest: httpTestJSON,
@@ -637,8 +665,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
+			userID: "mock-userID",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -648,9 +675,9 @@ func Test_handleDateTimeSelection(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
 
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
 
 			mockAPI.On("UpdatePost", mock.AnythingOfType("*model.Post")).Return(nil, nil)
 
@@ -667,18 +694,20 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				return &oauth2.Token{}, test.ParseAuthTokenErr
 			})
 
-			mockCtrl := gomock.NewController(t)
-			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			if test.userID != "" {
+				mockCtrl := gomock.NewController(t)
+				mockedStore := mock_plugin.NewMockStore(mockCtrl)
 
-			mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
+				mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
 
-			p.store = mockedStore
+				p.store = mockedStore
+			}
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
 			req.Header.Add(HeaderMattermostUserID, test.userID)
-			rr := httptest.NewRecorder()
-			p.ServeHTTP(&plugin.Context{}, rr, req)
-			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+			resp := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, resp, req)
+			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
 		})
 	}
 }
@@ -698,6 +727,24 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 		userID            string
 		ParseAuthTokenErr error
 	}{
+		"User is unauthorized": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				Body: model.PostActionIntegrationRequest{
+					TriggerId: "mockTriggerId",
+					PostId:    "mockPostId",
+					Context: map[string]interface{}{
+						"type": "Date",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusUnauthorized,
+			},
+			userID: "",
+		},
 		"Selected date is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
@@ -716,8 +763,7 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 				Body:         &model.PostActionIntegrationResponse{},
 				ResponseType: "application/json",
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
+			userID: "mock-userID",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -727,9 +773,9 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
 
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
 
 			p.SetAPI(mockAPI)
 
@@ -741,18 +787,20 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(p), "OpenDialogRequest", func(_ *Plugin, _ http.ResponseWriter, _ model.OpenDialogRequest) {})
 
-			mockCtrl := gomock.NewController(t)
-			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			if test.userID != "" {
+				mockCtrl := gomock.NewController(t)
+				mockedStore := mock_plugin.NewMockStore(mockCtrl)
 
-			mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
+				mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
 
-			p.store = mockedStore
+				p.store = mockedStore
+			}
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
 			req.Header.Add(HeaderMattermostUserID, test.userID)
-			rr := httptest.NewRecorder()
-			p.ServeHTTP(&plugin.Context{}, rr, req)
-			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+			resp := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, resp, req)
+			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
 		})
 	}
 }

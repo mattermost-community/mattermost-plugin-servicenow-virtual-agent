@@ -58,6 +58,11 @@ func Test_validateDate(t *testing.T) {
 			date:        "2022-09-12",
 			expected:    "",
 		},
+		{
+			description: "Date is out of range",
+			date:        "2022-09-31",
+			expected:    "Please enter a valid date",
+		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
