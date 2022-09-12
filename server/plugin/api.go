@@ -42,8 +42,8 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathDateTimeSelectionDialog, p.checkOAuth(p.handleDateTimeSelectionDialog)).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathDateTimeSelection, p.checkOAuth(p.handleDateTimeSelection)).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathDateTimeSelectionDialog, p.checkAuth(p.checkOAuth(p.handleDateTimeSelectionDialog))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathDateTimeSelection, p.checkAuth(p.checkOAuth(p.handleDateTimeSelection))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
