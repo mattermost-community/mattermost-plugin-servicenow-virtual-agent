@@ -51,9 +51,14 @@ const (
 	DateTimeUIType                  = "DateTime"
 
 	updatedPostBorderColor = "#74ccac"
+	DateValue              = "date"
+	TimeValue              = "time"
+	DateTimeDialogType     = "type"
+	DateLayout             = "2006-01-02"
 
-	DateValidationError = "Please enter a valid date"
-	TimeValidationError = "Please enter a valid time"
+	DateValidationError    = "Please enter a valid date"
+	TimeValidationError    = "Please enter a valid time"
+	InvalidCallbackIDError = "Invalid callback ID."
 )
 
 // #nosec G101 -- This is a false positive. The below line is not a hardcoded credential

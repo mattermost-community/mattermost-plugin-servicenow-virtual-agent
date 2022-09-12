@@ -205,10 +205,12 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 
 func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
+	response := &model.PostActionIntegrationResponse{}
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
 		p.API.LogError("Error decoding PostActionIntegrationRequest.", "Error", err.Error())
 		http.Error(w, "Error decoding PostActionIntegrationRequest.", http.StatusBadRequest)
+		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
 
@@ -216,7 +218,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 
 	date := model.DialogElement{
 		DisplayName: "Date:",
-		Name:        "date",
+		Name:        DateValue,
 		Type:        "text",
 		Placeholder: "YYYY-MM-DD",
 		HelpText:    "Please enter the date in the format YYYY-MM-DD. Example: 2001-11-04",
@@ -227,7 +229,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 
 	time := model.DialogElement{
 		DisplayName: "Time:",
-		Name:        "time",
+		Name:        TimeValue,
 		Type:        "text",
 		Placeholder: "HH:MM",
 		HelpText:    "Please enter the time in 24 hour format as HH:MM. Example: 20:04",
@@ -236,7 +238,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 		MaxLength:   5,
 	}
 
-	inputType := fmt.Sprintf("%v", postActionIntegrationRequest.Context["type"])
+	inputType := fmt.Sprintf("%v", postActionIntegrationRequest.Context[DateTimeDialogType])
 	switch inputType {
 	case DateUIType:
 		elements = append(elements, date)
@@ -259,7 +261,6 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 
 	p.OpenDialogRequest(w, requestBody)
 
-	response := &model.PostActionIntegrationResponse{}
 	p.returnPostActionIntegrationResponse(w, response)
 }
 
@@ -268,7 +269,7 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 	response := &model.SubmitDialogResponse{}
 	submitRequest := &model.SubmitDialogRequest{}
 	if err := decoder.Decode(&submitRequest); err != nil {
-		p.API.LogError("Error decoding SubmitDialogRequest params.", "Error", err.Error())
+		p.API.LogError("Error decoding SubmitDialogRequest	.", "Error", err.Error())
 		p.returnSubmitDialogResponse(w, response)
 		return
 	}
@@ -279,8 +280,8 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 	var selectedOption string
 
 	if len(strings.Split(submitRequest.CallbackId, "__")) != 2 {
-		p.API.LogError("Invalid callback ID.")
-		response.Error = "Invalid callback ID"
+		p.API.LogError(InvalidCallbackIDError)
+		response.Error = InvalidCallbackIDError
 		p.returnSubmitDialogResponse(w, response)
 		return
 	}
@@ -290,20 +291,20 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 
 	switch inputType {
 	case DateTimeUIType:
-		selectedOption = fmt.Sprintf("%v %v:00", submitRequest.Submission["date"], submitRequest.Submission["time"])
+		selectedOption = fmt.Sprintf("%v %v:00", submitRequest.Submission[DateValue], submitRequest.Submission[TimeValue])
 
-		dateValidationError := p.validateDate(fmt.Sprintf("%v", submitRequest.Submission["date"]))
+		dateValidationError := p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
 
 		response.Errors = map[string]string{}
 
 		if dateValidationError != "" {
-			response.Errors["date"] = dateValidationError
+			response.Errors[DateValue] = dateValidationError
 		}
 
-		timeValidationError := p.validateTime(fmt.Sprintf("%v", submitRequest.Submission["time"]))
+		timeValidationError := p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
 
 		if timeValidationError != "" {
-			response.Errors["time"] = timeValidationError
+			response.Errors[TimeValue] = timeValidationError
 		}
 
 		if dateValidationError != "" || timeValidationError != "" {
@@ -311,25 +312,25 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	case DateUIType:
-		selectedOption = fmt.Sprintf("%v", submitRequest.Submission["date"])
+		selectedOption = fmt.Sprintf("%v", submitRequest.Submission[DateValue])
 
-		dateValidationError := p.validateDate(fmt.Sprintf("%v", submitRequest.Submission["date"]))
+		dateValidationError := p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
 
 		if dateValidationError != "" {
 			response.Errors = map[string]string{
-				"date": dateValidationError,
+				DateValue: dateValidationError,
 			}
 			p.returnSubmitDialogResponse(w, response)
 			return
 		}
 	case TimeUIType:
-		selectedOption = fmt.Sprintf("%v:00", submitRequest.Submission["time"])
+		selectedOption = fmt.Sprintf("%v:00", submitRequest.Submission[TimeValue])
 
-		timeValidationError := p.validateTime(fmt.Sprintf("%v", submitRequest.Submission["time"]))
+		timeValidationError := p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
 
 		if timeValidationError != "" {
 			response.Errors = map[string]string{
-				"time": timeValidationError,
+				TimeValue: timeValidationError,
 			}
 			p.returnSubmitDialogResponse(w, response)
 			return

@@ -18,12 +18,12 @@ func (p *Plugin) generateUUID() string {
 }
 
 func (p *Plugin) validateDate(date string) string {
-	d, err := time.Parse("2006-01-02", date)
+	parsedDate, err := time.Parse(DateLayout, date)
 	if err != nil {
 		return DateValidationError
 	}
 
-	year := d.Year()
+	year := parsedDate.Year()
 	currentYear := time.Now().Year()
 	if year < currentYear-100 || year > currentYear+100 {
 		return fmt.Sprintf("Please enter year from %d to %d", currentYear-100, currentYear+100)
