@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 
 	"bou.ke/monkey"
@@ -224,27 +226,31 @@ func Test_CreateOutputImagePost(t *testing.T) {
 		isErrorExpected       bool
 		expectedError         string
 		readAllError          error
+		httpGetError          error
+		contentType           string
 	}{
 		{
 			description: "Image post is created",
 			body: &OutputImage{
-				Value:   "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				Value:   "https://test/test.jpg",
 				AltText: "mockAltText",
 			},
+			contentType: "image/jpg",
 		},
 		{
 			description: "No image post is created due to invalid image URL",
 			body: &OutputImage{
-				Value:   "htps://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				Value:   "htps://test/test.jpg",
 				AltText: "mockAltText",
 			},
 			isErrorExpected: true,
+			httpGetError:    errors.New("unsupported protocol scheme"),
 			expectedError:   "unsupported protocol scheme",
 		},
 		{
 			description: "Not able to get direct channel",
 			body: &OutputImage{
-				Value:   "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				Value:   "https://test/test.jpg",
 				AltText: "mockAltText",
 			},
 			getDirectChannelError: &model.AppError{
@@ -256,15 +262,16 @@ func Test_CreateOutputImagePost(t *testing.T) {
 		{
 			description: "Not able to upload file on Mattermost",
 			body: &OutputImage{
-				Value:   "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				Value:   "https://test/test.jpg",
 				AltText: "mockAltText",
 			},
 			uploadFileError: &model.AppError{},
+			contentType:     "image/jpg",
 		},
 		{
 			description: "Error reading file data",
 			body: &OutputImage{
-				Value:   "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
+				Value:   "https://test/test.jpg",
 				AltText: "mockAltText",
 			},
 			readAllError:    errors.New("mockError"),
@@ -283,6 +290,15 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			mockAPI.On("UploadFile", []byte{}, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.FileInfo{}, testCase.uploadFileError)
 
 			p.SetAPI(mockAPI)
+
+			monkey.Patch(http.Get, func(_ string) (*http.Response, error) {
+				return &http.Response{
+					Body: io.NopCloser(strings.NewReader("mockResponseBody")),
+					Header: map[string][]string{
+						"Content-Type": {testCase.contentType},
+					},
+				}, testCase.httpGetError
+			})
 
 			monkey.Patch(ioutil.ReadAll, func(_ io.Reader) ([]byte, error) {
 				return []byte{}, testCase.readAllError
