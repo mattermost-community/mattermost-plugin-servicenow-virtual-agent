@@ -47,8 +47,8 @@ func (p *Plugin) initializeAPI() *mux.Router {
 func (p *Plugin) checkAuthBySecret(handleFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Replace all occurrences of " " with "+" in WebhookSecret.
-		secret := strings.ReplaceAll(r.FormValue(SecretParam), " ", "+")
-		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, secret); err != nil {
+		webhookSecret := strings.ReplaceAll(r.FormValue(SecretParam), " ", "+")
+		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, webhookSecret); err != nil {
 			p.API.LogError("Invalid secret", "Error", err.Error())
 			http.Error(w, fmt.Sprintf("Invalid Secret. Error: %s", err.Error()), status)
 			return
