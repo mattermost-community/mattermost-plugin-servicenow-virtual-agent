@@ -46,6 +46,8 @@ const (
 	OutputImageUIType               = "OutputImage"
 
 	updatedPostBorderColor = "#74ccac"
+
+	InvalidImageLinkError = "Invalid image link."
 )
 
 // #nosec G101 -- This is a false positive. The below line is not a hardcoded credential

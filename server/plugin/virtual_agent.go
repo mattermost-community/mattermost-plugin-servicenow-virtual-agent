@@ -278,15 +278,18 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 	linkContents := strings.Split(body.Value, "/")
 
 	if len(linkContents) < 1 {
-		p.API.LogInfo("Invalid image link.")
-		return nil, errors.New("invalid image link")
+		p.API.LogInfo(InvalidImageLinkError)
+		return nil, errors.New(InvalidImageLinkError)
 	}
 
 	completeFilename := linkContents[len(linkContents)-1]
 
 	filenameContents := strings.Split(completeFilename, ".")
 
-	contentTypeInHeaders := resp.Header["Content-Type"][0]
+	contentTypeInHeaders := ""
+	if len(resp.Header["Content-Type"]) > 0 {
+		contentTypeInHeaders = resp.Header["Content-Type"][0]
+	}
 
 	if len(strings.Split(contentTypeInHeaders, "/")) == 2 {
 		fileExtension := ""
