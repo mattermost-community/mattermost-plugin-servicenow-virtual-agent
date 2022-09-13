@@ -310,7 +310,7 @@ func (p *Plugin) CreateOutputCardImageAttachment(body *OutputCardImageData) *mod
 
 func (p *Plugin) CreateOutputCardVideoAttachment(body *OutputCardVideoData) *model.SlackAttachment {
 	return &model.SlackAttachment{
-		Text: fmt.Sprintf("**[%s](%s)**\n%s\n%s", body.Title, body.Link, body.Description, body.URL),
+		Text: fmt.Sprintf("**[%s](%s)**\n%s", body.Title, body.Link, body.Description),
 	}
 }
 
