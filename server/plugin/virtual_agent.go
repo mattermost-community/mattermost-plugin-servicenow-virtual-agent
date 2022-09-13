@@ -286,7 +286,10 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 
 	filenameContents := strings.Split(completeFilename, ".")
 
-	ContentTypeInHeaders := resp.Header["Content-Type"][0]
+	ContentTypeInHeaders := ""
+	if len(resp.Header["Content-Type"]) > 0 {
+		ContentTypeInHeaders = resp.Header["Content-Type"][0]
+	}
 
 	if len(strings.Split(ContentTypeInHeaders, "/")) == 2 {
 		fileExtension := ""
