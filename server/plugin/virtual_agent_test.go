@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest/mock"
@@ -232,7 +233,7 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			},
 		},
 		{
-			description: "Image post is not created because of invalid image URL",
+			description: "No image post is created due to invalid image URL",
 			body: &OutputImage{
 				Value:   "htps://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885__480.jpg",
 				AltText: "mockAltText",
@@ -275,7 +276,7 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			p := Plugin{}
 			mockAPI := &plugintest.API{}
 
-			mockAPI.On("LogInfo", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return("LogInfo error")
 
 			mockAPI.On("GetDirectChannel", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.Channel{}, testCase.getDirectChannelError)
 
