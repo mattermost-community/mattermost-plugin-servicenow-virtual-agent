@@ -71,7 +71,7 @@ func (test *HTTPTest) CompareHTTPResponse(rr *httptest.ResponseRecorder, expecte
 
 func GetMockArgumentsWithType(typeString string, num int) []interface{} {
 	ret := make([]interface{}, num)
-	for i := 0; i < len(ret); i++ {
+	for i := 0; i < num; i++ {
 		ret[i] = mock.AnythingOfTypeArgument(typeString)
 	}
 	return ret

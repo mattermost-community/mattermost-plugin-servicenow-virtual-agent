@@ -285,7 +285,7 @@ func Test_CreateOutputImagePost(t *testing.T) {
 
 			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return("LogInfo error")
 
-			mockAPI.On("GetDirectChannel", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.Channel{}, testCase.getDirectChannelError)
+			mockAPI.On("GetDirectChannel", testutils.GetMockArgumentsWithType("string", 2)...).Return(&model.Channel{}, testCase.getDirectChannelError)
 
 			mockAPI.On("UploadFile", []byte{}, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.FileInfo{}, testCase.uploadFileError)
 
