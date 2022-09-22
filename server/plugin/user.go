@@ -168,7 +168,7 @@ func (c *client) GetMe(mattermostUserID string) (*serializer.ServiceNowUser, err
 		return nil, fmt.Errorf("user doesn't exist on ServiceNow with email %s", mattermostUser.Email)
 	}
 	if len(userDetails.UserDetails) > 1 {
-		c.plugin.API.LogWarn("multiple users with the same email address on instance.", "Email", mattermostUser.Email)
+		c.plugin.API.LogWarn("multiple users with the same email address on instance.", "Email", mattermostUser.Email, "Instance", c.plugin.getConfiguration().ServiceNowURL)
 	}
 
 	return userDetails.UserDetails[0], nil
