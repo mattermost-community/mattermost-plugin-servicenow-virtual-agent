@@ -212,12 +212,21 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				return err
 			}
 		case *TopicPickerControl:
+			if len(res.Options) == 0 {
+				p.API.LogInfo("TopicPickerControl dropdown has no options to display.")
+				return nil
+			}
+
 			if _, err = p.DMWithAttachments(userID, p.CreateTopicPickerControlAttachment(res)); err != nil {
 				return err
 			}
 		case *Picker:
 			if _, err = p.DM(userID, res.Label); err != nil {
 				return err
+			}
+			if len(res.Options) == 0 {
+				p.API.LogInfo("Picker dropdown has no options to display.")
+				return nil
 			}
 			if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
 				return err
