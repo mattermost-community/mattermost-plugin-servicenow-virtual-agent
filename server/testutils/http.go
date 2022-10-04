@@ -91,7 +91,6 @@ func (test *HTTPTest) CompareHTTPResponse(resp *httptest.ResponseRecorder, expec
 		testAssert.Equal(expected.ResponseType, resp.Header().Get("Content-Type"))
 
 		respBody := resp.Body.Bytes()
-
 		testAssert.Equal(expectedBody, respBody)
 	}
 }

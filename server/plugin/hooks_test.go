@@ -38,7 +38,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 		},
 		{
 			description:  "Message is posted but failed to get user from KV store",
-			getUserError: errors.New("mockError"),
+			getUserError: errors.New("error getting the user from KVstore"),
 			Message:      "mockMessage",
 		},
 		{
@@ -52,17 +52,17 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 		},
 		{
 			description:         "Message is posted but failed to parse auth token",
-			parseAuthTokenError: errors.New("mockError"),
+			parseAuthTokenError: errors.New("error in parsing the auth token"),
 			Message:             "mockMessage",
 		},
 		{
 			description:                       "Message is posted but failed to parse auth token",
-			sendMessageToVirtualAgentAPIError: errors.New("mockError"),
+			sendMessageToVirtualAgentAPIError: errors.New("error in parsing the auth token"),
 			Message:                           "mockMessage",
 		},
 		{
 			description:                  "Message is posted but failed to create message attachment",
-			createMessageAttachmentError: errors.New("mockError"),
+			createMessageAttachmentError: errors.New("error in creating message attachment"),
 			Message:                      "mockMessage",
 		},
 	} {
@@ -72,7 +72,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			p.botUserID = "mock-botID"
 			mockAPI := &plugintest.API{}
 
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
 
 			mockAPI.On("GetChannel", "mockChannelID").Return(&model.Channel{
 				Type: "D",

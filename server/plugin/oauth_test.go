@@ -64,7 +64,7 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 				StatusCode: http.StatusInternalServerError,
 			},
 			userID:        "mock-userID",
-			InitOAuth2Err: errors.New("mockError"),
+			InitOAuth2Err: errors.New("error in initializing oAuth2"),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -86,9 +86,9 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
 
 			p.SetAPI(mockAPI)
 
@@ -179,7 +179,7 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 				StatusCode: http.StatusInternalServerError,
 			},
 			userID:           "mock-userID",
-			CompleteOAuthErr: errors.New("mockError"),
+			CompleteOAuthErr: errors.New("error completing OAuth2"),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -201,9 +201,9 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return()
 
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return()
 
 			p.SetAPI(mockAPI)
 

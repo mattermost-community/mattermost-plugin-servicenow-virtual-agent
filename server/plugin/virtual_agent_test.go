@@ -31,8 +31,8 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 		},
 		{
 			description: "Error while sending message to Virtual Agent API",
-			errMessage:  errors.New("mockErrMessage"),
-			expectedErr: errors.New("failed to call virtual agent bot integration API: mockErrMessage"),
+			errMessage:  errors.New("error in calling the Virtual Agent API"),
+			expectedErr: errors.New("failed to call virtual agent bot integration API: error in calling the Virtual Agent API"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -73,8 +73,8 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 		},
 		{
 			description: "Error in starting conversation with Virtual Agent",
-			errMessage:  errors.New("mockErrMessage"),
-			expectedErr: errors.New("failed to start conversation with virtual agent bot: mockErrMessage"),
+			errMessage:  errors.New("error in calling the Virtual Agent API"),
+			expectedErr: errors.New("failed to start conversation with virtual agent bot: error in calling the Virtual Agent API"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -244,21 +244,21 @@ func Test_CreateMessageAttachment(t *testing.T) {
 			description: "CreateMessageAttachment returns an error while getting file info",
 			fileID:      "mockFileID",
 			getFileInfoError: &model.AppError{
-				Message: "mockError",
+				Message: "error in getting the file info",
 			},
-			expectedError: "error getting the file info. Error: : mockError, ",
+			expectedError: "error getting the file info. Error: error in getting the file info",
 		},
 		{
 			description:   "CreateMessageAttachment returns an error while marshaling file",
 			fileID:        "mockFileID",
-			marshalError:  errors.New("mockError"),
-			expectedError: "error occurred while marshaling the file. Error: mockError",
+			marshalError:  errors.New("error in marshaling the file"),
+			expectedError: "error occurred while marshaling the file. Error: error in marshaling the file",
 		},
 		{
 			description:   "CreateMessageAttachment returns an error while encrypting file",
 			fileID:        "mockFileID",
-			encryptError:  errors.New("mockError"),
-			expectedError: "error occurred while encrypting the file. Error: mockError",
+			encryptError:  errors.New("error in encryptiing the file"),
+			expectedError: "error occurred while encrypting the file. Error: error in encryptiing the file",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
