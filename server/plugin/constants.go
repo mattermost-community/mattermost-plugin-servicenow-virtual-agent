@@ -47,8 +47,8 @@ const (
 	OutputImageUIType               = "OutputImage"
 
 	InvalidImageLinkError = "Invalid image link."
-	ItemTypeImage = "image"
-	ItemTypeFile  = "file"
+	ItemTypeImage         = "image"
+	ItemTypeFile          = "file"
 
 	UploadImageMessage = "\n(**Note:** Please upload an image using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
 	UploadFileMessage  = "\n(**Note:** Please upload a file using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
