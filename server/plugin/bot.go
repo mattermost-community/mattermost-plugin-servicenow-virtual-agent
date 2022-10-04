@@ -58,6 +58,7 @@ func (p *Plugin) GetPostWithSlackAttachment(mattermostUserID string, attachments
 		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", mattermostUserID)
 		return nil, err
 	}
+
 	post := &model.Post{
 		ChannelId: channel.Id,
 		UserId:    p.botUserID,

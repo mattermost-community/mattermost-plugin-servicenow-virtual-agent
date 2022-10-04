@@ -3,6 +3,7 @@ package plugin
 import (
 	"testing"
 
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest/mock"
@@ -42,8 +43,8 @@ func TestDM(t *testing.T) {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
 			mockAPI := &plugintest.API{}
-			mockAPI.On("LogInfo", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return("LogInfo error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 3)...).Return("LogError error")
 
 			mockAPI.On("GetDirectChannel", mock.Anything, mock.Anything).Return(testCase.mockChannel, testCase.mockChannelErr)
 
@@ -80,8 +81,9 @@ func TestEphemeral(t *testing.T) {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
 			mockAPI := &plugintest.API{}
-			mockAPI.On("LogInfo", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+
+			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return("LogInfo error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 3)...).Return("LogError error")
 
 			mockAPI.On("SendEphemeralPost", mock.Anything, mock.Anything).Return(&model.Post{})
 

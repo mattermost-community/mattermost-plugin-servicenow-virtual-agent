@@ -11,7 +11,7 @@ import (
 type Client interface {
 	GetMe(mattermostUserID string) (*serializer.ServiceNowUser, error)
 	StartConverstaionWithVirtualAgent(userID string) error
-	SendMessageToVirtualAgentAPI(userID, messageText string, typed bool) error
+	SendMessageToVirtualAgentAPI(userID, messageText string, typed bool, attachment *MessageAttachment) error
 }
 
 type client struct {
