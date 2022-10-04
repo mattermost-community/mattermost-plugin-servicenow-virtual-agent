@@ -51,16 +51,16 @@ const (
 	TimeUIType                      = "Time"
 	DateTimeUIType                  = "DateTime"
 
-	DateValue              = "date"
-	TimeValue              = "time"
-	DateTimeDialogType     = "type"
-	DateLayout             = "2006-01-02"
+	DateValue          = "date"
+	TimeValue          = "time"
+	DateTimeDialogType = "type"
+	DateLayout         = "2006-01-02"
 
 	DateValidationError    = "Please enter a valid date"
 	TimeValidationError    = "Please enter a valid time"
 	InvalidCallbackIDError = "Invalid callback ID."
-	ItemTypeImage = "image"
-	ItemTypeFile  = "file"
+	ItemTypeImage          = "image"
+	ItemTypeFile           = "file"
 
 	UploadImageMessage = "\n(**Note:** Please upload an image using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
 	UploadFileMessage  = "\n(**Note:** Please upload a file using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
