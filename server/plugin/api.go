@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-server/v5/model"
@@ -45,6 +46,8 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathDateTimeSelectionDialog, p.checkAuth(p.checkOAuth(p.handleDateTimeSelectionDialog))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathDateTimeSelection, p.checkAuth(p.checkOAuth(p.handleDateTimeSelection))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
+	apiRouter.HandleFunc(fmt.Sprintf("/file/{%s}", PathParamEncryptedFileInfo), p.handleFileAttachments).Methods(http.MethodGet)
+
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
@@ -89,6 +92,52 @@ func (p *Plugin) handleStaticFiles(r *mux.Router) {
 
 	// This will serve static files from the 'assets' directory under '/static/<filename>'
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(bundlePath, "assets")))))
+}
+
+// handleFileAttachments returns the data of the fileID passed in the request URL.
+func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
+	pathParams := mux.Vars(r)
+	encryptedFileInfo := pathParams[PathParamEncryptedFileInfo]
+
+	decoded, err := decode(encryptedFileInfo)
+	if err != nil {
+		p.API.LogError("Error occurred while decoding the file. Error: %s", err.Error())
+		http.Error(w, "Error occurred while decoding the file.", http.StatusBadRequest)
+		return
+	}
+
+	jsonBytes, err := decrypt(decoded, []byte(p.getConfiguration().EncryptionSecret))
+	if err != nil {
+		p.API.LogError("Error occurred while decrypting the file. Error: %s", err.Error())
+		http.Error(w, "Error occurred while decrypting the file.", http.StatusInternalServerError)
+		return
+	}
+
+	fileInfo := FileStruct{}
+	if err = json.Unmarshal(jsonBytes, &fileInfo); err != nil {
+		p.API.LogError("Error occurred while unmarshaling the file. Error: %s", err.Error())
+		http.Error(w, "Error occurred while unmarshaling the file.", http.StatusInternalServerError)
+		return
+	}
+
+	if time.Now().UTC().After(fileInfo.Expiry) {
+		http.NotFound(w, r)
+		return
+	}
+
+	data, appErr := p.API.GetFile(fileInfo.ID)
+	if appErr != nil {
+		p.API.LogInfo("Couldn't get file data. FileID: %s", fileInfo.ID)
+		http.Error(w, "Couldn't get file data.", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", http.DetectContentType(data))
+	if _, err = w.Write(data); err != nil {
+		p.API.LogError("Error occurred writing the file content in response. Error: %s", err.Error())
+		http.Error(w, "Error occurred writing the file content in response.", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (p *Plugin) withRecovery(next http.Handler) http.Handler {
@@ -338,7 +387,7 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 	}
 
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &MessageAttachment{}); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
 		p.returnSubmitDialogResponse(w, response)
 		return
@@ -379,9 +428,10 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
 	selectedOption := postActionIntegrationRequest.Context["selected_option"].(string)
+	attachment := &MessageAttachment{}
 
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, attachment); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
