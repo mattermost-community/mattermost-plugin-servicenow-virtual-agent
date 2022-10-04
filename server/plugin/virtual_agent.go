@@ -93,14 +93,14 @@ type OutputCard struct {
 }
 
 type OutputCardRecordData struct {
-	SysID            string         `json:"sys_id"`
-	Subtitle         string         `json:"subtitle"`
-	DataNowSmartLink string         `json:"dataNowSmartLink"`
-	Title            string         `json:"title"`
-	Fields           []RecordFields `json:"fields"`
-	TableName        string         `json:"table_name"`
-	URL              string         `json:"url"`
-	Target           string         `json:"target"`
+	SysID            string          `json:"sys_id"`
+	Subtitle         string          `json:"subtitle"`
+	DataNowSmartLink string          `json:"dataNowSmartLink"`
+	Title            string          `json:"title"`
+	Fields           []*RecordFields `json:"fields"`
+	TableName        string          `json:"table_name"`
+	URL              string          `json:"url"`
+	Target           string          `json:"target"`
 }
 
 type OutputCardVideoData struct {
@@ -299,9 +299,9 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 
-				URL := url.URL{RawQuery: data.Link}
+				videoURL := url.URL{RawQuery: data.Link}
 				if _, err = p.dm(userID, &model.Post{
-					Message: URL.Query().Get(VideoQueryParam),
+					Message: videoURL.Query().Get(VideoQueryParam),
 				}); err != nil {
 					return err
 				}
@@ -342,16 +342,16 @@ func (p *Plugin) CreateOutputCardVideoAttachment(body *OutputCardVideoData) *mod
 }
 
 func (p *Plugin) CreateOutputCardRecordAttachment(body *OutputCardRecordData) *model.SlackAttachment {
-	var fields []*model.SlackAttachmentField
-	fields = append(fields, &model.SlackAttachmentField{
+	fields := make([]*model.SlackAttachmentField, len(body.Fields)+1)
+	fields[0] = &model.SlackAttachmentField{
 		Title: body.Title,
 		Value: fmt.Sprintf("[%s](%s)", body.Subtitle, body.URL),
-	})
-	for _, field := range body.Fields {
-		fields = append(fields, &model.SlackAttachmentField{
+	}
+	for index, field := range body.Fields {
+		fields[index+1] = &model.SlackAttachmentField{
 			Title: field.FieldLabel,
 			Value: field.FieldValue,
-		})
+		}
 	}
 	return &model.SlackAttachment{
 		Fields: fields,
