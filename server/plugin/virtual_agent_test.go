@@ -257,8 +257,8 @@ func Test_CreateMessageAttachment(t *testing.T) {
 		{
 			description:   "CreateMessageAttachment returns an error while encrypting file",
 			fileID:        "mockFileID",
-			encryptError:  errors.New("error in encryptiing the file"),
-			expectedError: "error occurred while encrypting the file. Error: error in encryptiing the file",
+			encryptError:  errors.New("error in encrypting the file"),
+			expectedError: "error occurred while encrypting the file. Error: error in encrypting the file",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
