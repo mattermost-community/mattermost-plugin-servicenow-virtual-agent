@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
@@ -17,8 +18,15 @@ type VirtualAgentRequestBody struct {
 }
 
 type MessageBody struct {
-	Text  string `json:"text"`
-	Typed bool   `json:"typed"`
+	Attachment *MessageAttachment `json:"attachment"`
+	Text       string             `json:"text"`
+	Typed      bool               `json:"typed"`
+}
+
+type MessageAttachment struct {
+	URL         string `json:"url"`
+	ContentType string `json:"contentType"`
+	FileName    string `json:"fileName"`
 }
 
 type VirtualAgentResponse struct {
@@ -34,7 +42,7 @@ type OutputText struct {
 	UIType   string `json:"uiType"`
 	Group    string `json:"group"`
 	Value    string `json:"value"`
-	ItemType string `json:"itemType"`
+	ItemType string `json:"type"`
 	MaskType string `json:"maskType"`
 	Label    string `json:"label"`
 }
@@ -44,12 +52,13 @@ type OutputLinkValue struct {
 }
 
 type OutputLink struct {
-	UIType string `json:"uiType"`
-	Group  string `json:"group"`
-	Label  string `json:"label"`
-	Header string `json:"header"`
-	Type   string `json:"type"`
-	Value  OutputLinkValue
+	UIType        string `json:"uiType"`
+	Group         string `json:"group"`
+	Label         string `json:"label"`
+	Header        string `json:"header"`
+	Type          string `json:"type"`
+	Value         OutputLinkValue
+	PromptMessage string `json:"promptMsg"`
 }
 
 type GroupedPartsOutputControl struct {
@@ -127,6 +136,8 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(OutputText)
 	case InputTextUIType:
 		m.Value = new(OutputText)
+	case FileUploadUIType:
+		m.Value = new(OutputText)
 	case TopicPickerControlUIType:
 		m.Value = new(TopicPickerControl)
 	case PickerUIType:
@@ -154,11 +165,12 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed bool) error {
+func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed bool, attachment *MessageAttachment) error {
 	requestBody := &VirtualAgentRequestBody{
 		Message: &MessageBody{
-			Text:  messageText,
-			Typed: typed,
+			Attachment: attachment,
+			Text:       messageText,
+			Typed:      typed,
 		},
 		RequestID: c.plugin.generateUUID(),
 		UserID:    userID,
@@ -203,17 +215,32 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			message := res.Value
 			if res.Label != "" {
 				message = res.Label
+				if res.ItemType == ItemTypeImage {
+					message += UploadImageMessage
+				} else if res.ItemType == ItemTypeFile {
+					message += UploadFileMessage
+				}
 			}
+
 			if _, err = p.DM(userID, message); err != nil {
 				return err
 			}
 		case *TopicPickerControl:
+			if len(res.Options) == 0 {
+				p.API.LogInfo("TopicPickerControl dropdown has no options to display.")
+				return nil
+			}
+
 			if _, err = p.DMWithAttachments(userID, p.CreateTopicPickerControlAttachment(res)); err != nil {
 				return err
 			}
 		case *Picker:
 			if _, err = p.DM(userID, res.Label); err != nil {
 				return err
+			}
+			if len(res.Options) == 0 {
+				p.API.LogInfo("Picker dropdown has no options to display.")
+				return nil
 			}
 			if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
 				return err
@@ -333,4 +360,40 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	}
 
 	return postOptions
+}
+
+func (p *Plugin) createMessageAttachment(fileID string) (*MessageAttachment, error) {
+	var attachment *MessageAttachment
+	fileInfo, appErr := p.API.GetFileInfo(fileID)
+	if appErr != nil {
+		return nil, fmt.Errorf("error getting file info. Error: %w", appErr)
+	}
+
+	//TODO: Add a configuration setting for expiry time
+	expiryTime := time.Now().UTC().Add(time.Minute * AttachmentLinkExpiryTimeInMinutes)
+
+	file := &FileStruct{
+		ID:     fileID,
+		Expiry: expiryTime,
+	}
+
+	var jsonBytes []byte
+	jsonBytes, err := json.Marshal(file)
+	if err != nil {
+		return nil, fmt.Errorf("error occurred while marshaling the file. Error: %w", err)
+	}
+
+	var encrypted []byte
+	encrypted, err = encrypt(jsonBytes, []byte(p.getConfiguration().EncryptionSecret))
+	if err != nil {
+		return nil, fmt.Errorf("error occurred while encrypting the file. Error: %w", err)
+	}
+
+	attachment = &MessageAttachment{
+		URL:         p.GetPluginURL() + "/file/" + encode(encrypted),
+		ContentType: fileInfo.MimeType,
+		FileName:    fileInfo.Name,
+	}
+
+	return attachment, nil
 }

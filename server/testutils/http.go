@@ -47,6 +47,20 @@ func EncodeJSON(data interface{}) ([]byte, error) {
 	return b, nil
 }
 
+// EncodeString encodes string data in bytes
+func EncodeString(data interface{}) ([]byte, error) {
+	if data == nil {
+		return nil, nil
+	}
+
+	body, ok := data.(string)
+	if !ok {
+		return nil, errors.New("error while encoding string")
+	}
+
+	return []byte(body), nil
+}
+
 // CreateHTTPRequest creates http Request with basic data
 func (test *HTTPTest) CreateHTTPRequest(request Request) *http.Request {
 	tassert := assert.New(test.T)
@@ -80,6 +94,14 @@ func (test *HTTPTest) CompareHTTPResponse(rr *httptest.ResponseRecorder, expecte
 
 		testAssert.Equal(expectedBody, gotBody)
 	}
+}
+
+func GetMockArgumentsWithType(typeString string, num int) []interface{} {
+	ret := make([]interface{}, num)
+	for i := 0; i < len(ret); i++ {
+		ret[i] = mock.AnythingOfTypeArgument(typeString)
+	}
+	return ret
 }
 
 func GetMockArgumentsWithType(typeString string, num int) []interface{} {

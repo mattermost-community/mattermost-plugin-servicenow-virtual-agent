@@ -40,6 +40,7 @@ const (
 	StartConversationAction         = "START_CONVERSATION"
 	OutputTextUIType                = "OutputText"
 	InputTextUIType                 = "InputText"
+	FileUploadUIType                = "FileUpload"
 	TopicPickerControlUIType        = "TopicPickerControl"
 	PickerUIType                    = "Picker"
 	BooleanUIType                   = "Boolean"
@@ -50,15 +51,24 @@ const (
 	TimeUIType                      = "Time"
 	DateTimeUIType                  = "DateTime"
 
-	updatedPostBorderColor = "#74ccac"
-	DateValue              = "date"
-	TimeValue              = "time"
-	DateTimeDialogType     = "type"
-	DateLayout             = "2006-01-02"
+	DateValue          = "date"
+	TimeValue          = "time"
+	DateTimeDialogType = "type"
+	DateLayout         = "2006-01-02"
 
 	DateValidationError    = "Please enter a valid date"
 	TimeValidationError    = "Please enter a valid time"
 	InvalidCallbackIDError = "Invalid callback ID."
+	ItemTypeImage          = "image"
+	ItemTypeFile           = "file"
+
+	UploadImageMessage = "\n(**Note:** Please upload an image using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
+	UploadFileMessage  = "\n(**Note:** Please upload a file using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
+
+	PathParamEncryptedFileInfo = "encryptedFileInfo"
+
+	updatedPostBorderColor            = "#74ccac"
+	AttachmentLinkExpiryTimeInMinutes = 15
 )
 
 // #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
