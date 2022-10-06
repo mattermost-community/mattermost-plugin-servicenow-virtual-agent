@@ -408,11 +408,11 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	return postOptions
 }
 
-func (p *Plugin) createMessageAttachment(fileID string) (*MessageAttachment, error) {
+func (p *Plugin) CreateMessageAttachment(fileID string) (*MessageAttachment, error) {
 	var attachment *MessageAttachment
 	fileInfo, appErr := p.API.GetFileInfo(fileID)
 	if appErr != nil {
-		return nil, fmt.Errorf("error getting file info. Error: %w", appErr)
+		return nil, fmt.Errorf("error getting the file info. Error: %s", appErr.Message)
 	}
 
 	//TODO: Add a configuration setting for expiry time

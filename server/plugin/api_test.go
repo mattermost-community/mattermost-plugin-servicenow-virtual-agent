@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"bou.ke/monkey"
 	mock_plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/mocks"
@@ -95,7 +97,6 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
-				Body:   nil,
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -116,10 +117,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
-			GetUserErr:               nil,
-			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        nil,
+			userID: "mock-userID",
 		},
 		"User not found and failed to create disconnect post": {
 			httpTest: httpTestJSON,
@@ -133,8 +131,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			},
 			userID:                   "mock-userID",
 			GetUserErr:               ErrNotFound,
-			GetDisconnectUserPostErr: errors.New("mockErr"),
-			DisconnectUserErr:        nil,
+			GetDisconnectUserPostErr: errors.New("failed to create disconnect post"),
 		},
 		"User is found but error occurred while reading user from KV store": {
 			httpTest: httpTestJSON,
@@ -147,9 +144,8 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 				StatusCode: http.StatusOK,
 			},
 			userID:                   "mock-userID",
-			GetUserErr:               errors.New("mockError"),
-			GetDisconnectUserPostErr: errors.New("mockError"),
-			DisconnectUserErr:        nil,
+			GetUserErr:               errors.New("error in getting the user from KVstore"),
+			GetDisconnectUserPostErr: errors.New("failed to create disconnect post"),
 		},
 		"User not found and disconnect user post is created successfully": {
 			httpTest: httpTestJSON,
@@ -206,7 +202,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        errors.New("mockError"),
+			DisconnectUserErr:        errors.New("error in disconnecting the user"),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -228,9 +224,9 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
 
 			p.SetAPI(mockAPI)
 
@@ -288,7 +284,6 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			isErrorExpected: false,
 		},
 		"Webhook secret is absent": {
 			httpTest: httpTestJSON,
@@ -518,9 +513,9 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
 			mockAPI.On("DM", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil, nil)
 
@@ -620,7 +615,7 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			LoadUserErr: errors.New("mockErr"),
+			LoadUserErr: errors.New("error in loading the user from KVstore"),
 		},
 		"Error occurs while parsing OAuth token": {
 			httpTest: httpTestJSON,
@@ -676,9 +671,9 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
 			mockAPI.On("GetDirectChannel", mock.Anything, mock.Anything).Return(&model.Channel{
 				Id: "mock-channelID",
@@ -711,6 +706,153 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
 
 			if test.ParseAuthTokenErr != nil || test.callError != nil || test.LoadUserErr != nil {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
+		})
+	}
+}
+
+func TestPlugin_handleFileAttachments(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	httpTestString := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeString,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest         testutils.HTTPTest
+		request          testutils.Request
+		expectedResponse testutils.ExpectedResponse
+		decodeError      error
+		decryptError     error
+		unmarshalError   error
+		getFileError     *model.AppError
+		isErrorExpected  bool
+		isExpired        bool
+	}{
+		"File data is written in response": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"Error decoding encrypted file info": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusBadRequest,
+				Body:         "Error occurred while decoding the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
+			},
+			decodeError:     errors.New("error in decoding the file"),
+			isErrorExpected: true,
+		},
+		"Error decrypting file info": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Error occurred while decrypting the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
+			},
+			decryptError:    errors.New("error in decrypting the file"),
+			isErrorExpected: true,
+		},
+		"Error unmarshaling file info": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Error occurred while unmarshaling the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
+			},
+			unmarshalError:  errors.New("error in unmarshaling the file"),
+			isErrorExpected: true,
+		},
+		"Error getting file data": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Couldn't get file data.\n",
+				ResponseType: "text/plain; charset=utf-8",
+			},
+			getFileError: &model.AppError{
+				Message: "error in getting file data",
+			},
+			isErrorExpected: true,
+		},
+		"File link is expired": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusNotFound,
+			},
+			isExpired: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := new(Plugin)
+			p.setConfiguration(&configuration{EncryptionSecret: "mockEncryptionSecret"})
+
+			mockAPI := &plugintest.API{}
+
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
+
+			mockAPI.On("GetFile", mock.AnythingOfType("string")).Return([]byte{}, test.getFileError)
+
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			monkey.Patch(decode, func(_ string) ([]byte, error) {
+				return []byte{}, test.decodeError
+			})
+
+			monkey.Patch(decrypt, func(_, _ []byte) ([]byte, error) {
+				return []byte{}, test.decryptError
+			})
+
+			monkey.Patch(json.Unmarshal, func(_ []byte, _ interface{}) error {
+				return test.unmarshalError
+			})
+
+			currentTime := time.Now().UTC()
+			monkey.PatchInstanceMethod(reflect.TypeOf(currentTime), "After", func(_ time.Time, _ time.Time) bool {
+				return test.isExpired
+			})
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(HeaderMattermostUserID, "mock-userID")
+			resp := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, resp, req)
+			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
+
+			if test.isErrorExpected {
 				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
 			}
 		})

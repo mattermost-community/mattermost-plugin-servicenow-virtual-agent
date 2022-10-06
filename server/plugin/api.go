@@ -116,14 +116,15 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if time.Now().UTC().After(fileInfo.Expiry) {
+	currentTime := time.Now().UTC()
+	if currentTime.After(fileInfo.Expiry) {
 		http.NotFound(w, r)
 		return
 	}
 
 	data, appErr := p.API.GetFile(fileInfo.ID)
 	if appErr != nil {
-		p.API.LogInfo("Couldn't get file data. FileID: %s", fileInfo.ID)
+		p.API.LogError("Couldn't get file data. FileID: %s", fileInfo.ID)
 		http.Error(w, "Couldn't get file data.", http.StatusInternalServerError)
 		return
 	}

@@ -10,6 +10,7 @@ import (
 	"bou.ke/monkey"
 	mock_plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/mocks"
 	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
@@ -32,9 +33,9 @@ func Test_GetUser(t *testing.T) {
 		},
 		{
 			description: "Error in loading user from KV store using mattermostID",
-			errMessage:  errors.New("mockErrMessage"),
+			errMessage:  errors.New("error in loading the user from KVstore"),
 			loadedUser:  nil,
-			expectedErr: "mockErrMessage",
+			expectedErr: "error in loading the user from KVstore",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -72,8 +73,8 @@ func Test_DisconnectUser(t *testing.T) {
 		},
 		{
 			description: "Error in deleting user from KV store using mattermostID",
-			errMessage:  errors.New("mockErrMessage"),
-			expectedErr: "mockErrMessage",
+			errMessage:  errors.New("error in deleting the user from KVstore"),
+			expectedErr: "error in deleting the user from KVstore",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -152,7 +153,7 @@ func Test_GetDisconnectUserPost(t *testing.T) {
 		{
 			description:                      "GetDisconnectUserPost return error because GetDirectChannel return error due to invalid userID",
 			errMessage:                       &model.AppError{},
-			expectedErr:                      "mockErrMessage",
+			expectedErr:                      "userID is invalid",
 			userID:                           "invalid-UserID",
 			getPostWithSlackAttachmentResult: nil,
 		},
@@ -162,7 +163,7 @@ func Test_GetDisconnectUserPost(t *testing.T) {
 
 			mockAPI := &plugintest.API{}
 
-			mockAPI.On("LogInfo", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 
 			mockAPI.On("GetDirectChannel", testCase.userID, mock.AnythingOfType("string")).Return(testCase.getPostWithSlackAttachmentResult, testCase.errMessage)
 
@@ -190,25 +191,20 @@ func Test_InitOAuth2(t *testing.T) {
 		loadUserError error
 	}{
 		{
-			description:   "User is already connected to ServiceNow",
-			errMessage:    nil,
-			expectedErr:   "mockErrMessage",
-			loadedUser:    &serializer.User{},
-			loadUserError: nil,
+			description: "User is already connected to ServiceNow",
+			expectedErr: "user is already connected to ServiceNow",
+			loadedUser:  &serializer.User{},
 		},
 		{
 			description:   "OAuth2 is initialized successfully",
-			errMessage:    nil,
 			expectedErr:   "",
-			loadedUser:    nil,
-			loadUserError: errors.New("mockErrMessage"),
+			loadUserError: errors.New("user is not present in KVstore"),
 		},
 		{
 			description:   "Error occurred while storing oauth2 state",
-			errMessage:    errors.New("mockErrMessage"),
-			expectedErr:   "mockErrMessage",
-			loadedUser:    nil,
-			loadUserError: errors.New("mockErrMessage"),
+			errMessage:    errors.New("error storing OAuth2 state"),
+			expectedErr:   "error storing OAuth2 state",
+			loadUserError: errors.New("user is not present in KVstore"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -310,40 +306,40 @@ func Test_CompleteOAuth2(t *testing.T) {
 			authedUserID: "mock-authedUserID",
 			code:         "mockCode",
 			state:        "mockState_mock-authedUserID",
-			expectedErr:  "mockError",
-			getMeError:   errors.New("mockError"),
+			expectedErr:  "error getting the user details",
+			getMeError:   errors.New("error getting the user details"),
 		},
 		{
 			description:              "Error encoding the oauth2 token",
 			authedUserID:             "mock-authedUserID",
 			code:                     "mockCode",
 			state:                    "mockState_mock-authedUserID",
-			expectedErr:              "mockError",
-			newEncodedAuthTokenError: errors.New("mockError"),
+			expectedErr:              "error in generating new OAuth token",
+			newEncodedAuthTokenError: errors.New("error in generating new OAuth token"),
 		},
 		{
 			description:    "Error storing user in KV store",
 			authedUserID:   "mock-authedUserID",
 			code:           "mockCode",
 			state:          "mockState_mock-authedUserID",
-			expectedErr:    "mockError",
-			storeUserError: errors.New("mockError"),
+			expectedErr:    "error in storing the user in KVstore",
+			storeUserError: errors.New("error in storing the user in KVstore"),
 		},
 		{
 			description:  "Error while posting ConnectSuccessMessage to user",
 			authedUserID: "mock-authedUserID",
 			code:         "mockCode",
 			state:        "mockState_mock-authedUserID",
-			expectedErr:  "mockError",
-			dMError:      errors.New("mockError"),
+			expectedErr:  "error sending message to the user",
+			dMError:      errors.New("error sending message to the user"),
 		},
 		{
 			description:                            "Error while starting conversation with Virtual Agent",
 			authedUserID:                           "mock-authedUserID",
 			code:                                   "mockCode",
 			state:                                  "mockState_mock-authedUserID",
-			expectedErr:                            "mockError",
-			startConverstaionWithVirtualAgentError: errors.New("mockError"),
+			expectedErr:                            "error starting conversation with Virtual Agent",
+			startConverstaionWithVirtualAgentError: errors.New("error starting conversation with Virtual Agent"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
