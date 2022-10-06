@@ -159,12 +159,16 @@ func (c *client) GetMe(mattermostUserID string) (*serializer.ServiceNowUser, err
 	path := fmt.Sprintf("%s%s", c.plugin.getConfiguration().ServiceNowURL, PathGetUser)
 	params := url.Values{}
 	params.Add(SysQueryParam, fmt.Sprintf("email=%s", mattermostUser.Email))
+
 	_, err := c.CallJSON(http.MethodGet, path, nil, userDetails, params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get user details")
 	}
 	if len(userDetails.UserDetails) == 0 {
 		return nil, fmt.Errorf("user doesn't exist on ServiceNow with email %s", mattermostUser.Email)
+	}
+	if len(userDetails.UserDetails) > 1 {
+		c.plugin.API.LogWarn("multiple users with the same email address exist on ServiceNow instance", "Email", mattermostUser.Email, "Instance", c.plugin.getConfiguration().ServiceNowURL)
 	}
 
 	return userDetails.UserDetails[0], nil

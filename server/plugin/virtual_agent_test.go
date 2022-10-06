@@ -21,6 +21,8 @@ import (
 )
 
 func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	for _, testCase := range []struct {
 		description string
 		errMessage  error
@@ -45,8 +47,9 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 				}
 				return nil, nil
 			})
+			attachment := &MessageAttachment{}
 
-			err := c.SendMessageToVirtualAgentAPI("mock-userID", "mockMessage", true)
+			err := c.SendMessageToVirtualAgentAPI("mock-userID", "mockMessage", true, attachment)
 
 			if testCase.errMessage != nil {
 				require.Error(t, err)
@@ -59,6 +62,8 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 }
 
 func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	for _, testCase := range []struct {
 		description string
 		userID      string

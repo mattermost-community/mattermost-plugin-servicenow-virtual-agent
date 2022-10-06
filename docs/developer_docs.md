@@ -4,7 +4,7 @@
 - [License](#license)
 - [Overview](#overview)
 - [Features](#features)
-- [Basic Knowkedge](#basic-knowledge)
+- [Basic Knowledge](#basic-knowledge)
 - [Installation](#installation)
 - [Setup](#setup)
 - [Connecting to ServiceNow](#connecting-to-servicenow)
@@ -16,12 +16,13 @@ See the [LICENSE](./LICENSE) file for license rights and limitations.
 
 ## Overview
 
-This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created using the official Virtual Agent Bot API documentation which can be found [here](https://docs.servicenow.com/bundle/sandiego-application-development/page/integrate/inbound-rest/concept/bot-api.html). For a stable production rlease, please download the latest version from the Plugin Marketplace and follow the instructions to [install](#installation) and [configure](#setup) the plugin.
+This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created using the official Virtual Agent Bot API documentation which can be found [here](https://docs.servicenow.com/bundle/sandiego-application-development/page/integrate/inbound-rest/concept/bot-api.html). For a stable production release, please download the latest version from the Plugin Marketplace and follow the instructions to [install](#installation) and [configure](#setup) the plugin.
 
 ## Features
 
 This plugin supports sending text messages to the Virtual Agent through Mattermost and handling/displaying different types of responses from the Virtual Agent.
 **Note-** Currently we only support sending text messages and displaying text, picker/dropdown & link responses from the Virtual Agent API.
+**Note-** For sending file attachments to the Live Agent other than an image, you need to have ServiceNow version >= "San Diego Patch 4". Also, the link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
 
 ## Basic Knowledge
 
@@ -43,10 +44,16 @@ This plugin supports sending text messages to the Virtual Agent through Mattermo
     - [Pre-defined Conversation Flows/Topics](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/prebuilt-topics-ITSM.html)
     - [Additional Plugins](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/reference/additional-va-plugins.html)
 
+- **File Upload**
+
+    For sending file attachments to the Virtual Agent or the Live Agent we need to send a public link of the file in the request from where the Virtual Agent can download it. Virtual Agent does not support sending file attachments from any source, we have to specify the trusted domains ourselves so that the Virtual Agent knows that the specified domains can be trusted.
+    - [Set up trusted media domains](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/task/ccif-secure-file-upload.html)
+      - [Configuring the form layout](https://docs.servicenow.com/en-US/bundle/sandiego-platform-administration/page/administer/form-administration/concept/configure-form-layout.html)
+
 ## Installation
 
 1. Go to the [releases page of this GitHub repository](https://github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/releases) and download the latest release for your Mattermost server.
-2. Upload this file in the Mattermost **System Console > Plugins > Management** page to install the plugin. To learn more about how to upload a plugin, [see the documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
+2. Upload this file on the Mattermost **System Console > Plugins > Management** page to install the plugin. To learn more about how to upload a plugin, [see the documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
 3. Enable the plugin from **System Console > Plugins > ServiceNow Virtual Agent**.
 
 ## Setup

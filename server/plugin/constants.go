@@ -37,6 +37,7 @@ const (
 	StartConversationAction         = "START_CONVERSATION"
 	OutputTextUIType                = "OutputText"
 	InputTextUIType                 = "InputText"
+	FileUploadUIType                = "FileUpload"
 	TopicPickerControlUIType        = "TopicPickerControl"
 	PickerUIType                    = "Picker"
 	BooleanUIType                   = "Boolean"
@@ -45,9 +46,17 @@ const (
 	OutputCardUIType                = "OutputCard"
 	OutputImageUIType               = "OutputImage"
 
-	updatedPostBorderColor = "#74ccac"
-
 	InvalidImageLinkError = "Invalid image link."
+	ItemTypeImage         = "image"
+	ItemTypeFile          = "file"
+
+	UploadImageMessage = "\n(**Note:** Please upload an image using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
+	UploadFileMessage  = "\n(**Note:** Please upload a file using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
+
+	PathParamEncryptedFileInfo = "encryptedFileInfo"
+
+	updatedPostBorderColor            = "#74ccac"
+	AttachmentLinkExpiryTimeInMinutes = 15
 )
 
 // #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
