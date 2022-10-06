@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/mattermost/mattermost-server/v5/model"
@@ -85,15 +86,46 @@ type TopicPickerControl struct {
 }
 
 type OutputCard struct {
-	UIType string `json:"uiType"`
-	Group  string `json:"group"`
-	Data   string `json:"data"`
+	UIType       string `json:"uiType"`
+	Group        string `json:"group"`
+	Data         string `json:"data"`
+	TemplateName string `json:"templateName"`
 }
 
-type OutputCardData struct {
-	Subtitle string `json:"subtitle"`
-	Title    string `json:"title"`
-	URL      string `json:"url"`
+type OutputCardRecordData struct {
+	SysID            string          `json:"sys_id"`
+	Subtitle         string          `json:"subtitle"`
+	DataNowSmartLink string          `json:"dataNowSmartLink"`
+	Title            string          `json:"title"`
+	Fields           []*RecordFields `json:"fields"`
+	TableName        string          `json:"table_name"`
+	URL              string          `json:"url"`
+	Target           string          `json:"target"`
+}
+
+type OutputCardVideoData struct {
+	Link             string `json:"link"`
+	Description      string `json:"description"`
+	ID               string `json:"id"`
+	DataNowSmartLink string `json:"dataNowSmartLink"`
+	Title            string `json:"title"`
+	URL              string `json:"url"`
+	Target           string `json:"target"`
+}
+
+type OutputCardImageData struct {
+	Image            string `json:"image"`
+	Description      string `json:"description"`
+	DataNowSmartLink string `json:"dataNowSmartLink"`
+	Title            string `json:"title"`
+	URL              string `json:"url"`
+	ImageAlt         string `json:"imageAlt"`
+	Target           string `json:"target"`
+}
+
+type RecordFields struct {
+	FieldLabel string `json:"fieldLabel"`
+	FieldValue string `json:"fieldValue"`
 }
 
 type Picker struct {
@@ -246,15 +278,42 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 			}
-		//TODO: Modify later to display a proper card.
 		case *OutputCard:
-			var data OutputCardData
-			if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
-				return err
-			}
+			switch res.TemplateName {
+			case OutputCardSmallImageType, OutputCardLargeImageType:
+				var data OutputCardImageData
+				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
+					return err
+				}
 
-			if _, err = p.DMWithAttachments(userID, p.CreateOutputCardAttachment(&data)); err != nil {
-				return err
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardImageAttachment(&data)); err != nil {
+					return err
+				}
+			case OutputCardVideoType:
+				var data OutputCardVideoData
+				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
+					return err
+				}
+
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardVideoAttachment(&data)); err != nil {
+					return err
+				}
+
+				videoURL := url.URL{RawQuery: data.Link}
+				if _, err = p.dm(userID, &model.Post{
+					Message: videoURL.Query().Get(VideoQueryParam),
+				}); err != nil {
+					return err
+				}
+			case OutputCardRecordType:
+				var data OutputCardRecordData
+				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
+					return err
+				}
+
+				if _, err := p.DMWithAttachments(userID, p.CreateOutputCardRecordAttachment(&data)); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -269,10 +328,33 @@ func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttach
 	}
 }
 
-func (p *Plugin) CreateOutputCardAttachment(body *OutputCardData) *model.SlackAttachment {
+func (p *Plugin) CreateOutputCardImageAttachment(body *OutputCardImageData) *model.SlackAttachment {
 	return &model.SlackAttachment{
-		Pretext: body.Title,
-		Text:    fmt.Sprintf("[%s](%s)", body.Subtitle, body.URL),
+		Text:     fmt.Sprintf("**%s**\n%s", body.Title, body.Description),
+		ImageURL: body.Image,
+	}
+}
+
+func (p *Plugin) CreateOutputCardVideoAttachment(body *OutputCardVideoData) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Text: fmt.Sprintf("**[%s](%s)**\n%s", body.Title, body.Link, body.Description),
+	}
+}
+
+func (p *Plugin) CreateOutputCardRecordAttachment(body *OutputCardRecordData) *model.SlackAttachment {
+	fields := make([]*model.SlackAttachmentField, len(body.Fields)+1)
+	fields[0] = &model.SlackAttachmentField{
+		Title: body.Title,
+		Value: fmt.Sprintf("[%s](%s)", body.Subtitle, body.URL),
+	}
+	for index, field := range body.Fields {
+		fields[index+1] = &model.SlackAttachmentField{
+			Title: field.FieldLabel,
+			Value: field.FieldValue,
+		}
+	}
+	return &model.SlackAttachment{
+		Fields: fields,
 	}
 }
 

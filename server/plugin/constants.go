@@ -21,7 +21,9 @@ const (
 	PathVirtualAgentBotIntegration = "/api/sn_va_as_service/bot/integration"
 	PathActionOptions              = "/action_options"
 
-	SysQueryParam = "sysparm_query"
+	SysQueryParam   = "sysparm_query"
+	VideoQueryParam = "target_url"
+	SecretParam     = "secret"
 
 	BotUsername    = "servicenow-virtual-agent"
 	BotDisplayName = "ServiceNow Virtual Agent"
@@ -44,6 +46,10 @@ const (
 	OutputLinkUIType                = "OutputLink"
 	GroupedPartsOutputControlUIType = "GroupedPartsOutputControl"
 	OutputCardUIType                = "OutputCard"
+	OutputCardSmallImageType        = "Small image with text"
+	OutputCardLargeImageType        = "Large image with text"
+	OutputCardVideoType             = "Youtube Video Card"
+	OutputCardRecordType            = "Card"
 
 	ItemTypeImage = "image"
 	ItemTypeFile  = "file"
