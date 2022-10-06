@@ -924,7 +924,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			p.initializeAPI()
 
 			var c client
-			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool) error {
+			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *MessageAttachment) error {
 				return nil
 			})
 
