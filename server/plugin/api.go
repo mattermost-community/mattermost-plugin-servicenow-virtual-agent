@@ -281,7 +281,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 
 	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
 	if err != nil {
-		p.API.LogInfo("Couldn't get bot's DM channel with user", "userID", mattermostUserID)
+		p.API.LogError("Couldn't get bot's DM channel with user", "UserID", mattermostUserID)
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}

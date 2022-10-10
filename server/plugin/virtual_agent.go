@@ -344,7 +344,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model.Post, error) {
 	channel, appErr := p.API.GetDirectChannel(userID, p.botUserID)
 	if appErr != nil {
-		p.API.LogError("Couldn't get bot's DM channel", "userID", userID, "Error", appErr.Message)
+		p.API.LogError("Couldn't get bot's DM channel", "UserID", userID, "Error", appErr.Message)
 		return nil, appErr
 	}
 
@@ -394,7 +394,7 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 	file, appErr := p.API.UploadFile(data, channel.Id, completeFilename)
 	if appErr != nil {
 		post.Message = body.AltText
-		p.API.LogError("Couldn't upload file on mattermost", "channelID", channel.Id, "Error", appErr.Message)
+		p.API.LogError("Couldn't upload file on mattermost", "ChannelID", channel.Id, "Error", appErr.Message)
 	} else {
 		post.FileIds = model.StringArray{file.Id}
 	}
