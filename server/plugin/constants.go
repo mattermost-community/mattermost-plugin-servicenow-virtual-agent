@@ -24,7 +24,9 @@ const (
 	PathDateTimeSelectionDialog    = "/date"
 	PathDateTimeSelection          = "/selected_date"
 
-	SysQueryParam = "sysparm_query"
+	SysQueryParam   = "sysparm_query"
+	VideoQueryParam = "target_url"
+	SecretParam     = "secret"
 
 	BotUsername    = "servicenow-virtual-agent"
 	BotDisplayName = "ServiceNow Virtual Agent"
@@ -50,6 +52,10 @@ const (
 	DateUIType                      = "Date"
 	TimeUIType                      = "Time"
 	DateTimeUIType                  = "DateTime"
+	OutputCardSmallImageType        = "Small image with text"
+	OutputCardLargeImageType        = "Large image with text"
+	OutputCardVideoType             = "Youtube Video Card"
+	OutputCardRecordType            = "Card"
 
 	DateValue          = "date"
 	TimeValue          = "time"
