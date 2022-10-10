@@ -155,6 +155,14 @@ type OutputImage struct {
 	AltText string `json:"altText"`
 }
 
+type DefaultDate struct {
+	UIType         string `json:"uiType"`
+	Group          string `json:"group"`
+	Required       bool   `json:"required"`
+	NLUTextEnabled bool   `json:"nluTextEnabled"`
+	Label          string `json:"label"`
+}
+
 func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	var uiType struct {
 		UIType string `json:"uiType"`
@@ -185,6 +193,12 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(OutputCard)
 	case OutputImageUIType:
 		m.Value = new(OutputImage)
+	case DateTimeUIType:
+		m.Value = new(DefaultDate)
+	case DateUIType:
+		m.Value = new(DefaultDate)
+	case TimeUIType:
+		m.Value = new(DefaultDate)
 	}
 
 	if m.Value != nil {
@@ -322,7 +336,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 
-				if _, err := p.DMWithAttachments(userID, p.CreateOutputCardRecordAttachment(&data)); err != nil {
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardRecordAttachment(&data)); err != nil {
 					return err
 				}
 			}
@@ -333,6 +347,10 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			}
 
 			if _, err = p.dm(userID, post); err != nil {
+				return err
+			}
+		case *DefaultDate:
+			if _, err = p.DMWithAttachments(userID, p.CreateDefaultDateAttachment(res)); err != nil {
 				return err
 			}
 		}
@@ -400,6 +418,24 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 	}
 
 	return post, nil
+}
+
+func (p *Plugin) CreateDefaultDateAttachment(body *DefaultDate) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Text: body.Label,
+		Actions: []*model.PostAction{
+			{
+				Name: fmt.Sprintf("Select %s", body.UIType),
+				Integration: &model.PostActionIntegration{
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
+					Context: map[string]interface{}{
+						"type": body.UIType,
+					},
+				},
+				Type: "button",
+			},
+		},
+	}
 }
 
 func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttachment {
