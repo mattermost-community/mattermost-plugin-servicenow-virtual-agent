@@ -325,7 +325,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 
-				if _, err := p.DMWithAttachments(userID, p.CreateOutputCardRecordAttachment(&data)); err != nil {
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardRecordAttachment(&data)); err != nil {
 					return err
 				}
 			}

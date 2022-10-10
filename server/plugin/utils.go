@@ -37,7 +37,6 @@ func (p *Plugin) validateTime(time string) string {
 
 	timeRegex := regexp.MustCompile(`^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$`)
 	timeMatched = timeRegex.FindAllStringSubmatch(time, -1)
-
 	if timeMatched == nil {
 		return TimeValidationError
 	}

@@ -21,8 +21,8 @@ const (
 	PathVirtualAgentBotIntegration = "/api/sn_va_as_service/bot/integration"
 	PathActionOptions              = "/action_options"
 	PathOpenDialog                 = "/api/v4/actions/dialogs/open"
-	PathDateTimeSelectionDialog    = "/date"
-	PathDateTimeSelection          = "/selected_date"
+	PathDateTimeSelectionDialog    = "/date_time"
+	PathDateTimeSelection          = "/selected_date_time"
 
 	SysQueryParam   = "sysparm_query"
 	VideoQueryParam = "target_url"

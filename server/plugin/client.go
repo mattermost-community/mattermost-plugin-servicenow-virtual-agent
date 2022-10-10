@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/mattermost/mattermost-server/v5/model"
 	"golang.org/x/oauth2"
 )
 
@@ -12,6 +13,7 @@ type Client interface {
 	GetMe(mattermostUserID string) (*serializer.ServiceNowUser, error)
 	StartConverstaionWithVirtualAgent(userID string) error
 	SendMessageToVirtualAgentAPI(userID, messageText string, typed bool, attachment *MessageAttachment) error
+	OpenDialogRequest(w http.ResponseWriter, r *http.Request, body *model.OpenDialogRequest) error
 }
 
 type client struct {
