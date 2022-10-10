@@ -44,7 +44,7 @@ func TestDM(t *testing.T) {
 			p := Plugin{}
 			mockAPI := &plugintest.API{}
 			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return()
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 3)...).Return()
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 
 			mockAPI.On("GetDirectChannel", mock.Anything, mock.Anything).Return(testCase.mockChannel, testCase.mockChannelErr)
 

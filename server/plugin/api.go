@@ -20,10 +20,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type OpenDialogResponse struct {
-	Body string `json:"body"`
-}
-
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)

@@ -163,7 +163,7 @@ func Test_GetDisconnectUserPost(t *testing.T) {
 
 			mockAPI := &plugintest.API{}
 
-			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return()
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 
 			mockAPI.On("GetDirectChannel", testCase.userID, mock.AnythingOfType("string")).Return(testCase.getPostWithSlackAttachmentResult, testCase.errMessage)
 
