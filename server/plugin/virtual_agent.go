@@ -344,34 +344,32 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model.Post, error) {
 	channel, appErr := p.API.GetDirectChannel(userID, p.botUserID)
 	if appErr != nil {
-		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", userID, "error", appErr.Message)
+		p.API.LogError("Couldn't get bot's DM channel", "userID", userID, "Error", appErr.Message)
 		return nil, appErr
 	}
 
 	resp, err := http.Get(body.Value)
 	if err != nil {
-		p.API.LogInfo("Error in getting file data from link", "error", err.Error())
+		p.API.LogError("Error in getting file data from link", "Error", err.Error())
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		p.API.LogInfo("Error in reading file data", "error", err.Error())
+		p.API.LogError("Error in reading file data", "Error", err.Error())
 		return nil, err
 	}
 
 	linkContents := strings.Split(body.Value, "/")
-
 	if len(linkContents) < 1 {
-		p.API.LogInfo(InvalidImageLinkError)
+		p.API.LogError(InvalidImageLinkError)
 		return nil, errors.New(InvalidImageLinkError)
 	}
 
 	completeFilename := linkContents[len(linkContents)-1]
 
 	filenameContents := strings.Split(completeFilename, ".")
-
 	ContentTypeInHeaders := ""
 	if len(resp.Header["Content-Type"]) > 0 {
 		ContentTypeInHeaders = resp.Header["Content-Type"][0]
@@ -396,7 +394,7 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 	file, appErr := p.API.UploadFile(data, channel.Id, completeFilename)
 	if appErr != nil {
 		post.Message = body.AltText
-		p.API.LogInfo("Couldn't upload file on mattermost", "channel_id", channel.Id, "error", appErr.Message)
+		p.API.LogError("Couldn't upload file on mattermost", "channelID", channel.Id, "Error", appErr.Message)
 	} else {
 		post.FileIds = model.StringArray{file.Id}
 	}

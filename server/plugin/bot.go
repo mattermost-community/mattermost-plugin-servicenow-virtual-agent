@@ -38,14 +38,14 @@ func (p *Plugin) DMWithAttachments(mattermostUserID string, attachments ...*mode
 func (p *Plugin) dm(mattermostUserID string, post *model.Post) (string, error) {
 	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
 	if err != nil {
-		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", mattermostUserID, "error", err.Error())
+		p.API.LogError("Couldn't get bot's DM channel", "userID", mattermostUserID, "Error", err.Error())
 		return "", err
 	}
 	post.ChannelId = channel.Id
 	post.UserId = p.botUserID
 	sentPost, err := p.API.CreatePost(post)
 	if err != nil {
-		p.API.LogError("error occurred while creating post", "error", err.Error())
+		p.API.LogError("Error occurred while creating post", "Error", err.Error())
 		return "", err
 	}
 
@@ -55,7 +55,7 @@ func (p *Plugin) dm(mattermostUserID string, post *model.Post) (string, error) {
 func (p *Plugin) GetPostWithSlackAttachment(mattermostUserID string, attachments ...*model.SlackAttachment) (*model.Post, error) {
 	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
 	if err != nil {
-		p.API.LogInfo("Couldn't get bot's DM channel", "user_id", mattermostUserID)
+		p.API.LogError("Couldn't get bot's DM channel", "userID", mattermostUserID)
 		return nil, err
 	}
 
