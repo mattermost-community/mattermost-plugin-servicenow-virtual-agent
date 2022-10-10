@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -87,15 +88,46 @@ type TopicPickerControl struct {
 }
 
 type OutputCard struct {
-	UIType string `json:"uiType"`
-	Group  string `json:"group"`
-	Data   string `json:"data"`
+	UIType       string `json:"uiType"`
+	Group        string `json:"group"`
+	Data         string `json:"data"`
+	TemplateName string `json:"templateName"`
 }
 
-type OutputCardData struct {
-	Subtitle string `json:"subtitle"`
-	Title    string `json:"title"`
-	URL      string `json:"url"`
+type OutputCardRecordData struct {
+	SysID            string          `json:"sys_id"`
+	Subtitle         string          `json:"subtitle"`
+	DataNowSmartLink string          `json:"dataNowSmartLink"`
+	Title            string          `json:"title"`
+	Fields           []*RecordFields `json:"fields"`
+	TableName        string          `json:"table_name"`
+	URL              string          `json:"url"`
+	Target           string          `json:"target"`
+}
+
+type OutputCardVideoData struct {
+	Link             string `json:"link"`
+	Description      string `json:"description"`
+	ID               string `json:"id"`
+	DataNowSmartLink string `json:"dataNowSmartLink"`
+	Title            string `json:"title"`
+	URL              string `json:"url"`
+	Target           string `json:"target"`
+}
+
+type OutputCardImageData struct {
+	Image            string `json:"image"`
+	Description      string `json:"description"`
+	DataNowSmartLink string `json:"dataNowSmartLink"`
+	Title            string `json:"title"`
+	URL              string `json:"url"`
+	ImageAlt         string `json:"imageAlt"`
+	Target           string `json:"target"`
+}
+
+type RecordFields struct {
+	FieldLabel string `json:"fieldLabel"`
+	FieldValue string `json:"fieldValue"`
 }
 
 type Picker struct {
@@ -121,6 +153,14 @@ type OutputImage struct {
 	Group   string `json:"group"`
 	Value   string `json:"value"`
 	AltText string `json:"altText"`
+}
+
+type DefaultDate struct {
+	UIType         string `json:"uiType"`
+	Group          string `json:"group"`
+	Required       bool   `json:"required"`
+	NLUTextEnabled bool   `json:"nluTextEnabled"`
+	Label          string `json:"label"`
 }
 
 func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
@@ -153,6 +193,12 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(OutputCard)
 	case OutputImageUIType:
 		m.Value = new(OutputImage)
+	case DateTimeUIType:
+		m.Value = new(DefaultDate)
+	case DateUIType:
+		m.Value = new(DefaultDate)
+	case TimeUIType:
+		m.Value = new(DefaultDate)
 	}
 
 	if m.Value != nil {
@@ -257,23 +303,55 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 			}
-		//TODO: Modify later to display a proper card.
 		case *OutputCard:
-			var data OutputCardData
-			if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
-				return err
-			}
+			switch res.TemplateName {
+			case OutputCardSmallImageType, OutputCardLargeImageType:
+				var data OutputCardImageData
+				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
+					return err
+				}
 
-			if _, err = p.DMWithAttachments(userID, p.CreateOutputCardAttachment(&data)); err != nil {
-				return err
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardImageAttachment(&data)); err != nil {
+					return err
+				}
+			case OutputCardVideoType:
+				var data OutputCardVideoData
+				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
+					return err
+				}
+
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardVideoAttachment(&data)); err != nil {
+					return err
+				}
+
+				videoURL := url.URL{RawQuery: data.Link}
+				if _, err = p.dm(userID, &model.Post{
+					Message: videoURL.Query().Get(VideoQueryParam),
+				}); err != nil {
+					return err
+				}
+			case OutputCardRecordType:
+				var data OutputCardRecordData
+				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
+					return err
+				}
+
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardRecordAttachment(&data)); err != nil {
+					return err
+				}
 			}
 		case *OutputImage:
-			post, err := p.CreateOutputImagePost(res, userID)
+			var post *model.Post
+			post, err = p.CreateOutputImagePost(res, userID)
 			if err != nil {
 				return err
 			}
 
 			if _, err = p.dm(userID, post); err != nil {
+				return err
+			}
+		case *DefaultDate:
+			if _, err = p.DMWithAttachments(userID, p.CreateDefaultDateAttachment(res)); err != nil {
 				return err
 			}
 		}
@@ -285,27 +363,26 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model.Post, error) {
 	channel, appErr := p.API.GetDirectChannel(userID, p.botUserID)
 	if appErr != nil {
-		p.API.LogInfo("Couldn't get the bot's DM channel", "user_id", userID, "error", appErr.Message)
+		p.API.LogError("Couldn't get bot's DM channel", "UserID", userID, "Error", appErr.Message)
 		return nil, appErr
 	}
 
 	resp, err := http.Get(body.Value)
 	if err != nil {
-		p.API.LogInfo("Error in getting file data from the link", "error", err.Error())
+		p.API.LogError("Error in getting file data from link", "Error", err.Error())
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		p.API.LogInfo("Error in reading file data", "error", err.Error())
+		p.API.LogError("Error in reading file data", "Error", err.Error())
 		return nil, err
 	}
 
 	linkContents := strings.Split(body.Value, "/")
-
 	if len(linkContents) < 1 {
-		p.API.LogInfo(InvalidImageLinkError)
+		p.API.LogError(InvalidImageLinkError)
 		return nil, errors.New(InvalidImageLinkError)
 	}
 
@@ -337,12 +414,30 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 	file, appErr := p.API.UploadFile(data, channel.Id, completeFilename)
 	if appErr != nil {
 		post.Message = body.AltText
-		p.API.LogInfo("Couldn't upload the file on mattermost", "channel_id", channel.Id, "error", appErr.Message)
+		p.API.LogError("Couldn't upload file on mattermost", "ChannelID", channel.Id, "Error", appErr.Message)
 	} else {
 		post.FileIds = model.StringArray{file.Id}
 	}
 
 	return post, nil
+}
+
+func (p *Plugin) CreateDefaultDateAttachment(body *DefaultDate) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Text: body.Label,
+		Actions: []*model.PostAction{
+			{
+				Name: fmt.Sprintf("Select %s", body.UIType),
+				Integration: &model.PostActionIntegration{
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
+					Context: map[string]interface{}{
+						"type": body.UIType,
+					},
+				},
+				Type: "button",
+			},
+		},
+	}
 }
 
 func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttachment {
@@ -352,10 +447,33 @@ func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttach
 	}
 }
 
-func (p *Plugin) CreateOutputCardAttachment(body *OutputCardData) *model.SlackAttachment {
+func (p *Plugin) CreateOutputCardImageAttachment(body *OutputCardImageData) *model.SlackAttachment {
 	return &model.SlackAttachment{
-		Pretext: body.Title,
-		Text:    fmt.Sprintf("[%s](%s)", body.Subtitle, body.URL),
+		Text:     fmt.Sprintf("**%s**\n%s", body.Title, body.Description),
+		ImageURL: body.Image,
+	}
+}
+
+func (p *Plugin) CreateOutputCardVideoAttachment(body *OutputCardVideoData) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Text: fmt.Sprintf("**[%s](%s)**\n%s", body.Title, body.Link, body.Description),
+	}
+}
+
+func (p *Plugin) CreateOutputCardRecordAttachment(body *OutputCardRecordData) *model.SlackAttachment {
+	fields := make([]*model.SlackAttachmentField, len(body.Fields)+1)
+	fields[0] = &model.SlackAttachmentField{
+		Title: body.Title,
+		Value: fmt.Sprintf("[%s](%s)", body.Subtitle, body.URL),
+	}
+	for index, field := range body.Fields {
+		fields[index+1] = &model.SlackAttachmentField{
+			Title: field.FieldLabel,
+			Value: field.FieldValue,
+		}
+	}
+	return &model.SlackAttachment{
+		Fields: fields,
 	}
 }
 
@@ -409,11 +527,11 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	return postOptions
 }
 
-func (p *Plugin) createMessageAttachment(fileID string) (*MessageAttachment, error) {
+func (p *Plugin) CreateMessageAttachment(fileID string) (*MessageAttachment, error) {
 	var attachment *MessageAttachment
 	fileInfo, appErr := p.API.GetFileInfo(fileID)
 	if appErr != nil {
-		return nil, fmt.Errorf("error getting file info. Error: %w", appErr)
+		return nil, fmt.Errorf("error getting the file info. Error: %s", appErr.Message)
 	}
 
 	//TODO: Add a configuration setting for expiry time

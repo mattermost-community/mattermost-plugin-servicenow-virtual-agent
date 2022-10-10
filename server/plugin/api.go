@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -38,6 +39,8 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathDateTimeSelectionDialog, p.checkAuth(p.checkOAuth(p.handleDateTimeSelectionDialog))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathDateTimeSelection, p.checkAuth(p.checkOAuth(p.handleDateTimeSelection))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(fmt.Sprintf("/file/{%s}", PathParamEncryptedFileInfo), p.handleFileAttachments).Methods(http.MethodGet)
 
@@ -48,7 +51,9 @@ func (p *Plugin) initializeAPI() *mux.Router {
 
 func (p *Plugin) checkAuthBySecret(handleFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, r.FormValue("secret")); err != nil {
+		// Replace all occurrences of " " with "+" in WebhookSecret.
+		webhookSecret := strings.ReplaceAll(r.FormValue(SecretParam), " ", "+")
+		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, webhookSecret); err != nil {
 			p.API.LogError("Invalid secret", "Error", err.Error())
 			http.Error(w, fmt.Sprintf("Invalid Secret. Error: %s", err.Error()), status)
 			return
@@ -113,14 +118,15 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if time.Now().UTC().After(fileInfo.Expiry) {
+	currentTime := time.Now().UTC()
+	if currentTime.After(fileInfo.Expiry) {
 		http.NotFound(w, r)
 		return
 	}
 
 	data, appErr := p.API.GetFile(fileInfo.ID)
 	if appErr != nil {
-		p.API.LogInfo("Couldn't get file data. FileID: %s", fileInfo.ID)
+		p.API.LogError("Couldn't get file data. FileID: %s", fileInfo.ID)
 		http.Error(w, "Couldn't get file data.", http.StatusInternalServerError)
 		return
 	}
@@ -188,7 +194,7 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
-		p.API.LogError("Error decoding PostActionIntegrationRequest params.", "Error", err.Error())
+		p.API.LogError("Error decoding PostActionIntegrationRequest.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
@@ -245,6 +251,166 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	p.returnPostActionIntegrationResponse(w, response)
 }
 
+func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	response := &model.PostActionIntegrationResponse{}
+	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
+	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
+		p.API.LogError("Error decoding PostActionIntegrationRequest.", "Error", err.Error())
+		http.Error(w, "Error decoding PostActionIntegrationRequest.", http.StatusBadRequest)
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+
+	var elements []model.DialogElement
+	date := model.DialogElement{
+		DisplayName: "Date:",
+		Name:        DateValue,
+		Type:        "text",
+		Placeholder: "YYYY-MM-DD",
+		HelpText:    "Please enter the date in the format YYYY-MM-DD. Example: 2001-11-04",
+		Optional:    false,
+		MinLength:   10,
+		MaxLength:   10,
+	}
+
+	time := model.DialogElement{
+		DisplayName: "Time:",
+		Name:        TimeValue,
+		Type:        "text",
+		Placeholder: "HH:MM",
+		HelpText:    "Please enter the time in 24 hour format as HH:MM. Example: 20:04",
+		Optional:    false,
+		MinLength:   5,
+		MaxLength:   5,
+	}
+
+	inputType := fmt.Sprintf("%v", postActionIntegrationRequest.Context[DateTimeDialogType])
+	switch inputType {
+	case DateUIType:
+		elements = append(elements, date)
+	case TimeUIType:
+		elements = append(elements, time)
+	case DateTimeUIType:
+		elements = append(elements, date, time)
+	}
+
+	requestBody := model.OpenDialogRequest{
+		TriggerId: postActionIntegrationRequest.TriggerId,
+		URL:       fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelection),
+		Dialog: model.Dialog{
+			Title:       fmt.Sprintf("Select %s", inputType),
+			CallbackId:  fmt.Sprintf("%s__%s", postActionIntegrationRequest.PostId, inputType),
+			SubmitLabel: "Submit",
+			Elements:    elements,
+		},
+	}
+
+	ctx := r.Context()
+	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
+	client := p.MakeClient(r.Context(), token)
+	if err := client.OpenDialogRequest(&requestBody); err != nil {
+		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
+		http.Error(w, "Error opening date-time selection dialog.", http.StatusInternalServerError)
+	}
+	p.returnPostActionIntegrationResponse(w, response)
+}
+
+func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	response := &model.SubmitDialogResponse{}
+	submitRequest := &model.SubmitDialogRequest{}
+	if err := decoder.Decode(&submitRequest); err != nil {
+		p.API.LogError("Error decoding SubmitDialogRequest.", "Error", err.Error())
+		p.returnSubmitDialogResponse(w, response)
+		return
+	}
+
+	ctx := r.Context()
+	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
+	userID := r.Header.Get(HeaderServiceNowUserID)
+	var selectedOption string
+
+	if len(strings.Split(submitRequest.CallbackId, "__")) != 2 {
+		p.API.LogError(InvalidCallbackIDError)
+		response.Error = InvalidCallbackIDError
+		p.returnSubmitDialogResponse(w, response)
+		return
+	}
+
+	postID := strings.Split(submitRequest.CallbackId, "__")[0]
+	inputType := strings.Split(submitRequest.CallbackId, "__")[1]
+
+	var dateValidationError, timeValidationError string
+	switch inputType {
+	case DateTimeUIType:
+		selectedOption = fmt.Sprintf("%v %v:00", submitRequest.Submission[DateValue], submitRequest.Submission[TimeValue])
+
+		response.Errors = map[string]string{}
+
+		dateValidationError = p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
+		if dateValidationError != "" {
+			response.Errors[DateValue] = dateValidationError
+		}
+
+		timeValidationError = p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
+		if timeValidationError != "" {
+			response.Errors[TimeValue] = timeValidationError
+		}
+	case DateUIType:
+		selectedOption = fmt.Sprintf("%v", submitRequest.Submission[DateValue])
+
+		dateValidationError = p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
+		if dateValidationError != "" {
+			response.Errors = map[string]string{
+				DateValue: dateValidationError,
+			}
+		}
+	case TimeUIType:
+		selectedOption = fmt.Sprintf("%v:00", submitRequest.Submission[TimeValue])
+
+		timeValidationError = p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
+
+		if timeValidationError != "" {
+			response.Errors = map[string]string{
+				TimeValue: timeValidationError,
+			}
+		}
+	}
+
+	if dateValidationError != "" || timeValidationError != "" {
+		p.returnSubmitDialogResponse(w, response)
+		return
+	}
+
+	client := p.MakeClient(r.Context(), token)
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &MessageAttachment{}); err != nil {
+		p.API.LogError("Error sending message to VA.", "Error", err.Error())
+		p.returnSubmitDialogResponse(w, response)
+		return
+	}
+
+	newAttachment := []*model.SlackAttachment{}
+	newAttachment = append(newAttachment, &model.SlackAttachment{
+		Text:  fmt.Sprintf("You selected %s: %s", inputType, selectedOption),
+		Color: updatedPostBorderColor,
+	})
+
+	newPost := &model.Post{
+		Id:        postID,
+		ChannelId: submitRequest.ChannelId,
+		UserId:    p.botUserID,
+	}
+
+	model.ParseSlackAttachment(newPost, newAttachment)
+
+	if _, appErr := p.API.UpdatePost(newPost); appErr != nil {
+		p.API.LogError("Error updating the post.", "Error", appErr.Message)
+		p.returnSubmitDialogResponse(w, response)
+		return
+	}
+}
+
 func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	response := &model.PostActionIntegrationResponse{}
 	decoder := json.NewDecoder(r.Body)
@@ -258,7 +424,6 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
-	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	selectedOption := postActionIntegrationRequest.Context["selected_option"].(string)
 	attachment := &MessageAttachment{}
 
@@ -275,15 +440,8 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		Color: updatedPostBorderColor,
 	})
 
-	channel, err := p.API.GetDirectChannel(mattermostUserID, p.botUserID)
-	if err != nil {
-		p.API.LogInfo("Couldn't get bot's DM channel with user", "userID", mattermostUserID)
-		p.returnPostActionIntegrationResponse(w, response)
-		return
-	}
-
 	newPost := &model.Post{
-		ChannelId: channel.Id,
+		ChannelId: postActionIntegrationRequest.ChannelId,
 		UserId:    p.botUserID,
 	}
 
@@ -316,5 +474,12 @@ func (p *Plugin) returnPostActionIntegrationResponse(w http.ResponseWriter, res 
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write(res.ToJson()); err != nil {
 		p.API.LogWarn("Failed to write PostActionIntegrationResponse", "Error", err.Error())
+	}
+}
+
+func (p *Plugin) returnSubmitDialogResponse(w http.ResponseWriter, res *model.SubmitDialogResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write(res.ToJson()); err != nil {
+		p.API.LogWarn("Failed to write SubmitDialogResponse", "Error", err.Error())
 	}
 }

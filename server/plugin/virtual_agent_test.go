@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -34,8 +35,8 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 		},
 		{
 			description: "Error while sending message to Virtual Agent API",
-			errMessage:  errors.New("mockErrMessage"),
-			expectedErr: errors.New("failed to call virtual agent bot integration API: mockErrMessage"),
+			errMessage:  errors.New("error in calling the Virtual Agent API"),
+			expectedErr: errors.New("failed to call virtual agent bot integration API: error in calling the Virtual Agent API"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -71,13 +72,13 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			description: "Conversation is successfully started with VIrtual Agent",
+			description: "Conversation is successfully started with Virtual Agent",
 			errMessage:  nil,
 		},
 		{
 			description: "Error in starting conversation with Virtual Agent",
-			errMessage:  errors.New("mockErrMessage"),
-			expectedErr: errors.New("failed to start conversation with virtual agent bot: mockErrMessage"),
+			errMessage:  errors.New("error in calling the Virtual Agent API"),
+			expectedErr: errors.New("failed to start conversation with virtual agent bot: error in calling the Virtual Agent API"),
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
@@ -186,7 +187,7 @@ func Test_CreatePickerAttachment(t *testing.T) {
 		response    *model.SlackAttachment
 	}{
 		{
-			description: "CreatePickerAttachment returns proper stack attachment",
+			description: "CreatePickerAttachment returns proper slack attachment",
 			body: &Picker{
 				Label: "mockLabel",
 				Options: []Option{{
@@ -288,7 +289,7 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			p := Plugin{}
 			mockAPI := &plugintest.API{}
 
-			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return("LogInfo error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return("")
 
 			mockAPI.On("GetDirectChannel", testutils.GetMockArgumentsWithType("string", 2)...).Return(&model.Channel{}, testCase.getDirectChannelError)
 
@@ -314,6 +315,85 @@ func Test_CreateOutputImagePost(t *testing.T) {
 				assert.Contains(t, err.Error(), testCase.expectedError)
 			} else {
 				assert.NotNil(t, post)
+			}
+		})
+	}
+}
+
+func Test_CreateMessageAttachment(t *testing.T) {
+	p := Plugin{}
+
+	defer monkey.UnpatchAll()
+
+	for _, testCase := range []struct {
+		description      string
+		fileID           string
+		response         *MessageAttachment
+		getFileInfoError *model.AppError
+		marshalError     error
+		encryptError     error
+		expectedError    string
+	}{
+		{
+			description: "CreateMessageAttachment returns a valid attachment",
+			fileID:      "mockFileID",
+			response: &MessageAttachment{
+				URL:         "mockSiteURL" + p.GetPluginURLPath() + "/file/" + encode([]byte{}),
+				ContentType: "mockMimeType",
+				FileName:    "mockName",
+			},
+		},
+		{
+			description: "CreateMessageAttachment returns an error while getting file info",
+			fileID:      "mockFileID",
+			getFileInfoError: &model.AppError{
+				Message: "error in getting the file info",
+			},
+			expectedError: "error getting the file info. Error: error in getting the file info",
+		},
+		{
+			description:   "CreateMessageAttachment returns an error while marshaling file",
+			fileID:        "mockFileID",
+			marshalError:  errors.New("error in marshaling the file"),
+			expectedError: "error occurred while marshaling the file. Error: error in marshaling the file",
+		},
+		{
+			description:   "CreateMessageAttachment returns an error while encrypting file",
+			fileID:        "mockFileID",
+			encryptError:  errors.New("error in encrypting the file"),
+			expectedError: "error occurred while encrypting the file. Error: error in encrypting the file",
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			p.setConfiguration(
+				&configuration{
+					EncryptionSecret:  "mockEncryptionSecret",
+					MattermostSiteURL: "mockSiteURL",
+				})
+
+			mockAPI := plugintest.API{}
+
+			mockAPI.On("GetFileInfo", mock.AnythingOfType("string")).Return(&model.FileInfo{
+				MimeType: "mockMimeType",
+				Name:     "mockName",
+			}, testCase.getFileInfoError)
+
+			p.SetAPI(&mockAPI)
+
+			monkey.Patch(json.Marshal, func(_ interface{}) ([]byte, error) {
+				return []byte{}, testCase.marshalError
+			})
+
+			monkey.Patch(encrypt, func(_, _ []byte) ([]byte, error) {
+				return []byte{}, testCase.encryptError
+			})
+
+			res, err := p.CreateMessageAttachment(testCase.fileID)
+
+			assert.EqualValues(t, testCase.response, res)
+
+			if testCase.expectedError != "" {
+				assert.EqualError(t, err, testCase.expectedError)
 			}
 		})
 	}
