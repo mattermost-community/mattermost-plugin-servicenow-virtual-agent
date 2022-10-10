@@ -23,7 +23,9 @@ type Request struct {
 
 // ExpectedResponse stores expected response basic data
 type ExpectedResponse struct {
-	StatusCode int
+	StatusCode   int
+	ResponseType string
+	Body         interface{}
 }
 
 // HTTPTest encapsulates data for testing needs
@@ -78,9 +80,19 @@ func (test *HTTPTest) CreateHTTPRequest(request Request) *http.Request {
 }
 
 // CompareHTTPResponse compares expected response with actual response
-func (test *HTTPTest) CompareHTTPResponse(rr *httptest.ResponseRecorder, expected ExpectedResponse) {
+func (test *HTTPTest) CompareHTTPResponse(resp *httptest.ResponseRecorder, expected ExpectedResponse) {
 	testAssert := assert.New(test.T)
-	testAssert.Equal(expected.StatusCode, rr.Code, "Http status codes are different")
+	testAssert.Equal(expected.StatusCode, resp.Code, "Http status codes are different")
+
+	if expected.Body != nil {
+		expectedBody, err := test.Encoder(expected.Body)
+		testAssert.NoError(err)
+
+		testAssert.Equal(expected.ResponseType, resp.Header().Get("Content-Type"))
+
+		respBody := resp.Body.Bytes()
+		testAssert.Equal(expectedBody, respBody)
+	}
 }
 
 func GetMockArgumentsWithType(typeString string, num int) []interface{} {
