@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
@@ -13,7 +14,7 @@ type Client interface {
 	GetMe(mattermostUserID string) (*serializer.ServiceNowUser, error)
 	StartConverstaionWithVirtualAgent(userID string) error
 	SendMessageToVirtualAgentAPI(userID, messageText string, typed bool, attachment *MessageAttachment) error
-	OpenDialogRequest(w http.ResponseWriter, r *http.Request, body *model.OpenDialogRequest) error
+	OpenDialogRequest(body *model.OpenDialogRequest) error
 }
 
 type client struct {
@@ -30,4 +31,13 @@ func (p *Plugin) MakeClient(ctx context.Context, token *oauth2.Token) Client {
 		plugin:     p,
 	}
 	return c
+}
+
+func (c *client) OpenDialogRequest(body *model.OpenDialogRequest) error {
+	postURL := fmt.Sprintf("%s%s", c.plugin.getConfiguration().MattermostSiteURL, PathOpenDialog)
+	_, err := c.CallJSON(http.MethodPost, postURL, body, nil, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }

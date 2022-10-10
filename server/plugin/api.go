@@ -309,24 +309,16 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 			Elements:    elements,
 		},
 	}
+
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	client := p.MakeClient(r.Context(), token)
-	err := client.OpenDialogRequest(w, r, &requestBody)
+	err := client.OpenDialogRequest(&requestBody)
 	if err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
 		http.Error(w, "Error opening date-time selection dialog.", http.StatusInternalServerError)
 	}
 	p.returnPostActionIntegrationResponse(w, response)
-}
-
-func (c *client) OpenDialogRequest(w http.ResponseWriter, r *http.Request, body *model.OpenDialogRequest) error {
-	postURL := fmt.Sprintf("%s%s", c.plugin.getConfiguration().MattermostSiteURL, PathOpenDialog)
-	_, err := c.CallJSON(http.MethodPost, postURL, body, nil, nil)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request) {
