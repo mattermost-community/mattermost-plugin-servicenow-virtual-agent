@@ -1,7 +1,9 @@
 package plugin
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -9,6 +11,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"bou.ke/monkey"
 	mock_plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/mocks"
@@ -30,6 +33,8 @@ type panicHandler struct {
 func (ph panicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	panic("bad handler")
 }
+
+const pathPrefix = "/api/v1"
 
 func TestWithRecovery(t *testing.T) {
 	defer func() {
@@ -59,6 +64,8 @@ func TestWithRecovery(t *testing.T) {
 }
 
 func TestPlugin_handleUserDisconnect(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	httpTestJSON := testutils.HTTPTest{
 		T:       t,
 		Encoder: testutils.EncodeJSON,
@@ -77,22 +84,30 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/user/disconnect",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body:   model.PostActionIntegrationRequest{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusUnauthorized,
 			},
-			userID:                   "",
-			GetUserErr:               ErrNotFound,
-			GetDisconnectUserPostErr: errors.New("mockErr"),
-			DisconnectUserErr:        nil,
+			userID: "",
+		},
+		"Error while decoding request body": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID: "mock-userID",
 		},
 		"User is disconnected successfully": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/user/disconnect",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						DisconnectUserContextName: true,
@@ -102,16 +117,13 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
-			GetUserErr:               nil,
-			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        nil,
+			userID: "mock-userID",
 		},
 		"User not found and failed to create disconnect post": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/user/disconnect",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body:   model.PostActionIntegrationRequest{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -119,29 +131,27 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			},
 			userID:                   "mock-userID",
 			GetUserErr:               ErrNotFound,
-			GetDisconnectUserPostErr: errors.New("mockErr"),
-			DisconnectUserErr:        nil,
+			GetDisconnectUserPostErr: errors.New("failed to create disconnect post"),
 		},
 		"User is found but error occurred while reading user from KV store": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/user/disconnect",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body:   model.PostActionIntegrationRequest{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
 			userID:                   "mock-userID",
-			GetUserErr:               errors.New("mockError"),
-			GetDisconnectUserPostErr: errors.New("mockError"),
-			DisconnectUserErr:        nil,
+			GetUserErr:               errors.New("error in getting the user from KVstore"),
+			GetDisconnectUserPostErr: errors.New("failed to create disconnect post"),
 		},
 		"User not found and disconnect user post is created successfully": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/user/disconnect",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						DisconnectUserContextName: "mockContextName",
@@ -160,7 +170,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/user/disconnect",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						DisconnectUserContextName: false,
@@ -179,7 +189,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/user/disconnect",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						DisconnectUserContextName: true,
@@ -192,7 +202,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        errors.New("mockError"),
+			DisconnectUserErr:        errors.New("error in disconnecting the user"),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -214,9 +224,9 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
 
 			p.SetAPI(mockAPI)
 
@@ -239,6 +249,10 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+
+			if (test.GetUserErr != ErrNotFound && test.GetUserErr != nil) || test.GetDisconnectUserPostErr != nil || test.DisconnectUserErr != nil {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
 		})
 	}
 }
@@ -249,74 +263,231 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 		Encoder: testutils.EncodeJSON,
 	}
 
+	httpTestString := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeString,
+	}
+
 	for name, test := range map[string]struct {
 		httpTest         testutils.HTTPTest
 		request          testutils.Request
 		expectedResponse testutils.ExpectedResponse
+		isErrorExpected  bool
 	}{
-		"Webhook secret is absent": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    "/api/v1/nowbot/processResponse",
-				Body:   VirtualAgentResponse{},
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusForbidden,
-			},
-		},
 		"Webhook secret is present": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/nowbot/processResponse?secret=mockWebhookSecret",
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body:   VirtualAgentResponse{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
 		},
+		"Webhook secret is absent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathVirtualAgentWebhook),
+				Body:   VirtualAgentResponse{},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusForbidden,
+			},
+			isErrorExpected: true,
+		},
 		"handleVirtualAgentWebhook empty body": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/nowbot/processResponse?secret=mockWebhookSecret",
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
 				Body:   nil,
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
 			},
+			isErrorExpected: true,
 		},
-		"Proper response is received from Virtual Agent": {
-			httpTest: httpTestJSON,
+		"OutputLink response received from Virtual Agent": {
+			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/nowbot/processResponse?secret=mockWebhookSecret",
-				Body: VirtualAgentResponse{
-					VirtualAgentRequestBody: VirtualAgentRequestBody{
-						Action:    "mockAction",
-						RequestID: "mockRequestID",
-						UserID:    "mockUserID",
-						Message: &MessageBody{
-							Text:  "mockText",
-							Typed: true,
-						},
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				Body: `{
+					"requestId": "mock-requestId",
+					"message": {
+					  "text": "",
+					  "typed": true
 					},
-					Body: []MessageResponseBody{
+					"userId": "mock-userId",
+					"body": [
+					  {
+						"uiType": "OutputLink",
+						"group": "DefaultText",
+						"label": "Successful",
+						"header": "header",
+						"value": {
+							"action": "action"
+						}
+					  }
+					],
+					"score": 1
+				  }`,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"TopicPickerControl response received from Virtual Agent": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				Body: `{
+					"requestId": "mock-requestId",
+					"message": {
+					  "text": "",
+					  "typed": true
+					},
+					"userId": "mock-userId",
+					"body": [
+					  { 
+						"uiType":"TopicPickerControl", 
+						"group":"DefaultPicker", 
+						"nluTextEnabled":false, 
+						"promptMsg":"Hi guest, please enter your request or make a selection of what I can help with. You can type help any time when you need help.", 
+						"label":"Show me everything", 
+						"options":[ 
+						  { 
+							"label":"b2b topic", 
+							"value":"2bb7bd7670de6010f877c7f188266fc7", 
+							"enabled":true 
+						  }, 
+						  { 
+							 "label":"Live Agent Support.", 
+							 "value":"ce2ee85053130010cf8cddeeff7b12bf", 
+							 "enabled":true 
+						  } 
+						] 
+					  }
+					],
+					"score": 1
+				  }`,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"OutputText response received from Virtual Agent": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				Body: `{
+					"requestId": "mock-requestId",
+					"message": {
+					  "text": "",
+					  "typed": true
+					},
+					"userId": "mock-userId",
+					"body": [
+					  {
+						"uiType": "OutputText",
+						"group": "DefaultText",
+						"value": "Successful",
+						"maskType": "NONE"
+					  }
+					],
+					"score": 1
+				  }`,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"Picker response received from Virtual Agent": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				Body: `{
+					"requestId": "mock-requestId",
+					"message": {
+					  "text": "",
+					  "typed": true
+					},
+					"userId": "mock-userId",
+					"body": [
 						{
-							Value: OutputLink{
-								UIType: "mockUIType",
-								Group:  "mockGroup",
-								Label:  "mockLabel",
-								Header: "mockHeader",
-								Type:   "mockType",
-								Value: OutputLinkValue{
-									Action: "mockAction",
-								},
-							},
-						},
+							"uiType":"Picker",
+							"group":"DefaultPicker",
+							"required":true,
+							"nluTextEnabled":false,
+							"label":"I want to be sure I got this right. What item best describes what you want to do?",
+							"itemType":"List",
+							"style":"list",
+							"multiSelect":false,
+							"options":[
+							  {
+								"label":"Live Agent Support.",
+								"value":"Live Agent Support.",
+								"renderStyle":"data",
+								"enabled":false
+							  },
+							  {
+								"label":"Virtual Agent Capabilities.",
+								"value":"Virtual Agent Capabilities.",
+								"renderStyle":"data",
+								"enabled":false
+							  },
+							  {
+								"label":"I want something else",
+								"value":"-1",
+								"renderStyle":"data",
+								"enabled":false
+							  }
+							],
+							"scriptedData":null
+						  }
+					],
+					"score": 1
+				  }`,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"GroupedPartsOutputControl response received from Virtual Agent": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				Body: `{
+					"requestId": "mock-requestId",
+					"message": {
+					  "text": "",
+					  "typed": true
 					},
-				},
+					"userId": "mock-userID",
+					"body": [
+						{
+							"uiType": "GroupedPartsOutputControl",
+							"group": "DefaultGroupedPartsOutputControl",
+							"groupPartType": "Link",
+							"header": "header message",
+							"values": [
+							  {
+								"action": "www.foo",
+								"description": "description",
+								"label": "link_1 label",
+								"context": "ITSM"
+							  }
+							]
+						  }
+					],
+					"score": 1
+				  }`,
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -342,13 +513,26 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+
+			mockAPI.On("DM", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil, nil)
+
+			mockAPI.On("DMWithAttachments", mock.AnythingOfType("string"), &model.SlackAttachment{}).Return(nil, nil)
 
 			p.SetAPI(mockAPI)
 
 			p.initializeAPI()
+
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+
+			if !test.isErrorExpected {
+				mockedStore.EXPECT().LoadUserWithSysID(gomock.Any()).Return(&serializer.User{}, nil)
+			}
+
+			p.store = mockedStore
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
 			rr := httptest.NewRecorder()
@@ -359,24 +543,27 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 }
 
 func TestPlugin_handlePickerSelection(t *testing.T) {
+	defer monkey.UnpatchAll()
+
 	httpTestJSON := testutils.HTTPTest{
 		T:       t,
 		Encoder: testutils.EncodeJSON,
 	}
 
 	for name, test := range map[string]struct {
-		httpTest          testutils.HTTPTest
-		request           testutils.Request
-		expectedResponse  testutils.ExpectedResponse
-		userID            string
-		ParseAuthTokenErr error
-		LoadUserErr       error
+		httpTest              testutils.HTTPTest
+		request               testutils.Request
+		expectedResponse      testutils.ExpectedResponse
+		ParseAuthTokenErr     error
+		LoadUserErr           error
+		getDirectChannelError *model.AppError
+		callError             error
 	}{
 		"Selected option is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/action_options",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						"selected_option": "mockOption",
@@ -386,15 +573,39 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
-			LoadUserErr:       nil,
+		},
+		"Error while decoding response body": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
+				Body:   nil,
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"Failed to get direct channel": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						"selected_option": "mockOption",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			getDirectChannelError: &model.AppError{},
 		},
 		"User is not present in store": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/action_options",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						"selected_option": "mockOption",
@@ -404,15 +615,13 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: nil,
-			LoadUserErr:       errors.New("mockErr"),
+			LoadUserErr: errors.New("error in loading the user from KVstore"),
 		},
 		"Error occurs while parsing OAuth token": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    "/api/v1/action_options",
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
 						"selected_option": "mockOption",
@@ -422,8 +631,24 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:            "mock-userID",
 			ParseAuthTokenErr: errors.New("mockErr"),
+		},
+		"Error while sending selected option to Virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						"selected_option": "mockOption",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			callError:         errors.New("mockError"),
+			ParseAuthTokenErr: nil,
 			LoadUserErr:       nil,
 		},
 	} {
@@ -446,9 +671,13 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
 
-			mockAPI.On("LogDebug", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("Logdebug error")
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
-			mockAPI.On("LogError", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+
+			mockAPI.On("GetDirectChannel", mock.Anything, mock.Anything).Return(&model.Channel{
+				Id: "mock-channelID",
+			}, test.getDirectChannelError)
 
 			p.SetAPI(mockAPI)
 
@@ -460,21 +689,172 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 
 			var c client
 			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
-				return nil, nil
+				return nil, test.callError
 			})
 
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
 
-			mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, test.LoadUserErr)
+			mockedStore.EXPECT().LoadUser("mock-userID").Return(&serializer.User{}, test.LoadUserErr)
 
 			p.store = mockedStore
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, test.userID)
+			req.Header.Add(HeaderMattermostUserID, "mock-userID")
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+
+			if test.ParseAuthTokenErr != nil || test.callError != nil || test.LoadUserErr != nil {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
+		})
+	}
+}
+
+func TestPlugin_handleFileAttachments(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	httpTestString := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeString,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest         testutils.HTTPTest
+		request          testutils.Request
+		expectedResponse testutils.ExpectedResponse
+		decodeError      error
+		decryptError     error
+		unmarshalError   error
+		getFileError     *model.AppError
+		isErrorExpected  bool
+		isExpired        bool
+	}{
+		"File data is written in response": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"Error decoding encrypted file info": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusBadRequest,
+				Body:         "Error occurred while decoding the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
+			},
+			decodeError:     errors.New("error in decoding the file"),
+			isErrorExpected: true,
+		},
+		"Error decrypting file info": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Error occurred while decrypting the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
+			},
+			decryptError:    errors.New("error in decrypting the file"),
+			isErrorExpected: true,
+		},
+		"Error unmarshaling file info": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Error occurred while unmarshaling the file.\n",
+				ResponseType: "text/plain; charset=utf-8",
+			},
+			unmarshalError:  errors.New("error in unmarshaling the file"),
+			isErrorExpected: true,
+		},
+		"Error getting file data": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusInternalServerError,
+				Body:         "Couldn't get file data.\n",
+				ResponseType: "text/plain; charset=utf-8",
+			},
+			getFileError: &model.AppError{
+				Message: "error in getting file data",
+			},
+			isErrorExpected: true,
+		},
+		"File link is expired": {
+			httpTest: httpTestString,
+			request: testutils.Request{
+				Method: http.MethodGet,
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusNotFound,
+			},
+			isExpired: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := new(Plugin)
+			p.setConfiguration(&configuration{EncryptionSecret: "mockEncryptionSecret"})
+
+			mockAPI := &plugintest.API{}
+
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
+
+			mockAPI.On("GetFile", mock.AnythingOfType("string")).Return([]byte{}, test.getFileError)
+
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			monkey.Patch(decode, func(_ string) ([]byte, error) {
+				return []byte{}, test.decodeError
+			})
+
+			monkey.Patch(decrypt, func(_, _ []byte) ([]byte, error) {
+				return []byte{}, test.decryptError
+			})
+
+			monkey.Patch(json.Unmarshal, func(_ []byte, _ interface{}) error {
+				return test.unmarshalError
+			})
+
+			currentTime := time.Now().UTC()
+			monkey.PatchInstanceMethod(reflect.TypeOf(currentTime), "After", func(_ time.Time, _ time.Time) bool {
+				return test.isExpired
+			})
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(HeaderMattermostUserID, "mock-userID")
+			resp := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, resp, req)
+			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
+
+			if test.isErrorExpected {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
 		})
 	}
 }
