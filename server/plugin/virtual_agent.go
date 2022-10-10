@@ -341,7 +341,8 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				}
 			}
 		case *OutputImage:
-			post, err := p.CreateOutputImagePost(res, userID)
+			var post *model.Post
+			post, err = p.CreateOutputImagePost(res, userID)
 			if err != nil {
 				return err
 			}
