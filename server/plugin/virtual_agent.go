@@ -3,8 +3,10 @@ package plugin
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-server/v5/model"
@@ -146,6 +148,21 @@ type Option struct {
 	Enabled bool   `json:"enabled"`
 }
 
+type OutputImage struct {
+	UIType  string `json:"uiType"`
+	Group   string `json:"group"`
+	Value   string `json:"value"`
+	AltText string `json:"altText"`
+}
+
+type DefaultDate struct {
+	UIType         string `json:"uiType"`
+	Group          string `json:"group"`
+	Required       bool   `json:"required"`
+	NLUTextEnabled bool   `json:"nluTextEnabled"`
+	Label          string `json:"label"`
+}
+
 func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	var uiType struct {
 		UIType string `json:"uiType"`
@@ -174,6 +191,14 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(GroupedPartsOutputControl)
 	case OutputCardUIType:
 		m.Value = new(OutputCard)
+	case OutputImageUIType:
+		m.Value = new(OutputImage)
+	case DateTimeUIType:
+		m.Value = new(DefaultDate)
+	case DateUIType:
+		m.Value = new(DefaultDate)
+	case TimeUIType:
+		m.Value = new(DefaultDate)
 	}
 
 	if m.Value != nil {
@@ -311,14 +336,107 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 
-				if _, err := p.DMWithAttachments(userID, p.CreateOutputCardRecordAttachment(&data)); err != nil {
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardRecordAttachment(&data)); err != nil {
 					return err
 				}
+			}
+		case *OutputImage:
+			var post *model.Post
+			post, err = p.CreateOutputImagePost(res, userID)
+			if err != nil {
+				return err
+			}
+
+			if _, err = p.dm(userID, post); err != nil {
+				return err
+			}
+		case *DefaultDate:
+			if _, err = p.DMWithAttachments(userID, p.CreateDefaultDateAttachment(res)); err != nil {
+				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model.Post, error) {
+	channel, appErr := p.API.GetDirectChannel(userID, p.botUserID)
+	if appErr != nil {
+		p.API.LogError("Couldn't get bot's DM channel", "UserID", userID, "Error", appErr.Message)
+		return nil, appErr
+	}
+
+	resp, err := http.Get(body.Value)
+	if err != nil {
+		p.API.LogError("Error in getting file data from link", "Error", err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		p.API.LogError("Error in reading file data", "Error", err.Error())
+		return nil, err
+	}
+
+	linkContents := strings.Split(body.Value, "/")
+	if len(linkContents) < 1 {
+		p.API.LogError(InvalidImageLinkError)
+		return nil, errors.New(InvalidImageLinkError)
+	}
+
+	completeFilename := linkContents[len(linkContents)-1]
+
+	filenameContents := strings.Split(completeFilename, ".")
+	ContentTypeInHeaders := ""
+	if len(resp.Header["Content-Type"]) > 0 {
+		ContentTypeInHeaders = resp.Header["Content-Type"][0]
+	}
+
+	if len(strings.Split(ContentTypeInHeaders, "/")) == 2 {
+		fileExtension := ""
+		if len(filenameContents) == 2 {
+			fileExtension = filenameContents[1]
+		}
+
+		fileExtensionInHeaders := strings.Split(ContentTypeInHeaders, "/")[1]
+		if fileExtension != fileExtensionInHeaders {
+			fileExtension = fileExtensionInHeaders
+		}
+
+		filename := filenameContents[0]
+		completeFilename = fmt.Sprintf("%s.%s", filename, fileExtension)
+	}
+
+	post := &model.Post{}
+	file, appErr := p.API.UploadFile(data, channel.Id, completeFilename)
+	if appErr != nil {
+		post.Message = body.AltText
+		p.API.LogError("Couldn't upload file on mattermost", "ChannelID", channel.Id, "Error", appErr.Message)
+	} else {
+		post.FileIds = model.StringArray{file.Id}
+	}
+
+	return post, nil
+}
+
+func (p *Plugin) CreateDefaultDateAttachment(body *DefaultDate) *model.SlackAttachment {
+	return &model.SlackAttachment{
+		Text: body.Label,
+		Actions: []*model.PostAction{
+			{
+				Name: fmt.Sprintf("Select %s", body.UIType),
+				Integration: &model.PostActionIntegration{
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
+					Context: map[string]interface{}{
+						"type": body.UIType,
+					},
+				},
+				Type: "button",
+			},
+		},
+	}
 }
 
 func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttachment {
