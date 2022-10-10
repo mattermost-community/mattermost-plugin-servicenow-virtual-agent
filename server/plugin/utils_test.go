@@ -15,7 +15,7 @@ func Test_LogAndSendErrorToUser(t *testing.T) {
 	t.Run("Error is successfully sent to the user", func(t *testing.T) {
 		p := Plugin{}
 		mockAPI := &plugintest.API{}
-		mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 3)...).Return("LogError error")
+		mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 3)...).Return()
 
 		mockAPI.On("SendEphemeralPost", mock.Anything, mock.Anything).Return(&model.Post{})
 

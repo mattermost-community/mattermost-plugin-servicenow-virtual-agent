@@ -20,10 +20,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type Post struct {
-	Body string `json:"body"`
-}
-
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)
@@ -55,7 +51,9 @@ func (p *Plugin) initializeAPI() *mux.Router {
 
 func (p *Plugin) checkAuthBySecret(handleFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, r.FormValue("secret")); err != nil {
+		// Replace all occurrences of " " with "+" in WebhookSecret.
+		webhookSecret := strings.ReplaceAll(r.FormValue(SecretParam), " ", "+")
+		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, webhookSecret); err != nil {
 			p.API.LogError("Invalid secret", "Error", err.Error())
 			http.Error(w, fmt.Sprintf("Invalid Secret. Error: %s", err.Error()), status)
 			return
@@ -120,14 +118,15 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if time.Now().UTC().After(fileInfo.Expiry) {
+	currentTime := time.Now().UTC()
+	if currentTime.After(fileInfo.Expiry) {
 		http.NotFound(w, r)
 		return
 	}
 
 	data, appErr := p.API.GetFile(fileInfo.ID)
 	if appErr != nil {
-		p.API.LogInfo("Couldn't get file data. FileID: %s", fileInfo.ID)
+		p.API.LogError("Couldn't get file data. FileID: %s", fileInfo.ID)
 		http.Error(w, "Couldn't get file data.", http.StatusInternalServerError)
 		return
 	}
@@ -264,7 +263,6 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	}
 
 	var elements []model.DialogElement
-
 	date := model.DialogElement{
 		DisplayName: "Date:",
 		Name:        DateValue,
@@ -308,8 +306,13 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 		},
 	}
 
-	p.OpenDialogRequest(w, requestBody)
-
+	ctx := r.Context()
+	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
+	client := p.MakeClient(r.Context(), token)
+	if err := client.OpenDialogRequest(&requestBody); err != nil {
+		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
+		http.Error(w, "Error opening date-time selection dialog.", http.StatusInternalServerError)
+	}
 	p.returnPostActionIntegrationResponse(w, response)
 }
 
@@ -338,52 +341,46 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 	postID := strings.Split(submitRequest.CallbackId, "__")[0]
 	inputType := strings.Split(submitRequest.CallbackId, "__")[1]
 
+	var dateValidationError, timeValidationError string
 	switch inputType {
 	case DateTimeUIType:
 		selectedOption = fmt.Sprintf("%v %v:00", submitRequest.Submission[DateValue], submitRequest.Submission[TimeValue])
 
-		dateValidationError := p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
-
 		response.Errors = map[string]string{}
 
+		dateValidationError = p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
 		if dateValidationError != "" {
 			response.Errors[DateValue] = dateValidationError
 		}
 
-		timeValidationError := p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
-
+		timeValidationError = p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
 		if timeValidationError != "" {
 			response.Errors[TimeValue] = timeValidationError
-		}
-
-		if dateValidationError != "" || timeValidationError != "" {
-			p.returnSubmitDialogResponse(w, response)
-			return
 		}
 	case DateUIType:
 		selectedOption = fmt.Sprintf("%v", submitRequest.Submission[DateValue])
 
-		dateValidationError := p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
-
+		dateValidationError = p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
 		if dateValidationError != "" {
 			response.Errors = map[string]string{
 				DateValue: dateValidationError,
 			}
-			p.returnSubmitDialogResponse(w, response)
-			return
 		}
 	case TimeUIType:
 		selectedOption = fmt.Sprintf("%v:00", submitRequest.Submission[TimeValue])
 
-		timeValidationError := p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
+		timeValidationError = p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
 
 		if timeValidationError != "" {
 			response.Errors = map[string]string{
 				TimeValue: timeValidationError,
 			}
-			p.returnSubmitDialogResponse(w, response)
-			return
 		}
+	}
+
+	if dateValidationError != "" || timeValidationError != "" {
+		p.returnSubmitDialogResponse(w, response)
+		return
 	}
 
 	client := p.MakeClient(r.Context(), token)
