@@ -174,7 +174,7 @@ func Test_CreateOutputCardVideoAttachment(t *testing.T) {
 				Description: "mockDescription",
 			},
 			response: &model.SlackAttachment{
-				Text: fmt.Sprintf("**[%s](%s)**\n%s\n%s", "mockTitle", "mockLink", "mockDescription", "mockURL"),
+				Text: fmt.Sprintf("**[%s](%s)**\n%s", "mockTitle", "mockLink", "mockDescription"),
 			},
 		},
 	} {
@@ -200,7 +200,7 @@ func Test_CreateOutputCardRecordAttachment(t *testing.T) {
 				Title:    "mockTitle",
 				Subtitle: "mockSubtitle",
 				URL:      "mockURL",
-				Fields: []RecordFields{
+				Fields: []*RecordFields{
 					{
 						FieldLabel: "mockLabel",
 						FieldValue: "mockValue",
