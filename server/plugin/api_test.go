@@ -712,6 +712,17 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 	}
 }
 
+func getHandleDateTimeSelectionRequestBody(date, time, dialogType string) model.SubmitDialogRequest {
+	return model.SubmitDialogRequest{
+		CallbackId: fmt.Sprintf("mockPostID__%s", dialogType),
+		Submission: map[string]interface{}{
+			"date": date,
+			"time": time,
+		},
+		ChannelId: "mockChannelID",
+	}
+}
+
 func Test_handleDateTimeSelection(t *testing.T) {
 	defer monkey.UnpatchAll()
 
@@ -732,13 +743,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
-				Body: model.SubmitDialogRequest{
-					CallbackId: "mockPostID__Date",
-					Submission: map[string]interface{}{
-						"date": "2022-09-23",
-					},
-					ChannelId: "mockChannelID",
-				},
+				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusUnauthorized,
@@ -749,13 +754,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
-				Body: model.SubmitDialogRequest{
-					CallbackId: "mockPostID__Date",
-					Submission: map[string]interface{}{
-						"date": "2022-09-23",
-					},
-					ChannelId: "mockChannelID",
-				},
+				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -768,13 +767,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
-				Body: model.SubmitDialogRequest{
-					CallbackId: "mockPostID__Date",
-					Submission: map[string]interface{}{
-						"date": "2022-09-23",
-					},
-					ChannelId: "mockChannelID",
-				},
+				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode:   http.StatusOK,
@@ -788,13 +781,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
-				Body: model.SubmitDialogRequest{
-					CallbackId: "mockPostID__Date",
-					Submission: map[string]interface{}{
-						"date": "2022-23-23",
-					},
-					ChannelId: "mockChannelID",
-				},
+				Body:   getHandleDateTimeSelectionRequestBody("2022-23-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -812,13 +799,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
-				Body: model.SubmitDialogRequest{
-					CallbackId: "mockPostID__Time",
-					Submission: map[string]interface{}{
-						"time": "22:12",
-					},
-					ChannelId: "mockChannelID",
-				},
+				Body:   getHandleDateTimeSelectionRequestBody("", "22:12", "Time"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode:   http.StatusOK,
@@ -832,13 +813,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
-				Body: model.SubmitDialogRequest{
-					CallbackId: "mockPostID__Time",
-					Submission: map[string]interface{}{
-						"time": "25:12",
-					},
-					ChannelId: "mockChannelID",
-				},
+				Body:   getHandleDateTimeSelectionRequestBody("", "25:12", "Time"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -856,14 +831,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
-				Body: model.SubmitDialogRequest{
-					CallbackId: "mockPostID__DateTime",
-					Submission: map[string]interface{}{
-						"date": "2022-09-23",
-						"time": "22:12",
-					},
-					ChannelId: "mockChannelID",
-				},
+				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "22:12", "DateTime"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -879,14 +847,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			request: testutils.Request{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
-				Body: model.SubmitDialogRequest{
-					CallbackId: "mockPostID__DateTime",
-					Submission: map[string]interface{}{
-						"date": "2022-13-23",
-						"time": "24:12",
-					},
-					ChannelId: "mockChannelID",
-				},
+				Body:   getHandleDateTimeSelectionRequestBody("2022-13-23", "24:12", "DateTime"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -949,11 +910,12 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 	}
 
 	for name, test := range map[string]struct {
-		httpTest          testutils.HTTPTest
-		request           testutils.Request
-		expectedResponse  testutils.ExpectedResponse
-		userID            string
-		ParseAuthTokenErr error
+		httpTest             testutils.HTTPTest
+		request              testutils.Request
+		expectedResponse     testutils.ExpectedResponse
+		userID               string
+		parseAuthTokenErr    error
+		openDialogRequestErr error
 	}{
 		"User is unauthorized": {
 			httpTest: httpTestJSON,
@@ -1005,12 +967,12 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			p.initializeAPI()
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
-				return &oauth2.Token{}, test.ParseAuthTokenErr
+				return &oauth2.Token{}, test.parseAuthTokenErr
 			})
 
 			c := client{}
 			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "OpenDialogRequest", func(_ *client, _ *model.OpenDialogRequest) error {
-				return nil
+				return test.openDialogRequestErr
 			})
 
 			if test.userID != "" {

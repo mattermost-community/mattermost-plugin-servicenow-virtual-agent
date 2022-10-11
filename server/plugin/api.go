@@ -312,6 +312,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	if err := client.OpenDialogRequest(&requestBody); err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
 		http.Error(w, "Error opening date-time selection dialog.", http.StatusInternalServerError)
+		return
 	}
 	p.returnPostActionIntegrationResponse(w, response)
 }
