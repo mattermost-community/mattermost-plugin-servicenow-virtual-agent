@@ -224,6 +224,7 @@ func Test_CreatePickerAttachment(t *testing.T) {
 func Test_CreateOutputImagePost(t *testing.T) {
 	defer monkey.UnpatchAll()
 
+	mockAltText := "mockAltText"
 	for _, testCase := range []struct {
 		description           string
 		body                  *OutputImage
@@ -239,7 +240,7 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			description: "Image post is created",
 			body: &OutputImage{
 				Value:   "https://test/test.jpg",
-				AltText: "mockAltText",
+				AltText: mockAltText,
 			},
 			contentType: "image/jpg",
 		},
@@ -247,7 +248,7 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			description: "No image post is created due to invalid image URL",
 			body: &OutputImage{
 				Value:   "htps://test/test.jpg",
-				AltText: "mockAltText",
+				AltText: mockAltText,
 			},
 			isErrorExpected: true,
 			httpGetError:    errors.New("unsupported protocol scheme"),
@@ -257,19 +258,19 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			description: "Not able to get direct channel",
 			body: &OutputImage{
 				Value:   "https://test/test.jpg",
-				AltText: "mockAltText",
+				AltText: mockAltText,
 			},
 			getDirectChannelError: &model.AppError{
-				Message: "mockErrorMessage",
+				Message: "error getting direct channel info",
 			},
 			isErrorExpected: true,
-			expectedError:   "mockErrorMessage",
+			expectedError:   "error getting direct channel info",
 		},
 		{
 			description: "Not able to upload file on Mattermost",
 			body: &OutputImage{
 				Value:   "https://test/test.jpg",
-				AltText: "mockAltText",
+				AltText: mockAltText,
 			},
 			uploadFileError: &model.AppError{},
 			contentType:     "image/jpg",
@@ -278,18 +279,18 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			description: "Error reading file data",
 			body: &OutputImage{
 				Value:   "https://test/test.jpg",
-				AltText: "mockAltText",
+				AltText: mockAltText,
 			},
-			readAllError:    errors.New("mockError"),
+			readAllError:    errors.New("error reading file data"),
 			isErrorExpected: true,
-			expectedError:   "mockError",
+			expectedError:   "error reading file data",
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
 			mockAPI := &plugintest.API{}
 
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return("")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 
 			mockAPI.On("GetDirectChannel", testutils.GetMockArgumentsWithType("string", 2)...).Return(&model.Channel{}, testCase.getDirectChannelError)
 
@@ -315,6 +316,7 @@ func Test_CreateOutputImagePost(t *testing.T) {
 				assert.Contains(t, err.Error(), testCase.expectedError)
 			} else {
 				assert.NotNil(t, post)
+				assert.Nil(t, err)
 			}
 		})
 	}
