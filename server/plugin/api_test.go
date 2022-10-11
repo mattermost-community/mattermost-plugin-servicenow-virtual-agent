@@ -712,6 +712,287 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 	}
 }
 
+func getHandleDateTimeSelectionRequestBody(date, time, dialogType string) *model.SubmitDialogRequest {
+	return &model.SubmitDialogRequest{
+		CallbackId: fmt.Sprintf("mockPostID__%s", dialogType),
+		Submission: map[string]interface{}{
+			"date": date,
+			"time": time,
+		},
+		ChannelId: "mockChannelID",
+	}
+}
+
+func Test_handleDateTimeSelection(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	httpTestJSON := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeJSON,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest          testutils.HTTPTest
+		request           testutils.Request
+		expectedResponse  testutils.ExpectedResponse
+		userID            string
+		ParseAuthTokenErr error
+	}{
+		"User is unauthorized": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusUnauthorized,
+			},
+		},
+		"Error parsing OAuth token": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID:            "mock-userID",
+			ParseAuthTokenErr: errors.New("mockError"),
+		},
+		"Selected date is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusOK,
+				Body:         &model.SubmitDialogResponse{},
+				ResponseType: "application/json",
+			},
+			userID: "mock-userID",
+		},
+		"Selected date is invalid": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body:   getHandleDateTimeSelectionRequestBody("2022-23-23", "", "Date"),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+				Body: &model.SubmitDialogResponse{
+					Errors: map[string]string{
+						"date": "Please enter a valid date",
+					},
+				},
+				ResponseType: "application/json",
+			},
+			userID: "mock-userID",
+		},
+		"Selected time is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body:   getHandleDateTimeSelectionRequestBody("", "22:12", "Time"),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusOK,
+				Body:         &model.SubmitDialogResponse{},
+				ResponseType: "application/json",
+			},
+			userID: "mock-userID",
+		},
+		"Selected time is invalid": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body:   getHandleDateTimeSelectionRequestBody("", "25:12", "Time"),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+				Body: &model.SubmitDialogResponse{
+					Errors: map[string]string{
+						"time": "Please enter a valid time",
+					},
+				},
+				ResponseType: "application/json",
+			},
+			userID: "mock-userID",
+		},
+		"Selected date-time is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "22:12", "DateTime"),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+				Body: &model.SubmitDialogResponse{
+					Errors: map[string]string{},
+				},
+				ResponseType: "application/json",
+			},
+			userID: "mock-userID",
+		},
+		"Selected date-time is invalid": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				Body:   getHandleDateTimeSelectionRequestBody("2022-13-23", "24:12", "DateTime"),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+				Body: &model.SubmitDialogResponse{
+					Errors: map[string]string{
+						"date": "Please enter a valid date",
+						"time": "Please enter a valid time",
+					},
+				},
+				ResponseType: "application/json",
+			},
+			userID: "mock-userID",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := new(Plugin)
+
+			mockAPI := &plugintest.API{}
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
+			mockAPI.On("UpdatePost", mock.AnythingOfType("*model.Post")).Return(nil, nil)
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			var c client
+			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *MessageAttachment) error {
+				return nil
+			})
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+				return &oauth2.Token{}, test.ParseAuthTokenErr
+			})
+
+			if test.userID != "" {
+				mockCtrl := gomock.NewController(t)
+				mockedStore := mock_plugin.NewMockStore(mockCtrl)
+
+				mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
+
+				p.store = mockedStore
+			}
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
+			resp := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, resp, req)
+			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
+		})
+	}
+}
+
+func Test_handleDateTimeSelectionDialog(t *testing.T) {
+	defer monkey.UnpatchAll()
+
+	httpTestJSON := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeJSON,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest             testutils.HTTPTest
+		request              testutils.Request
+		expectedResponse     testutils.ExpectedResponse
+		userID               string
+		parseAuthTokenErr    error
+		openDialogRequestErr error
+	}{
+		"User is unauthorized": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				Body: model.PostActionIntegrationRequest{
+					TriggerId: "mockTriggerId",
+					PostId:    "mockPostId",
+					Context: map[string]interface{}{
+						"type": "Date",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusUnauthorized,
+			},
+		},
+		"Selected date is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				Body: model.PostActionIntegrationRequest{
+					TriggerId: "mockTriggerId",
+					PostId:    "mockPostId",
+					Context: map[string]interface{}{
+						"type": "Date",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode:   http.StatusOK,
+				Body:         &model.PostActionIntegrationResponse{},
+				ResponseType: "application/json",
+			},
+			userID: "mock-userID",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := new(Plugin)
+
+			mockAPI := &plugintest.API{}
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+				return &oauth2.Token{}, test.parseAuthTokenErr
+			})
+
+			c := client{}
+			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "OpenDialogRequest", func(_ *client, _ *model.OpenDialogRequest) error {
+				return test.openDialogRequestErr
+			})
+
+			if test.userID != "" {
+				mockCtrl := gomock.NewController(t)
+				mockedStore := mock_plugin.NewMockStore(mockCtrl)
+
+				mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
+
+				p.store = mockedStore
+			}
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(HeaderMattermostUserID, test.userID)
+			resp := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, resp, req)
+			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
+		})
+	}
+}
+
 func TestPlugin_handleFileAttachments(t *testing.T) {
 	defer monkey.UnpatchAll()
 
@@ -816,15 +1097,10 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			p.setConfiguration(&configuration{EncryptionSecret: "mockEncryptionSecret"})
 
 			mockAPI := &plugintest.API{}
-
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
-
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
-
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
-
 			mockAPI.On("GetFile", mock.AnythingOfType("string")).Return([]byte{}, test.getFileError)
-
 			p.SetAPI(mockAPI)
 
 			p.initializeAPI()
@@ -832,11 +1108,9 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			monkey.Patch(decode, func(_ string) ([]byte, error) {
 				return []byte{}, test.decodeError
 			})
-
 			monkey.Patch(decrypt, func(_, _ []byte) ([]byte, error) {
 				return []byte{}, test.decryptError
 			})
-
 			monkey.Patch(json.Unmarshal, func(_ []byte, _ interface{}) error {
 				return test.unmarshalError
 			})

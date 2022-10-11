@@ -7,5 +7,5 @@ var manifest = struct {
 	Version string
 }{
 	ID:      "mattermost-plugin-servicenow-virtual-agent",
-	Version: "1.2.1",
+	Version: "2.0.0",
 }

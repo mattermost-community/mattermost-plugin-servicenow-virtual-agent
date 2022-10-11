@@ -312,6 +312,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	if err := client.OpenDialogRequest(&requestBody); err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
 		http.Error(w, "Error opening date-time selection dialog.", http.StatusInternalServerError)
+		return
 	}
 	p.returnPostActionIntegrationResponse(w, response)
 }
@@ -409,6 +410,8 @@ func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request)
 		p.returnSubmitDialogResponse(w, response)
 		return
 	}
+
+	p.returnSubmitDialogResponse(w, response)
 }
 
 func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {

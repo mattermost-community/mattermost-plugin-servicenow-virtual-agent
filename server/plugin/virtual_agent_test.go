@@ -51,7 +51,6 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 			attachment := &MessageAttachment{}
 
 			err := c.SendMessageToVirtualAgentAPI("mock-userID", "mockMessage", true, attachment)
-
 			if testCase.errMessage != nil {
 				require.Error(t, err)
 				require.EqualError(t, testCase.expectedErr, err.Error())
@@ -92,7 +91,6 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 			})
 
 			err := c.StartConverstaionWithVirtualAgent("mock-userID")
-
 			if testCase.errMessage != nil {
 				require.Error(t, err)
 				require.EqualError(t, testCase.expectedErr, err.Error())
@@ -128,7 +126,6 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 			p := Plugin{}
 
 			res := p.CreateOutputLinkAttachment(testCase.body)
-
 			require.EqualValues(t, testCase.response, res)
 		})
 	}
@@ -273,7 +270,6 @@ func Test_CreateTopicPickerControlAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			res := p.CreateTopicPickerControlAttachment(testCase.body)
-
 			require.EqualValues(t, testCase.response, res)
 		})
 	}
@@ -316,7 +312,44 @@ func Test_CreatePickerAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			res := p.CreatePickerAttachment(testCase.body)
+			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
 
+func Test_CreateDefaultDateAttachment(t *testing.T) {
+	p := Plugin{}
+
+	for _, testCase := range []struct {
+		description string
+		body        *DefaultDate
+		response    *model.SlackAttachment
+	}{
+		{
+			description: "CreateDefaultDateAttachment returns proper slack attachment",
+			body: &DefaultDate{
+				UIType: "mockUIType",
+				Label:  "mockLabel",
+			},
+			response: &model.SlackAttachment{
+				Text: "mockLabel",
+				Actions: []*model.PostAction{
+					{
+						Name: "Select mockUIType",
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
+							Context: map[string]interface{}{
+								"type": "mockUIType",
+							},
+						},
+						Type: "button",
+					},
+				},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			res := p.CreateDefaultDateAttachment(testCase.body)
 			require.EqualValues(t, testCase.response, res)
 		})
 	}
