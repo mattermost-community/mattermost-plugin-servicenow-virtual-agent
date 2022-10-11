@@ -224,7 +224,11 @@ func Test_CreatePickerAttachment(t *testing.T) {
 func Test_CreateOutputImagePost(t *testing.T) {
 	defer monkey.UnpatchAll()
 
-	mockAltText := "mockAltText"
+	mockBody := &OutputImage{
+		Value:   "https://test/test.jpg",
+		AltText: "mockAltText",
+	}
+
 	for _, testCase := range []struct {
 		description           string
 		body                  *OutputImage
@@ -238,28 +242,19 @@ func Test_CreateOutputImagePost(t *testing.T) {
 	}{
 		{
 			description: "Image post is created",
-			body: &OutputImage{
-				Value:   "https://test/test.jpg",
-				AltText: mockAltText,
-			},
+			body:        mockBody,
 			contentType: "image/jpg",
 		},
 		{
-			description: "No image post is created due to invalid image URL",
-			body: &OutputImage{
-				Value:   "htps://test/test.jpg",
-				AltText: mockAltText,
-			},
+			description:     "No image post is created due to invalid image URL",
+			body:            mockBody,
 			isErrorExpected: true,
 			httpGetError:    errors.New("unsupported protocol scheme"),
 			expectedError:   "unsupported protocol scheme",
 		},
 		{
 			description: "Not able to get direct channel",
-			body: &OutputImage{
-				Value:   "https://test/test.jpg",
-				AltText: mockAltText,
-			},
+			body:        mockBody,
 			getDirectChannelError: &model.AppError{
 				Message: "error getting direct channel info",
 			},
@@ -267,20 +262,14 @@ func Test_CreateOutputImagePost(t *testing.T) {
 			expectedError:   "error getting direct channel info",
 		},
 		{
-			description: "Not able to upload file on Mattermost",
-			body: &OutputImage{
-				Value:   "https://test/test.jpg",
-				AltText: mockAltText,
-			},
+			description:     "Not able to upload file on Mattermost",
+			body:            mockBody,
 			uploadFileError: &model.AppError{},
 			contentType:     "image/jpg",
 		},
 		{
-			description: "Error reading file data",
-			body: &OutputImage{
-				Value:   "https://test/test.jpg",
-				AltText: mockAltText,
-			},
+			description:     "Error reading file data",
+			body:            mockBody,
 			readAllError:    errors.New("error reading file data"),
 			isErrorExpected: true,
 			expectedError:   "error reading file data",
