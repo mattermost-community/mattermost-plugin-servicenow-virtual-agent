@@ -137,7 +137,7 @@ func Test_CreateOutputCardImageAttachment(t *testing.T) {
 		response    *model.SlackAttachment
 	}{
 		{
-			description: "CreateOutputLinkAttachment returns proper slack attachment",
+			description: "CreateOutputCardImageAttachment returns proper slack attachment",
 			body: &OutputCardImageData{
 				Image:       "mockImage",
 				Title:       "mockTitle",
@@ -166,7 +166,7 @@ func Test_CreateOutputCardVideoAttachment(t *testing.T) {
 		response    *model.SlackAttachment
 	}{
 		{
-			description: "CreateOutputLinkAttachment returns proper slack attachment",
+			description: "CreateOutputCardVideoAttachment returns proper slack attachment",
 			body: &OutputCardVideoData{
 				Title:       "mockTitle",
 				Link:        "mockLink",
@@ -195,7 +195,7 @@ func Test_CreateOutputCardRecordAttachment(t *testing.T) {
 		response    *model.SlackAttachment
 	}{
 		{
-			description: "CreateOutputLinkAttachment returns proper slack attachment",
+			description: "CreateOutputCardRecordAttachment returns proper slack attachment",
 			body: &OutputCardRecordData{
 				Title:    "mockTitle",
 				Subtitle: "mockSubtitle",
