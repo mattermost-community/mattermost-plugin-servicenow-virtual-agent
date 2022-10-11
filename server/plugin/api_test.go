@@ -712,8 +712,8 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 	}
 }
 
-func getHandleDateTimeSelectionRequestBody(date, time, dialogType string) model.SubmitDialogRequest {
-	return model.SubmitDialogRequest{
+func getHandleDateTimeSelectionRequestBody(date, time, dialogType string) *model.SubmitDialogRequest {
+	return &model.SubmitDialogRequest{
 		CallbackId: fmt.Sprintf("mockPostID__%s", dialogType),
 		Submission: map[string]interface{}{
 			"date": date,
