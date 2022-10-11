@@ -197,13 +197,9 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 				})
 
 			mockAPI := &plugintest.API{}
-
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
-
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
-
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
-
 			p.SetAPI(mockAPI)
 
 			p.initializeAPI()

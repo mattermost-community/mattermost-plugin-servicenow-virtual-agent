@@ -905,15 +905,10 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			p := new(Plugin)
 
 			mockAPI := &plugintest.API{}
-
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
-
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
-
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
-
 			mockAPI.On("UpdatePost", mock.AnythingOfType("*model.Post")).Return(nil, nil)
-
 			p.SetAPI(mockAPI)
 
 			p.initializeAPI()
@@ -1002,13 +997,9 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			p := new(Plugin)
 
 			mockAPI := &plugintest.API{}
-
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
-
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
-
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
-
 			p.SetAPI(mockAPI)
 
 			p.initializeAPI()
@@ -1144,15 +1135,10 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			p.setConfiguration(&configuration{EncryptionSecret: "mockEncryptionSecret"})
 
 			mockAPI := &plugintest.API{}
-
 			mockAPI.On("GetBundlePath").Return("mockString", nil)
-
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
-
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
-
 			mockAPI.On("GetFile", mock.AnythingOfType("string")).Return([]byte{}, test.getFileError)
-
 			p.SetAPI(mockAPI)
 
 			p.initializeAPI()
@@ -1160,11 +1146,9 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			monkey.Patch(decode, func(_ string) ([]byte, error) {
 				return []byte{}, test.decodeError
 			})
-
 			monkey.Patch(decrypt, func(_, _ []byte) ([]byte, error) {
 				return []byte{}, test.decryptError
 			})
-
 			monkey.Patch(json.Unmarshal, func(_ []byte, _ interface{}) error {
 				return test.unmarshalError
 			})

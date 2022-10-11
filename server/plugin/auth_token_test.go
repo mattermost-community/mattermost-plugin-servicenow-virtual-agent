@@ -83,7 +83,6 @@ func Test_NewEncodedAuthToken(t *testing.T) {
 			})
 
 			tok := &oauth2.Token{}
-
 			res, err := p.NewEncodedAuthToken(tok)
 			if testCase.expectedError != "" {
 				require.EqualError(t, err, testCase.expectedError)

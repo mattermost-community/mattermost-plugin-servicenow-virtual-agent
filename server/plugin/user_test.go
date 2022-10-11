@@ -170,7 +170,6 @@ func Test_GetDisconnectUserPost(t *testing.T) {
 			p.SetAPI(mockAPI)
 
 			res, err := p.GetDisconnectUserPost(testCase.userID, "mockMessage")
-
 			if testCase.expectedErr != "" {
 				require.Nil(t, res)
 				require.IsType(t, &model.AppError{}, err)
@@ -222,7 +221,6 @@ func Test_InitOAuth2(t *testing.T) {
 			p.store = mockedStore
 
 			res, err := p.InitOAuth2("mock-userID")
-
 			if testCase.expectedErr != "" {
 				require.Equal(t, "", res)
 				require.NotNil(t, err)
@@ -383,7 +381,6 @@ func Test_CompleteOAuth2(t *testing.T) {
 			p.store = mockedStore
 
 			err := p.CompleteOAuth2(testCase.authedUserID, testCase.code, testCase.state)
-
 			if testCase.expectedErr != "" {
 				require.EqualError(t, err, testCase.expectedErr)
 			} else {

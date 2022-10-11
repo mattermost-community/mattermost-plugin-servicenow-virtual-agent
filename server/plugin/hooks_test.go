@@ -68,12 +68,10 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			p.botUserID = "mock-botID"
+
 			mockAPI := &plugintest.API{}
-
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
-
 			mockAPI.On("GetChannel", "mockChannelID").Return(&model.Channel{
 				Type: "D",
 				Name: "mock-botID__mock",

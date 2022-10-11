@@ -14,11 +14,10 @@ import (
 func Test_LogAndSendErrorToUser(t *testing.T) {
 	t.Run("Error is successfully sent to the user", func(t *testing.T) {
 		p := Plugin{}
+
 		mockAPI := &plugintest.API{}
 		mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 3)...).Return()
-
 		mockAPI.On("SendEphemeralPost", mock.Anything, mock.Anything).Return(&model.Post{})
-
 		p.SetAPI(mockAPI)
 
 		p.logAndSendErrorToUser("mock-userID", "mock-channelID", "mockErrMesssage")
@@ -67,7 +66,6 @@ func Test_validateDate(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.validateDate(testCase.date)
 
 			assert.Contains(t, res, testCase.expected)
@@ -109,7 +107,6 @@ func Test_validateTime(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.validateTime(testCase.time)
 
 			assert.EqualValues(t, testCase.expected, res)
