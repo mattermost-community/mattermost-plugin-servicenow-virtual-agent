@@ -20,8 +20,8 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
 
 ## Features
 
-This plugin supports sending text messages, file attachments and selected date to the Virtual Agent through Mattermost and handling/displaying different types of responses from the Virtual Agent.
-**Note-** Currently we only support sending text messages, file attachments and selected date and displaying text, picker/dropdown, link, card and image responses from the Virtual Agent API.
+This plugin supports sending text messages, file attachments and the selected dates to the Virtual Agent through Mattermost and handling/displaying different types of responses from the Virtual Agent.
+**Note-** Currently we only support sending text messages, file attachments and the selected dates and displaying text, picker/dropdown, link, card and image responses from the Virtual Agent API.
 **Note-** For sending file attachments to the Live Agent other than an image, you need to have ServiceNow version >= "San Diego Patch 4". Also, the link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
 
 ## Basic Knowledge
@@ -43,7 +43,7 @@ This plugin supports sending text messages, file attachments and selected date t
 
     - [Pre-defined Conversation Flows/Topics](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/reference/prebuilt-topics-ITSM.html)
     - [Additional Plugins](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/reference/additional-va-plugins.html)
-    - Sometimes a conversation flow might not work because the user do not have access to some tables or APIs which are being used in that flow (You can see the errors in "All > System Log > Errors"). In such cases you have to manually provide the access in "All > Application Cross-Scope Access".
+    - Sometimes a conversation flow might not work because the user does not have access to some tables or APIs which are being used in that flow (You can see the errors in "All > System Log > Errors"). In such cases, you have to manually provide the access in "All > Application Cross-Scope Access".
       - [Create cross-scope access privileges for topic blocks and custom controls](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/task/configure-cross-scope-privileges.html)
 
 - **File Upload**
