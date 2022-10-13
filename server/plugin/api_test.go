@@ -954,6 +954,30 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			},
 			userID: "mock-userID",
 		},
+		"Error opening data/time selection dialog": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				Body: model.PostActionIntegrationRequest{
+					TriggerId: "mockTriggerId",
+					PostId:    "mockPostId",
+					Context: map[string]interface{}{
+						"type": "Date",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body: &serializer.APIErrorResponse{
+					StatusCode: http.StatusInternalServerError,
+					Message:    "Error opening date-time selection dialog.",
+				},
+				ResponseType: "application/json",
+			},
+			userID:               "mock-userID",
+			openDialogRequestErr: errors.New("request failed to open date-/time selction dialog"),
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			p := new(Plugin)
