@@ -11,7 +11,7 @@ import (
 func (p *Plugin) httpOAuth2Connect(w http.ResponseWriter, r *http.Request) {
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	if mattermostUserID == "" {
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: "Not authorized"})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
 		return
 	}
 
@@ -27,19 +27,19 @@ func (p *Plugin) httpOAuth2Connect(w http.ResponseWriter, r *http.Request) {
 func (p *Plugin) httpOAuth2Complete(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "missing authorization code"})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "Missing authorization code"})
 		return
 	}
 
 	state := r.URL.Query().Get("state")
 	if state == "" {
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "missing authorization state"})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "Missing authorization state"})
 		return
 	}
 
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	if mattermostUserID == "" {
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: "not authorized"})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
 		return
 	}
 

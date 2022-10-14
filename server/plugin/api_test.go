@@ -954,7 +954,7 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			},
 			userID: "mock-userID",
 		},
-		"Error opening data/time selection dialog": {
+		"Error in opening data/time selection dialog": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
@@ -971,7 +971,7 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 				StatusCode: http.StatusInternalServerError,
 				Body: &serializer.APIErrorResponse{
 					StatusCode: http.StatusInternalServerError,
-					Message:    "Error opening date-time selection dialog.",
+					Message:    "Error in opening date-time selection dialog.",
 				},
 				ResponseType: "application/json",
 			},
@@ -1106,7 +1106,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
 				Body: serializer.APIErrorResponse{
-					Message:    "Couldn't get file data.",
+					Message:    "Couldn't get the file data.",
 					StatusCode: http.StatusBadRequest,
 				},
 				ResponseType: "application/json",

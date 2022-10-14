@@ -60,7 +60,6 @@ func (p *Plugin) handleAPIError(w http.ResponseWriter, apiErr *serializer.APIErr
 	}
 
 	w.WriteHeader(apiErr.StatusCode)
-
 	if _, err = w.Write(errorBytes); err != nil {
 		p.API.LogError("Failed to write JSON response", "error", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -72,9 +71,9 @@ func (p *Plugin) checkAuthBySecret(handleFunc http.HandlerFunc) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Replace all occurrences of " " with "+" in WebhookSecret.
 		webhookSecret := strings.ReplaceAll(r.FormValue(SecretParam), " ", "+")
-		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, webhookSecret); err != nil {
+		if statusCode, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, webhookSecret); err != nil {
 			p.API.LogError("Invalid secret", "Error", err.Error())
-			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: status, Message: fmt.Sprintf("Invalid Secret. Error: %s", err.Error())})
+			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: statusCode, Message: fmt.Sprintf("Invalid Secret. Error: %s", err.Error())})
 			return
 		}
 
@@ -146,14 +145,14 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	data, appErr := p.API.GetFile(fileInfo.ID)
 	if appErr != nil {
 		p.API.LogError("Couldn't get file data. FileID: %s", fileInfo.ID)
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Couldn't get file data."})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Couldn't get the file data."})
 		return
 	}
 
 	w.Header().Set("Content-Type", http.DetectContentType(data))
 	if _, err = w.Write(data); err != nil {
 		p.API.LogError("Error occurred writing the file content in response. Error: %s", err.Error())
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error occurred writing the file content in response."})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error occurred while writing the file content in response."})
 		return
 	}
 }
@@ -177,7 +176,7 @@ func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Header.Get(HeaderMattermostUserID)
 		if userID == "" {
-			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: "Not authorized"})
+			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
 			return
 		}
 
@@ -276,7 +275,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
 		p.API.LogError("Error decoding PostActionIntegrationRequest.", "Error", err.Error())
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "Error decoding PostActionIntegrationRequest."})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "Error in decoding PostActionIntegrationRequest."})
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
@@ -330,7 +329,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	client := p.MakeClient(r.Context(), token)
 	if err := client.OpenDialogRequest(&requestBody); err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error opening date-time selection dialog."})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error in opening date-time selection dialog."})
 		return
 	}
 	p.returnPostActionIntegrationResponse(w, response)
