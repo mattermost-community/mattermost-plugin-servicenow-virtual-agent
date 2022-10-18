@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"golang.org/x/oauth2"
 )
 
 func (p *Plugin) httpOAuth2Connect(w http.ResponseWriter, r *http.Request) {
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	if mattermostUserID == "" {
-		http.Error(w, "Not authorized", http.StatusUnauthorized)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
 		return
 	}
 
 	redirectURL, err := p.InitOAuth2(mattermostUserID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()})
 		return
 	}
 
@@ -26,25 +27,25 @@ func (p *Plugin) httpOAuth2Connect(w http.ResponseWriter, r *http.Request) {
 func (p *Plugin) httpOAuth2Complete(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		http.Error(w, "missing authorization code", http.StatusBadRequest)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "Missing authorization code"})
 		return
 	}
 
 	state := r.URL.Query().Get("state")
 	if state == "" {
-		http.Error(w, "missing authorization state", http.StatusBadRequest)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "Missing authorization state"})
 		return
 	}
 
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	if mattermostUserID == "" {
-		http.Error(w, "not authorized", http.StatusUnauthorized)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
 		return
 	}
 
 	err := p.CompleteOAuth2(mattermostUserID, code, state)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()})
 		return
 	}
 
@@ -64,7 +65,7 @@ func (p *Plugin) httpOAuth2Complete(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 	if _, err := w.Write([]byte(html)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()})
 	}
 }
 

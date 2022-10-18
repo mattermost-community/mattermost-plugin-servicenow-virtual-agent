@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
@@ -49,13 +50,30 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	return r
 }
 
+func (p *Plugin) handleAPIError(w http.ResponseWriter, apiErr *serializer.APIErrorResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	errorBytes, err := json.Marshal(apiErr)
+	if err != nil {
+		p.API.LogError("Failed to marshal API error", "Error", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(apiErr.StatusCode)
+	if _, err = w.Write(errorBytes); err != nil {
+		p.API.LogError("Failed to write JSON response", "Error", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
 func (p *Plugin) checkAuthBySecret(handleFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Replace all occurrences of " " with "+" in WebhookSecret.
 		webhookSecret := strings.ReplaceAll(r.FormValue(SecretParam), " ", "+")
-		if status, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, webhookSecret); err != nil {
+		if statusCode, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, webhookSecret); err != nil {
 			p.API.LogError("Invalid secret", "Error", err.Error())
-			http.Error(w, fmt.Sprintf("Invalid Secret. Error: %s", err.Error()), status)
+			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: statusCode, Message: fmt.Sprintf("Invalid Secret. Error: %s", err.Error())})
 			return
 		}
 
@@ -100,21 +118,21 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	decoded, err := decode(encryptedFileInfo)
 	if err != nil {
 		p.API.LogError("Error occurred while decoding the file. Error: %s", err.Error())
-		http.Error(w, "Error occurred while decoding the file.", http.StatusBadRequest)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "Error occurred while decoding the file."})
 		return
 	}
 
 	jsonBytes, err := decrypt(decoded, []byte(p.getConfiguration().EncryptionSecret))
 	if err != nil {
 		p.API.LogError("Error occurred while decrypting the file. Error: %s", err.Error())
-		http.Error(w, "Error occurred while decrypting the file.", http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error occurred while decrypting the file."})
 		return
 	}
 
 	fileInfo := FileStruct{}
 	if err = json.Unmarshal(jsonBytes, &fileInfo); err != nil {
 		p.API.LogError("Error occurred while unmarshaling the file. Error: %s", err.Error())
-		http.Error(w, "Error occurred while unmarshaling the file.", http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error occurred while unmarshaling the file."})
 		return
 	}
 
@@ -127,14 +145,14 @@ func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	data, appErr := p.API.GetFile(fileInfo.ID)
 	if appErr != nil {
 		p.API.LogError("Couldn't get file data. FileID: %s", fileInfo.ID)
-		http.Error(w, "Couldn't get file data.", http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Couldn't get the file data."})
 		return
 	}
 
 	w.Header().Set("Content-Type", http.DetectContentType(data))
 	if _, err = w.Write(data); err != nil {
 		p.API.LogError("Error occurred writing the file content in response. Error: %s", err.Error())
-		http.Error(w, "Error occurred writing the file content in response.", http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error occurred while writing the file content in response."})
 		return
 	}
 }
@@ -158,7 +176,7 @@ func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Header.Get(HeaderMattermostUserID)
 		if userID == "" {
-			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
 			return
 		}
 
@@ -257,7 +275,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
 	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
 		p.API.LogError("Error decoding PostActionIntegrationRequest.", "Error", err.Error())
-		http.Error(w, "Error decoding PostActionIntegrationRequest.", http.StatusBadRequest)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusBadRequest, Message: "Error in decoding PostActionIntegrationRequest."})
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
@@ -311,7 +329,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	client := p.MakeClient(r.Context(), token)
 	if err := client.OpenDialogRequest(&requestBody); err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
-		http.Error(w, "Error opening date-time selection dialog.", http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error in opening date-time selection dialog."})
 		return
 	}
 	p.returnPostActionIntegrationResponse(w, response)
@@ -461,13 +479,13 @@ func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Reques
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		p.API.LogError("Error occurred while reading webhook body.", "Error", err.Error())
-		http.Error(w, "Error occurred while reading webhook body.", http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error occurred while reading webhook body."})
 		return
 	}
 
 	if err = p.ProcessResponse(data); err != nil {
 		p.API.LogError("Error occurred while processing response body.", "Error", err.Error())
-		http.Error(w, "Error occurred while processing response body.", http.StatusInternalServerError)
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error occurred while processing response body."})
 		return
 	}
 	ReturnStatusOK(w)

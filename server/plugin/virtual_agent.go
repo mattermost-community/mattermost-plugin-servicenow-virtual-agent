@@ -173,17 +173,11 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	}
 
 	switch uiType.UIType {
-	case OutputTextUIType:
-		m.Value = new(OutputText)
-	case InputTextUIType:
-		m.Value = new(OutputText)
-	case FileUploadUIType:
+	case OutputTextUIType, InputTextUIType, FileUploadUIType:
 		m.Value = new(OutputText)
 	case TopicPickerControlUIType:
 		m.Value = new(TopicPickerControl)
-	case PickerUIType:
-		m.Value = new(Picker)
-	case BooleanUIType:
+	case PickerUIType, BooleanUIType:
 		m.Value = new(Picker)
 	case OutputLinkUIType:
 		m.Value = new(OutputLink)
@@ -193,11 +187,7 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 		m.Value = new(OutputCard)
 	case OutputImageUIType:
 		m.Value = new(OutputImage)
-	case DateTimeUIType:
-		m.Value = new(DefaultDate)
-	case DateUIType:
-		m.Value = new(DefaultDate)
-	case TimeUIType:
+	case DateTimeUIType, DateUIType, TimeUIType:
 		m.Value = new(DefaultDate)
 	}
 
