@@ -20,7 +20,7 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. For a stable 
 - ### This plugin supports sending the below fields to the Virtual Agent through Mattermost:
   1. **Text messages**
 
-        ![image](https://user-images.githubusercontent.com/55234496/196138915-9577372f-89a4-49f7-bc02-398ca42a7003.png)
+        ![Screenshot from 2022-10-19 13-22-36](https://user-images.githubusercontent.com/55234496/196630251-c4332607-9181-483d-a55e-e5805ef36007.png)
 
   2. **File attachments**  
 
