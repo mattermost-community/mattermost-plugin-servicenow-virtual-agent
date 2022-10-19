@@ -20,22 +20,22 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
 
 ## Features
 
-- ### This plugin supports sending the below fields to the Virtual Agent through Mattermost-
+- ### This plugin supports sending the below fields to the Virtual Agent through Mattermost:
   1. **Text messages**
 
-        ![image](https://user-images.githubusercontent.com/55234496/196138915-9577372f-89a4-49f7-bc02-398ca42a7003.png)
+        ![Screenshot from 2022-10-19 13-22-36](https://user-images.githubusercontent.com/55234496/196630251-c4332607-9181-483d-a55e-e5805ef36007.png)
 
   2. **File attachments**  
 
         ![Screenshot from 2022-10-17 14-41-41](https://user-images.githubusercontent.com/55234496/196138330-711b97da-e7f1-42d4-91d5-4e6f5c0dfcbd.png)
 
-  3. **The selected dates**
+  3. **Date/Time**
 
         ![Screenshot from 2022-10-17 14-14-50](https://user-images.githubusercontent.com/55234496/196132228-03649985-4d30-423c-acd1-a5af894b25f7.png)
 
         ![Screenshot from 2022-10-17 14-17-28](https://user-images.githubusercontent.com/55234496/196132775-24ca6bb5-34bb-42fe-bdaf-e5661a46813a.png)
 
-- ### Handling/Displaying the following types of responses from the Virtual Agent
+- ### Handling/Displaying the following types of responses from the Virtual Agent:
 
   1. **OutputText**
 
@@ -57,7 +57,7 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
 
         ![Screenshot from 2022-10-17 13-46-51](https://user-images.githubusercontent.com/55234496/196125018-b4e0ecbd-4f2a-4e6d-9dc4-e3a08704d7cc.png)
 
-**Note-** For sending file attachments to the Live Agent other than an image, you need to have ServiceNow version >= "San Diego Patch 4". Also, the link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
+**Note-** For sending file attachments to the Live Agent other than an image, you need to have ServiceNow version greater than or equal to "San Diego Patch 4". Also, the link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
 
 ## Basic Knowledge
 
