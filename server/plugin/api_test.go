@@ -954,6 +954,30 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			},
 			userID: "mock-userID",
 		},
+		"Error in opening data/time selection dialog": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				Body: model.PostActionIntegrationRequest{
+					TriggerId: "mockTriggerId",
+					PostId:    "mockPostId",
+					Context: map[string]interface{}{
+						"type": "Date",
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body: &serializer.APIErrorResponse{
+					StatusCode: http.StatusInternalServerError,
+					Message:    "Error in opening date-time selection dialog.",
+				},
+				ResponseType: "application/json",
+			},
+			userID:               "mock-userID",
+			openDialogRequestErr: errors.New("request failed to open date-/time selction dialog"),
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			p := new(Plugin)
@@ -996,9 +1020,9 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 func TestPlugin_handleFileAttachments(t *testing.T) {
 	defer monkey.UnpatchAll()
 
-	httpTestString := testutils.HTTPTest{
+	httpTestJSON := testutils.HTTPTest{
 		T:       t,
-		Encoder: testutils.EncodeString,
+		Encoder: testutils.EncodeJSON,
 	}
 
 	for name, test := range map[string]struct {
@@ -1013,7 +1037,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 		isExpired        bool
 	}{
 		"File data is written in response": {
-			httpTest: httpTestString,
+			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
@@ -1023,57 +1047,69 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			},
 		},
 		"Error decoding encrypted file info": {
-			httpTest: httpTestString,
+			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
-				StatusCode:   http.StatusBadRequest,
-				Body:         "Error occurred while decoding the file.\n",
-				ResponseType: "text/plain; charset=utf-8",
+				StatusCode: http.StatusBadRequest,
+				Body: serializer.APIErrorResponse{
+					Message:    "Error occurred while decoding the file.",
+					StatusCode: http.StatusBadRequest,
+				},
+				ResponseType: "application/json",
 			},
 			decodeError:     errors.New("error in decoding the file"),
 			isErrorExpected: true,
 		},
 		"Error decrypting file info": {
-			httpTest: httpTestString,
+			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
-				StatusCode:   http.StatusInternalServerError,
-				Body:         "Error occurred while decrypting the file.\n",
-				ResponseType: "text/plain; charset=utf-8",
+				StatusCode: http.StatusInternalServerError,
+				Body: serializer.APIErrorResponse{
+					Message:    "Error occurred while decrypting the file.",
+					StatusCode: http.StatusBadRequest,
+				},
+				ResponseType: "application/json",
 			},
 			decryptError:    errors.New("error in decrypting the file"),
 			isErrorExpected: true,
 		},
 		"Error unmarshaling file info": {
-			httpTest: httpTestString,
+			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
-				StatusCode:   http.StatusInternalServerError,
-				Body:         "Error occurred while unmarshaling the file.\n",
-				ResponseType: "text/plain; charset=utf-8",
+				StatusCode: http.StatusInternalServerError,
+				Body: serializer.APIErrorResponse{
+					Message:    "Error occurred while unmarshaling the file.",
+					StatusCode: http.StatusBadRequest,
+				},
+				ResponseType: "application/json",
 			},
 			unmarshalError:  errors.New("error in unmarshaling the file"),
 			isErrorExpected: true,
 		},
 		"Error getting file data": {
-			httpTest: httpTestString,
+			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
-				StatusCode:   http.StatusInternalServerError,
-				Body:         "Couldn't get file data.\n",
-				ResponseType: "text/plain; charset=utf-8",
+				StatusCode: http.StatusInternalServerError,
+				Body: serializer.APIErrorResponse{
+					Message:    "Couldn't get the file data.",
+					StatusCode: http.StatusBadRequest,
+				},
+				ResponseType: "application/json",
 			},
 			getFileError: &model.AppError{
 				Message: "error in getting file data",
@@ -1081,7 +1117,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			isErrorExpected: true,
 		},
 		"File link is expired": {
-			httpTest: httpTestString,
+			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
 				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
