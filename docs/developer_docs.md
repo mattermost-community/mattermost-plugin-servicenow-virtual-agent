@@ -88,7 +88,7 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
       - [Configuring the form layout](https://docs.servicenow.com/en-US/bundle/sandiego-platform-administration/page/administer/form-administration/concept/configure-form-layout.html)
 
 - **Invalid response**
-    We get an "undefined" response from Virtual Agent API in a specific case. You can read [this](https://www.servicenow.com/community/virtual-agent-nlu-forum/getting-improper-response-from-virtual-agent-bot-integration-api/m-p/255032) for more information.
+    We get an "undefined" response from Virtual Agent API in a specific case. Please refer to [this](https://www.servicenow.com/community/virtual-agent-nlu-forum/getting-improper-response-from-virtual-agent-bot-integration-api/m-p/255032) for more information.
 
     [va.bot.to.bot.take.control_times](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/concept/bot2bot.html)
 

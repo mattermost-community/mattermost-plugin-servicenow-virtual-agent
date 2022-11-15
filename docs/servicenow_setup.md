@@ -28,11 +28,11 @@ We need to set up the virtual agent on a ServiceNow instance, to which we will s
 
     ![image](https://user-images.githubusercontent.com/55234496/201840807-f593a0cf-aa7a-4f34-bf29-4956f8b680e3.png)
 
-      1. Change the application scope to "Virtual Agent API". (From top right corner).
+      1. Change the application scope to "Virtual Agent API". (From the top right corner).
 
           ![image](https://user-images.githubusercontent.com/55234496/201833135-7907cdbc-5e00-4338-b81d-c48204eae614.png)
 
-      2. Make sure that "Enable list edit" and "Double click to edit" option are checked in the "HTTP header setting".
+      2. Make sure that "Enable list edit" and "Double click to edit" options are checked in the "HTTP header setting".
 
           ![image](https://user-images.githubusercontent.com/55234496/201832801-3883b457-93af-4d39-8ade-62545913dd2c.png)
             
