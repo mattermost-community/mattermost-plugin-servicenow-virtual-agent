@@ -23,39 +23,39 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
 - ### This plugin supports sending the below fields to the Virtual Agent through Mattermost:
   1. **Text messages**
 
-        ![Screenshot from 2022-10-19 13-22-36](https://user-images.githubusercontent.com/55234496/196630251-c4332607-9181-483d-a55e-e5805ef36007.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196630251-c4332607-9181-483d-a55e-e5805ef36007.png)
 
   2. **File attachments**  
 
-        ![Screenshot from 2022-10-17 14-41-41](https://user-images.githubusercontent.com/55234496/196138330-711b97da-e7f1-42d4-91d5-4e6f5c0dfcbd.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196138330-711b97da-e7f1-42d4-91d5-4e6f5c0dfcbd.png)
 
   3. **Date/Time**
 
-        ![Screenshot from 2022-10-17 14-14-50](https://user-images.githubusercontent.com/55234496/196132228-03649985-4d30-423c-acd1-a5af894b25f7.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196132228-03649985-4d30-423c-acd1-a5af894b25f7.png)
 
-        ![Screenshot from 2022-10-17 14-17-28](https://user-images.githubusercontent.com/55234496/196132775-24ca6bb5-34bb-42fe-bdaf-e5661a46813a.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196132775-24ca6bb5-34bb-42fe-bdaf-e5661a46813a.png)
 
 - ### Handling/Displaying the following types of responses from the Virtual Agent:
 
   1. **OutputText**
 
-        ![Screenshot from 2022-10-17 13-40-59](https://user-images.githubusercontent.com/55234496/196124240-db7f8ed1-fe2d-457b-89c5-df9c28d09879.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196124240-db7f8ed1-fe2d-457b-89c5-df9c28d09879.png)
 
   2. **OutputImage**
 
-        ![Screenshot from 2022-10-17 14-20-26](https://user-images.githubusercontent.com/55234496/196133695-dca8e495-d37f-4c61-b882-63db197a7c99.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196133695-dca8e495-d37f-4c61-b882-63db197a7c99.png)
 
   3. **OutputLink**
 
-        ![Screenshot from 2022-10-17 13-45-11](https://user-images.githubusercontent.com/55234496/196124712-19a1d2bd-b1cf-4018-95b6-eb5ef9920c1c.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196124712-19a1d2bd-b1cf-4018-95b6-eb5ef9920c1c.png)
 
   4. **Picker/Dropdown**
 
-        ![Screenshot from 2022-10-17 13-49-35](https://user-images.githubusercontent.com/55234496/196125669-1e3f2461-d2f3-4028-9320-6cab71ecd27e.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196125669-1e3f2461-d2f3-4028-9320-6cab71ecd27e.png)
 
   5. **OutputCard**
 
-        ![Screenshot from 2022-10-17 13-46-51](https://user-images.githubusercontent.com/55234496/196125018-b4e0ecbd-4f2a-4e6d-9dc4-e3a08704d7cc.png)
+        ![image](https://user-images.githubusercontent.com/55234496/196125018-b4e0ecbd-4f2a-4e6d-9dc4-e3a08704d7cc.png)
 
 **Note-** For sending file attachments to the Live Agent other than an image, you need to have ServiceNow version greater than or equal to "San Diego Patch 4". Also, the link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
 
@@ -86,6 +86,9 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
     For sending file attachments to the Virtual Agent or the Live Agent we need to send a public link of the file in the request from where the Virtual Agent can download it. Virtual Agent does not support sending file attachments from any source, we have to specify the trusted domains ourselves so that the Virtual Agent knows that the specified domains can be trusted.
     - [Set up trusted media domains](https://docs.servicenow.com/bundle/quebec-now-intelligence/page/administer/virtual-agent/task/ccif-secure-file-upload.html)
       - [Configuring the form layout](https://docs.servicenow.com/en-US/bundle/sandiego-platform-administration/page/administer/form-administration/concept/configure-form-layout.html)
+
+- **Invalid response**
+    We get an "undefined" response from Virtual Agent API in a specific case. Please refer to [this](https://www.servicenow.com/community/virtual-agent-nlu-forum/getting-improper-response-from-virtual-agent-bot-integration-api/m-p/255032) community question for more information about the issue. To bypass this issue, you should increase the value of `va.bot.to.bot.take.control_times` variable. You can read more about it [here](https://docs.servicenow.com/bundle/sandiego-servicenow-platform/page/administer/virtual-agent/concept/bot2bot.html).
 
 ## Installation
 
