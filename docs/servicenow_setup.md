@@ -19,7 +19,7 @@ We need to set up the virtual agent on a ServiceNow instance, to which we will s
     https://<your-mattermost-url>/plugins/mattermost-plugin-servicenow-virtual-agent/api/v1/nowbot/processResponse?secret=<your-webhook-secret>
     ```
     **Note**: (Webhook secret can be generated from the Mattermost system console settings of the Virtual agent plugin.)
-  - Adding "User-Agent" header:([Reason](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB0720934))
+  - Adding "User-Agent" header: ([Reason](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB0720934))
   
     Add the "User-Agent" header as shown in the screenshot below with the value "ServiceNow"
     ![image](https://user-images.githubusercontent.com/55234496/201832569-9f11f919-b7c9-4192-a9cf-89a955da08c1.png)
