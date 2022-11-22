@@ -43,7 +43,7 @@ We need to set up the virtual agent on a ServiceNow instance, to which we will s
 
 ## 4. Creating an OAuth app in ServiceNow
   - Navigate to **All > System OAuth > Application Registry.**
-  - Create on the New button on the top right corner and then go to "Create an OAuth API endpoint for external clients".
+  - Click on the New button in the top right corner and then go to "Create an OAuth API endpoint for external clients".
   - Enter the name for your app and set the redirect URL to `https://<your-mattermost-url>/plugins/mattermost-plugin-servicenow-virtual-agent/api/v1/oauth2/complete`.
   - The client secret will be generated automatically.
   - You will need the values `ClientID` and `ClientSecret` while configuring the plugin.
