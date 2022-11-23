@@ -7,7 +7,7 @@ We need to set up the virtual agent on a ServiceNow instance, to which we will s
   - Then click on Request Instance in the top right corner. Basically, ServiceNow itself provides developer instances to anyone who wishes to develop on ServiceNow.
   - Once the instance is created, open the menu from the top right corner, navigate to `Manage Instance Password`, and log in to your dev instance in a new tab.
 
-  **Note-** You need to have the same email address on Mattermost and for the user you used to login on the ServiceNow instance. You can update the email address of the user by going to the user's "Profile" from top right corner on the ServiceNow instance. You can also create a new user on the instance. (Refer [this](https://docs.servicenow.com/en-US/bundle/tokyo-platform-administration/page/administer/users-and-groups/task/t_CreateAUser.html) for creating a new user)
+  **Note-** Mattermost user should have the same email address which will be used to login on to the ServiceNow instance. On the ServiceNow instance, the email address of the user can be updated by going to the user's "Profile" from the top right corner. You can also create a new user on the instance. (Refer [this](https://docs.servicenow.com/en-US/bundle/tokyo-platform-administration/page/administer/users-and-groups/task/t_CreateAUser.html) for creating a new user)
 
 ## 2. Install Glide Virtual Agent and Virtual Agent
   - Navigate to **All > System Applications > All Available Application > All** and install the Glide Virtual Agent and Virtual Agent API.
