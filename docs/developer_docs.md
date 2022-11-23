@@ -103,8 +103,14 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
 
 ## Connecting to ServiceNow
   - Send any direct message to `servicenow-virtual-agent`.
+  **Note-** If `servicenow-virtual-agent` is not visible in your DMs, click on the plus(+) icon on the right side of "Direct Messages" and search for `servicenow-virtual-agent`.
+
+    ![image](https://user-images.githubusercontent.com/55234496/203471920-abdb02c2-2f79-4882-b3e3-f01da7e9b952.png)
+
   - You will get a response with a link to connect your ServiceNow account.
-  ![Screenshot from 2022-07-26 14-55-24](https://user-images.githubusercontent.com/55234496/181167065-f1b93e3b-8963-484a-8dda-a980173191a0.png)
+
+    ![image](https://user-images.githubusercontent.com/55234496/181167065-f1b93e3b-8963-484a-8dda-a980173191a0.png)
+
   - Click on that link. If it asks for login, enter your instance credentials and click `Allow` to connect your account.
     
 ## Development
