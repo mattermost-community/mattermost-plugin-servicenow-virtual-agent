@@ -335,7 +335,7 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 				Text: "mockLabel",
 				Actions: []*model.PostAction{
 					{
-						Name: "Select mockUIType",
+						Name: "Set mockUIType",
 						Integration: &model.PostActionIntegration{
 							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
 							Context: map[string]interface{}{
