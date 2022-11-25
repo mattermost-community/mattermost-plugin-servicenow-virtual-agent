@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -314,9 +313,8 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 
-				videoURL := url.URL{RawQuery: data.Link}
 				if _, err = p.dm(userID, &model.Post{
-					Message: videoURL.Query().Get(VideoQueryParam),
+					Message: fmt.Sprintf("https://www.youtube.com/watch?v=%s", data.ID),
 				}); err != nil {
 					return err
 				}
@@ -391,8 +389,8 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 			fileExtension = filenameContents[1]
 		}
 
-		fileExtensionInHeaders := strings.Split(contentTypeInHeaders, "/")[1]
-		if fileExtension != fileExtensionInHeaders {
+		fileExtensionInHeaders := strings.Split(strings.Split(contentTypeInHeaders, "/")[1], ";")[0]
+		if fileExtension == "" {
 			fileExtension = fileExtensionInHeaders
 		}
 
@@ -417,7 +415,7 @@ func (p *Plugin) CreateDefaultDateAttachment(body *DefaultDate) *model.SlackAtta
 		Text: body.Label,
 		Actions: []*model.PostAction{
 			{
-				Name: fmt.Sprintf("Select %s", body.UIType),
+				Name: fmt.Sprintf("Set %s", body.UIType),
 				Integration: &model.PostActionIntegration{
 					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
 					Context: map[string]interface{}{
