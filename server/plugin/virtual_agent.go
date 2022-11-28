@@ -314,7 +314,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				}
 
 				if _, err = p.dm(userID, &model.Post{
-					Message: fmt.Sprintf("https://www.youtube.com/watch?v=%s", data.ID),
+					Message: fmt.Sprintf(YoutubeUrl, data.ID),
 				}); err != nil {
 					return err
 				}
