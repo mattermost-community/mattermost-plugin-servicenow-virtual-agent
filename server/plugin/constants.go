@@ -79,7 +79,7 @@ const (
 	updatedPostBorderColor            = "#74ccac"
 	AttachmentLinkExpiryTimeInMinutes = 15
 
-	YoutubeUrl = "https://www.youtube.com/watch?v=%s"
+	YoutubeURL = "https://www.youtube.com/watch?v=%s"
 )
 
 // #nosec G101 -- This is a false positive. The below line is not a hardcoded credential
