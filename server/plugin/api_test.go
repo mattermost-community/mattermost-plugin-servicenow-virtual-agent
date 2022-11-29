@@ -742,7 +742,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -753,7 +753,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -766,7 +766,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -780,7 +780,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-23-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -798,7 +798,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("", "22:12", "Time"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -812,7 +812,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("", "25:12", "Time"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -830,7 +830,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "22:12", "DateTime"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -846,7 +846,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelection),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-13-23", "24:12", "DateTime"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -921,7 +921,7 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTimeDialog),
 				Body: model.PostActionIntegrationRequest{
 					TriggerId: "mockTriggerId",
 					PostId:    "mockPostId",
@@ -938,7 +938,7 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTimeDialog),
 				Body: model.PostActionIntegrationRequest{
 					TriggerId: "mockTriggerId",
 					PostId:    "mockPostId",
@@ -958,7 +958,7 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathDateTimeSelectionDialog),
+				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTimeDialog),
 				Body: model.PostActionIntegrationRequest{
 					TriggerId: "mockTriggerId",
 					PostId:    "mockPostId",

@@ -417,7 +417,7 @@ func (p *Plugin) CreateDefaultDateAttachment(body *DefaultDate) *model.SlackAtta
 			{
 				Name: fmt.Sprintf("Set %s", body.UIType),
 				Integration: &model.PostActionIntegration{
-					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelectionDialog),
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathSetDateTimeDialog),
 					Context: map[string]interface{}{
 						"type": body.UIType,
 					},

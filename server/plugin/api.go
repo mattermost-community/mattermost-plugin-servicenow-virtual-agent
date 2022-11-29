@@ -40,8 +40,8 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
 	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathDateTimeSelectionDialog, p.checkAuth(p.checkOAuth(p.handleDateTimeSelectionDialog))).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathDateTimeSelection, p.checkAuth(p.checkOAuth(p.handleDateTimeSelection))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathSetDateTimeDialog, p.checkAuth(p.checkOAuth(p.handleSetDateTimeDialog))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(PathSetDateTime, p.checkAuth(p.checkOAuth(p.handleSetDateTime))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(fmt.Sprintf("/file/{%s}", PathParamEncryptedFileInfo), p.handleFileAttachments).Methods(http.MethodGet)
 
@@ -269,7 +269,7 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 	p.returnPostActionIntegrationResponse(w, response)
 }
 
-func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Request) {
+func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	response := &model.PostActionIntegrationResponse{}
 	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
@@ -315,9 +315,9 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 
 	requestBody := model.OpenDialogRequest{
 		TriggerId: postActionIntegrationRequest.TriggerId,
-		URL:       fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathDateTimeSelection),
+		URL:       fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathSetDateTime),
 		Dialog: model.Dialog{
-			Title:       fmt.Sprintf("Select %s", inputType),
+			Title:       fmt.Sprintf("Set %s", inputType),
 			CallbackId:  fmt.Sprintf("%s__%s", postActionIntegrationRequest.PostId, inputType),
 			SubmitLabel: "Submit",
 			Elements:    elements,
@@ -335,7 +335,7 @@ func (p *Plugin) handleDateTimeSelectionDialog(w http.ResponseWriter, r *http.Re
 	p.returnPostActionIntegrationResponse(w, response)
 }
 
-func (p *Plugin) handleDateTimeSelection(w http.ResponseWriter, r *http.Request) {
+func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	response := &model.SubmitDialogResponse{}
 	submitRequest := &model.SubmitDialogRequest{}
