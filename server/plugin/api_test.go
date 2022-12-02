@@ -14,12 +14,12 @@ import (
 	"time"
 
 	"bou.ke/monkey"
-	mock_plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/mocks"
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/golang/mock/gomock"
+	mock_plugin "github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/mocks"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"golang.org/x/oauth2"
 
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"

@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"

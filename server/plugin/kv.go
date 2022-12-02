@@ -3,9 +3,9 @@ package plugin
 import (
 	"time"
 
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/store/kvstore"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/store/kvstore"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
 )

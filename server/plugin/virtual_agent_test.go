@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest/mock"

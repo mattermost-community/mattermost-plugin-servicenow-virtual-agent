@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/store/kvstore"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/store/kvstore"
 	"github.com/stretchr/testify/require"
 )
 
