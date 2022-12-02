@@ -22,8 +22,8 @@ ASSETS_DIR ?= assets
 mock:
 ifneq ($(HAS_SERVER),)
 	go install github.com/golang/mock/mockgen@v1.6.0
-	mockgen -destination server/mocks/mock_store.go github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/plugin Store
-	mockgen -destination server/mocks/mock_client.go github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/plugin Client
+	mockgen -destination server/mocks/mock_store.go github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/plugin Store
+	mockgen -destination server/mocks/mock_client.go github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/plugin Client
 endif
 
 ## Define the default target (make all)
@@ -281,7 +281,7 @@ endif
 sync:
 ifndef STARTERTEMPLATE_PATH
 	@echo STARTERTEMPLATE_PATH is not set.
-	@echo Set STARTERTEMPLATE_PATH to a local clone of https://github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent and retry.
+	@echo Set STARTERTEMPLATE_PATH to a local clone of https://github.com/mattermost/mattermost-plugin-starter-template and retry.
 	@exit 1
 endif
 	cd ${STARTERTEMPLATE_PATH} && go run ./build/sync/main.go ./build/sync/plan.yml $(PWD)

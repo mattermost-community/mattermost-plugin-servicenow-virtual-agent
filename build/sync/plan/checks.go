@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/build/sync/plan/git"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/build/sync/plan/git"
 )
 
 // CheckFail is a custom error type used to indicate a

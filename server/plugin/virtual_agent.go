@@ -3,7 +3,7 @@ package plugin
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -362,7 +362,7 @@ func (p *Plugin) CreateOutputImagePost(body *OutputImage, userID string) (*model
 	}
 	defer resp.Body.Close()
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		p.API.LogError("Error in reading the file data", "Error", err.Error())
 		return nil, err
