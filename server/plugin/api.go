@@ -5,7 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -14,11 +14,12 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
@@ -476,7 +477,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		p.API.LogError("Error occurred while reading webhook body.", "Error", err.Error())
 		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error occurred while reading webhook body."})

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"golang.org/x/oauth2"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
 func (p *Plugin) httpOAuth2Connect(w http.ResponseWriter, r *http.Request) {

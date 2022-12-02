@@ -3,11 +3,12 @@ package plugin
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
 
 func TestDM(t *testing.T) {
