@@ -92,7 +92,7 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. It is created
 
 ## Installation
 
-1. Go to the [releases page of this GitHub repository](https://github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/releases) and download the latest release for your Mattermost server.
+1. Go to the [releases page of this GitHub repository](https://github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/releases) and download the latest release for your Mattermost server.
 2. Upload this file on the Mattermost **System Console > Plugins > Management** page to install the plugin. To learn more about how to upload a plugin, [see the documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
 3. Enable the plugin from **System Console > Plugins > ServiceNow Virtual Agent**.
 

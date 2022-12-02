@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -12,13 +11,14 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest/mock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
 
 func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
@@ -430,7 +430,7 @@ func Test_CreateOutputImagePost(t *testing.T) {
 				}, testCase.httpGetError
 			})
 
-			monkey.Patch(ioutil.ReadAll, func(_ io.Reader) ([]byte, error) {
+			monkey.Patch(io.ReadAll, func(_ io.Reader) ([]byte, error) {
 				return []byte{}, testCase.readAllError
 			})
 

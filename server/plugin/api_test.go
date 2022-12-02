@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,17 +13,17 @@ import (
 	"time"
 
 	"bou.ke/monkey"
-	mock_plugin "github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/mocks"
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/golang/mock/gomock"
-	"golang.org/x/oauth2"
-
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
+
+	mock_plugin "github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/mocks"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
 
 type panicHandler struct {
@@ -58,7 +57,7 @@ func TestWithRecovery(t *testing.T) {
 	resp := w.Result()
 	if resp.Body != nil {
 		defer resp.Body.Close()
-		_, err := io.Copy(ioutil.Discard, resp.Body)
+		_, err := io.Copy(io.Discard, resp.Body)
 		require.NoError(t, err)
 	}
 }

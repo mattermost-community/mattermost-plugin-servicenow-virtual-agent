@@ -1,4 +1,4 @@
-module github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent
+module github.com/mattermost/mattermost-plugin-servicenow-virtual-agent
 
 go 1.16
 

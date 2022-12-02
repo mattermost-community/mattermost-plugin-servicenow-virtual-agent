@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/serializer"
-	"github.com/Brightscout/mattermost-plugin-servicenow-virtual-agent/server/store/kvstore"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/store/kvstore"
 )
 
 func Test_LoadUser(t *testing.T) {
