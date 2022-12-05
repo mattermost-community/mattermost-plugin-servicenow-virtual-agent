@@ -110,7 +110,7 @@ func (p *Plugin) CreateDisconnectUserAttachment() *model.SlackAttachment {
 		Color: "#FF0000",
 		Actions: []*model.PostAction{
 			{
-				Type: "button",
+				Type: model.POST_ACTION_TYPE_BUTTON,
 				Name: "Yes",
 				Integration: &model.PostActionIntegration{
 					URL: disconnectUserPath,
@@ -120,7 +120,7 @@ func (p *Plugin) CreateDisconnectUserAttachment() *model.SlackAttachment {
 				},
 			},
 			{
-				Type: "button",
+				Type: model.POST_ACTION_TYPE_BUTTON,
 				Name: "No",
 				Integration: &model.PostActionIntegration{
 					URL: disconnectUserPath,

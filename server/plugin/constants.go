@@ -61,10 +61,13 @@ const (
 	InvalidImageLinkError = "Invalid image link."
 	ItemTypeImage         = "image"
 	ItemTypeFile          = "file"
+	ItemTypePicture       = "Picture"
 	DateValue             = "date"
 	TimeValue             = "time"
 	DateTimeDialogType    = "type"
 	DateLayout            = "2006-01-02"
+
+	StyleCarousel = "carousel"
 
 	DateValidationError    = "Please enter a valid date"
 	TimeValidationError    = "Please enter a valid time"

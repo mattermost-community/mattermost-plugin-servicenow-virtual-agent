@@ -256,7 +256,7 @@ func Test_CreateTopicPickerControlAttachment(t *testing.T) {
 						Integration: &model.PostActionIntegration{
 							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
 						},
-						Type: "select",
+						Type: model.POST_ACTION_TYPE_SELECT,
 						Options: []*model.PostActionOptions{
 							{
 								Text:  "mockLabel",
@@ -298,7 +298,7 @@ func Test_CreatePickerAttachment(t *testing.T) {
 						Integration: &model.PostActionIntegration{
 							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
 						},
-						Type: "select",
+						Type: model.POST_ACTION_TYPE_SELECT,
 						Options: []*model.PostActionOptions{
 							{
 								Text:  "mockLabel",
@@ -342,7 +342,7 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 								"type": "mockUIType",
 							},
 						},
-						Type: "button",
+						Type: model.POST_ACTION_TYPE_BUTTON,
 					},
 				},
 			},
