@@ -449,12 +449,12 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	var selectedOption, selectedValue, message string
 	messageTyped := true
 	if _, ok := postActionIntegrationRequest.Context[StyleCarousel].(bool); ok {
-		selectedOption = postActionIntegrationRequest.Context["selected_label"].(string)
-		selectedValue = postActionIntegrationRequest.Context["selected_value"].(string)
+		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
+		selectedValue = postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
 		messageTyped = false
 		message = selectedValue
 	} else {
-		selectedOption = postActionIntegrationRequest.Context["selected_option"].(string)
+		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedOption].(string)
 		message = selectedOption
 	}
 

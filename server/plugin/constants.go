@@ -67,6 +67,10 @@ const (
 	DateTimeDialogType    = "type"
 	DateLayout            = "2006-01-02"
 
+	ContextKeySelectedLabel  = "selected_label"
+	ContextKeySelectedValue  = "selected_value"
+	ContextKeySelectedOption = "selected_option"
+
 	StyleCarousel = "carousel"
 
 	DateValidationError    = "Please enter a valid date"
