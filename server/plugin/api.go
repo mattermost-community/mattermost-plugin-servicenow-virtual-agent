@@ -446,11 +446,21 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
-	selectedOption := postActionIntegrationRequest.Context["selected_option"].(string)
-	attachment := &MessageAttachment{}
+	var selectedOption, selectedValue, message string
+	messageTyped := true
+	if _, ok := postActionIntegrationRequest.Context[StyleCarousel].(bool); ok {
+		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
+		selectedValue = postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
+		messageTyped = false
+		message = selectedValue
+	} else {
+		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedOption].(string)
+		message = selectedOption
+	}
 
+	attachment := &MessageAttachment{}
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, attachment); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, message, messageTyped, attachment); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return

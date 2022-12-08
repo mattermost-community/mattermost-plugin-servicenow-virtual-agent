@@ -109,7 +109,7 @@ func Test_CreateDisconnectUserAttachment(t *testing.T) {
 			Color: "#FF0000",
 			Actions: []*model.PostAction{
 				{
-					Type: "button",
+					Type: model.POST_ACTION_TYPE_BUTTON,
 					Name: "Yes",
 					Integration: &model.PostActionIntegration{
 						URL: disconnectUserPath,
@@ -119,7 +119,7 @@ func Test_CreateDisconnectUserAttachment(t *testing.T) {
 					},
 				},
 				{
-					Type: "button",
+					Type: model.POST_ACTION_TYPE_BUTTON,
 					Name: "No",
 					Integration: &model.PostActionIntegration{
 						URL: disconnectUserPath,

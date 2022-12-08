@@ -142,9 +142,11 @@ type Picker struct {
 }
 
 type Option struct {
-	Label   string `json:"label"`
-	Value   string `json:"value"`
-	Enabled bool   `json:"enabled"`
+	Label       string `json:"label"`
+	Value       string `json:"value"`
+	Enabled     bool   `json:"enabled"`
+	Description string `json:"description"`
+	Attachment  string `json:"attachment"`
 }
 
 type OutputImage struct {
@@ -274,8 +276,15 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				p.API.LogInfo("Picker dropdown has no options to display.")
 				return nil
 			}
-			if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
-				return err
+
+			if res.ItemType == ItemTypePicture && res.Style == StyleCarousel {
+				if _, err = p.DMWithAttachments(userID, p.CreateCarouselAttachments(res)...); err != nil {
+					return err
+				}
+			} else {
+				if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
+					return err
+				}
 			}
 		case *OutputLink:
 			if _, err = p.DMWithAttachments(userID, p.CreateOutputLinkAttachment(res)); err != nil {
@@ -422,7 +431,7 @@ func (p *Plugin) CreateDefaultDateAttachment(body *DefaultDate) *model.SlackAtta
 						"type": body.UIType,
 					},
 				},
-				Type: "button",
+				Type: model.POST_ACTION_TYPE_BUTTON,
 			},
 		},
 	}
@@ -481,7 +490,7 @@ func (p *Plugin) CreateTopicPickerControlAttachment(body *TopicPickerControl) *m
 				Integration: &model.PostActionIntegration{
 					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
 				},
-				Type:    "select",
+				Type:    model.POST_ACTION_TYPE_SELECT,
 				Options: p.getPostActionOptions(body.Options),
 			},
 		},
@@ -496,11 +505,38 @@ func (p *Plugin) CreatePickerAttachment(body *Picker) *model.SlackAttachment {
 				Integration: &model.PostActionIntegration{
 					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
 				},
-				Type:    "select",
+				Type:    model.POST_ACTION_TYPE_SELECT,
 				Options: p.getPostActionOptions(body.Options),
 			},
 		},
 	}
+}
+
+func (p *Plugin) CreateCarouselAttachments(body *Picker) []*model.SlackAttachment {
+	var attachments []*model.SlackAttachment
+	for index, option := range body.Options {
+		attachments = append(attachments, &model.SlackAttachment{
+			Title:    fmt.Sprintf("%v. %s", index+1, option.Label),
+			Text:     option.Description,
+			ImageURL: option.Attachment,
+			Actions: []*model.PostAction{
+				{
+					Name: "Select",
+					Type: model.POST_ACTION_TYPE_BUTTON,
+					Integration: &model.PostActionIntegration{
+						URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+						Context: map[string]interface{}{
+							ContextKeySelectedLabel: fmt.Sprintf("%v. %s", index+1, option.Label),
+							ContextKeySelectedValue: option.Value,
+							StyleCarousel:           true,
+						},
+					},
+				},
+			},
+		})
+	}
+
+	return attachments
 }
 
 func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptions {
