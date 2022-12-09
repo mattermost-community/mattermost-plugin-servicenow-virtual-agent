@@ -516,7 +516,7 @@ func (p *Plugin) CreateCarouselAttachments(body *Picker) []*model.SlackAttachmen
 	var attachments []*model.SlackAttachment
 	for index, option := range body.Options {
 		attachments = append(attachments, &model.SlackAttachment{
-			Title:    fmt.Sprintf("%v. %s", index+1, option.Label),
+			Title:    fmt.Sprintf("%v) %s", index+1, option.Label),
 			Text:     option.Description,
 			ImageURL: option.Attachment,
 			Actions: []*model.PostAction{
@@ -526,7 +526,7 @@ func (p *Plugin) CreateCarouselAttachments(body *Picker) []*model.SlackAttachmen
 					Integration: &model.PostActionIntegration{
 						URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
 						Context: map[string]interface{}{
-							ContextKeySelectedLabel: fmt.Sprintf("%v. %s", index+1, option.Label),
+							ContextKeySelectedLabel: fmt.Sprintf("%v) %s", index+1, option.Label),
 							ContextKeySelectedValue: option.Value,
 							StyleCarousel:           true,
 						},
