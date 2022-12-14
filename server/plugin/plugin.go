@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/bluele/gcache"
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
@@ -27,6 +28,8 @@ type Plugin struct {
 	botUserID string
 
 	store Store
+
+	channelCache gcache.Cache
 }
 
 func (p *Plugin) OnActivate() error {
@@ -41,6 +44,14 @@ func (p *Plugin) OnActivate() error {
 	}
 
 	p.router = p.initializeAPI()
+	p.channelCache = gcache.New(p.getConfiguration().ChannelCacheSize).ARC().Build()
+	return nil
+}
+
+func (p *Plugin) OnDeactivate() error {
+	if p.channelCache != nil {
+		p.channelCache.Purge()
+	}
 
 	return nil
 }

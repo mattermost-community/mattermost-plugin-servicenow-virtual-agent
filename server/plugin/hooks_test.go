@@ -5,8 +5,10 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"bou.ke/monkey"
+	"github.com/bluele/gcache"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
@@ -22,6 +24,8 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 	for _, testCase := range []struct {
 		description                       string
 		Message                           string
+		cacheGetError                     error
+		cacheSetError                     error
 		getChannelError                   *model.AppError
 		getUserError                      error
 		parseAuthTokenError               error
@@ -29,13 +33,20 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 		createMessageAttachmentError      error
 	}{
 		{
-			description: "Message is posted and successfully sent to Virtual Agent",
+			description: "Message is successfully sent to Virtual Agent when the channel is found in cache",
 			Message:     "mockMessage",
 		},
 		{
+			description:   "Message is successfully sent to Virtual Agent when the channel is not found in cache and error occurred while adding to cache",
+			Message:       "mockMessage",
+			cacheGetError: errors.New("key not found in cache"),
+			cacheSetError: errors.New("error in setting value in cache"),
+		},
+		{
 			description:     "Message is posted but failed to get current channel",
-			getChannelError: &model.AppError{},
 			Message:         "mockMessage",
+			cacheGetError:   errors.New("key not found in cache"),
+			getChannelError: &model.AppError{},
 		},
 		{
 			description:  "Message is posted but failed to get user from KV store",
@@ -68,15 +79,36 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
+			p := Plugin{
+				channelCache: &gcache.SimpleCache{},
+			}
 			p.botUserID = "mock-botID"
 
 			mockAPI := &plugintest.API{}
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
-			mockAPI.On("GetChannel", "mockChannelID").Return(&model.Channel{
-				Type: "D",
-				Name: "mock-botID__mock",
-			}, testCase.getChannelError)
+			defer mockAPI.AssertExpectations(t)
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p.channelCache), "Get", func(_ *gcache.SimpleCache, _ interface{}) (interface{}, error) {
+				return true, testCase.cacheGetError
+			})
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p.channelCache), "SetWithExpire", func(_ *gcache.SimpleCache, _ interface{}, _ interface{}, _ time.Duration) error {
+				return testCase.cacheSetError
+			})
+
+			if testCase.getChannelError != nil || testCase.parseAuthTokenError != nil || testCase.sendMessageToVirtualAgentAPIError != nil || (testCase.getUserError != nil && testCase.getUserError != ErrNotFound || testCase.createMessageAttachmentError != nil) {
+				mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
+			}
+
+			if testCase.cacheGetError != nil {
+				mockAPI.On("GetChannel", "mockChannelID").Return(&model.Channel{
+					Type: "D",
+					Name: "mock-botID__mock",
+				}, testCase.getChannelError)
+			}
+
+			if testCase.cacheSetError != nil {
+				mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 3)...).Return()
+			}
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "Ephemeral", func(_ *Plugin, _, _, _ string, _ ...interface{}) {})
 
@@ -118,12 +150,6 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			}
 
 			p.MessageHasBeenPosted(&plugin.Context{}, post)
-
-			mockAPI.AssertNumberOfCalls(t, "GetChannel", 1)
-
-			if testCase.getChannelError != nil || testCase.parseAuthTokenError != nil || testCase.sendMessageToVirtualAgentAPIError != nil || (testCase.getUserError != nil && testCase.getUserError != ErrNotFound) {
-				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
-			}
 		})
 	}
 }
