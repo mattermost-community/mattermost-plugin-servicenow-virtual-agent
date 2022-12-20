@@ -330,7 +330,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 		case *OutputImage:
 			linkContents := strings.Split(res.Value, "/")
 			if len(linkContents) < 1 {
-				if _, err = p.DM(userID, res.AltText); err != nil {
+				if _, err = p.DM(userID, fmt.Sprintf("Image: %s", res.AltText)); err != nil {
 					return err
 				}
 
@@ -338,8 +338,8 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				return errors.New(InvalidImageLinkError)
 			}
 
-			completeFilename := linkContents[len(linkContents)-1]
-			if _, err = p.DM(userID, fmt.Sprintf("![%s](%s)", completeFilename, res.Value)); err != nil {
+			completeFileName := linkContents[len(linkContents)-1]
+			if _, err = p.DM(userID, fmt.Sprintf("![%s](%s)", completeFileName, res.Value)); err != nil {
 				return err
 			}
 		case *DefaultDate:
