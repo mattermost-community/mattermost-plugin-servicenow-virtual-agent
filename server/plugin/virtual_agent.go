@@ -333,7 +333,8 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				if _, err = p.DM(userID, res.AltText); err != nil {
 					return err
 				}
-				p.API.LogError(InvalidImageLinkError)
+
+				p.API.LogError(InvalidImageLinkError, "Link", res.Value)
 				return errors.New(InvalidImageLinkError)
 			}
 
