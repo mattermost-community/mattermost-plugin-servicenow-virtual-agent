@@ -448,7 +448,34 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get(HeaderServiceNowUserID)
 	var selectedOption, selectedValue, message string
 	messageTyped := true
-	if _, ok := postActionIntegrationRequest.Context[StyleCarousel].(bool); ok {
+	_, isCarousel := postActionIntegrationRequest.Context[StyleCarousel].(bool)
+	go func() {
+		if isCarousel {
+			postIDs, err := p.store.LoadPostIDs(postActionIntegrationRequest.UserId)
+			if err != nil {
+				p.API.LogDebug("Unable to load the post IDs from KV store", "UserID", userID, "Error", err.Error())
+				return
+			}
+
+			if len(postIDs) == 0 {
+				return
+			}
+
+			if err = p.store.StorePostIDs(userID, make([]string, 0)); err != nil {
+				p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
+			}
+
+			for _, postID := range postIDs {
+				if postID != postActionIntegrationRequest.PostId {
+					if err := p.API.DeletePost(postID); err != nil {
+						p.API.LogDebug("Unable to delete the post", "PostID", postID, "Error", err.Error())
+					}
+				}
+			}
+		}
+	}()
+
+	if isCarousel {
 		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
 		selectedValue = postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
 		messageTyped = false
@@ -478,7 +505,6 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	model.ParseSlackAttachment(newPost, newAttachment)
-
 	response = &model.PostActionIntegrationResponse{
 		Update: newPost,
 	}

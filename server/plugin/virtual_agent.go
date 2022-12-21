@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
@@ -243,6 +244,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 	}
 
 	userID := user.MattermostUserID
+	p.handlePreviousCarouselPosts(userID)
 	for _, messageResponse := range vaResponse.Body {
 		switch res := messageResponse.Value.(type) {
 		case *OutputText:
@@ -278,7 +280,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			}
 
 			if res.ItemType == ItemTypePicture && res.Style == StyleCarousel {
-				if _, err = p.DMWithAttachments(userID, p.CreateCarouselAttachments(res)...); err != nil {
+				if err = p.HandleCarouselInput(userID, res); err != nil {
 					return err
 				}
 			} else {
@@ -512,31 +514,103 @@ func (p *Plugin) CreatePickerAttachment(body *Picker) *model.SlackAttachment {
 	}
 }
 
-func (p *Plugin) CreateCarouselAttachments(body *Picker) []*model.SlackAttachment {
-	var attachments []*model.SlackAttachment
-	for index, option := range body.Options {
-		attachments = append(attachments, &model.SlackAttachment{
-			Title:    fmt.Sprintf("%v) %s", index+1, option.Label),
-			Text:     option.Description,
-			ImageURL: option.Attachment,
-			Actions: []*model.PostAction{
-				{
-					Name: "Select",
-					Type: model.POST_ACTION_TYPE_BUTTON,
-					Integration: &model.PostActionIntegration{
-						URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
-						Context: map[string]interface{}{
-							ContextKeySelectedLabel: fmt.Sprintf("%v) %s", index+1, option.Label),
-							ContextKeySelectedValue: option.Value,
-							StyleCarousel:           true,
+func (p *Plugin) handlePreviousCarouselPosts(userID string) {
+	postIDs, err := p.store.LoadPostIDs(userID)
+	if err != nil {
+		p.API.LogDebug("Unable to load the post IDs from KV store", "UserID", userID, "Error", err.Error())
+		return
+	}
+
+	if len(postIDs) == 0 {
+		return
+	}
+
+	if err = p.store.StorePostIDs(userID, make([]string, 0)); err != nil {
+		p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
+	}
+
+	for _, postID := range postIDs {
+		go func(postID string) {
+			post, err := p.API.GetPost(postID)
+			if err != nil {
+				p.API.LogDebug("Unable to get the post", "PostID", postID, "Error", err.Error())
+			}
+			if post == nil {
+				return
+			}
+			attachments := post.Attachments()
+			for _, attachment := range attachments {
+				attachment.Actions = nil
+			}
+
+			model.ParseSlackAttachment(post, attachments)
+			if _, err = p.API.UpdatePost(post); err != nil {
+				p.API.LogDebug("Unable to update the post", "PostID", postID, "Error", err.Error())
+			}
+		}(postID)
+	}
+}
+
+func (p *Plugin) HandleCarouselInput(userID string, body *Picker) error {
+	postIDs := make([]string, 0)
+	idx := 0
+	for {
+		var attachments []*model.SlackAttachment
+		for i := idx; i < len(body.Options); i++ {
+			option := body.Options[i]
+			attachments = append(attachments, &model.SlackAttachment{
+				Title:    fmt.Sprintf("%v) %s", i+1, option.Label),
+				Text:     option.Description,
+				ImageURL: option.Attachment,
+				Actions: []*model.PostAction{
+					{
+						Name: "Select",
+						Type: model.POST_ACTION_TYPE_BUTTON,
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+							Context: map[string]interface{}{
+								ContextKeySelectedLabel: fmt.Sprintf("%v) %s", i+1, option.Label),
+								ContextKeySelectedValue: option.Value,
+								StyleCarousel:           true,
+							},
 						},
 					},
 				},
-			},
-		})
+			})
+
+			if !IsCharCountSafe(attachments) {
+				attachments = attachments[:len(attachments)-1]
+				idx = i
+				break
+			}
+
+			if i == len(body.Options)-1 {
+				idx = 0
+			}
+		}
+
+		postID, err := p.DMWithAttachments(userID, attachments...)
+		if err != nil {
+			return err
+		}
+
+		postIDs = append(postIDs, postID)
+		if idx == 0 {
+			break
+		}
 	}
 
-	return attachments
+	if err := p.store.StorePostIDs(userID, postIDs); err != nil {
+		p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
+	}
+
+	return nil
+}
+
+func IsCharCountSafe(attachments []*model.SlackAttachment) bool {
+	bytes, _ := json.Marshal(attachments)
+	// 35 is the approx. length of one line added by the MM server for post action IDs and 100 is a buffer
+	return utf8.RuneCountInString(string(bytes)) < model.POST_PROPS_MAX_RUNES-100-(len(attachments)*35)
 }
 
 func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptions {
