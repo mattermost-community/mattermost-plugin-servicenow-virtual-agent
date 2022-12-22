@@ -404,7 +404,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &MessageAttachment{}); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
 		p.returnSubmitDialogResponse(w, response)
 		return
@@ -506,7 +506,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	attachment := &MessageAttachment{}
+	attachment := &serializer.MessageAttachment{}
 	client := p.MakeClient(r.Context(), token)
 	if err := client.SendMessageToVirtualAgentAPI(userID, message, messageTyped, attachment); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())

@@ -529,6 +529,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 
 			if !test.isErrorExpected {
 				mockedStore.EXPECT().LoadUserWithSysID(gomock.Any()).Return(&serializer.User{}, nil)
+				mockedStore.EXPECT().LoadPostIDs(gomock.Any()).Return([]string{}, nil)
 			}
 
 			p.store = mockedStore
@@ -874,7 +875,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			p.initializeAPI()
 
 			var c client
-			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *MessageAttachment) error {
+			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *serializer.MessageAttachment) error {
 				return nil
 			})
 

@@ -132,11 +132,11 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 				return &client{}
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "CreateMessageAttachment", func(_ *Plugin, _ string) (*MessageAttachment, error) {
-				return &MessageAttachment{}, testCase.createMessageAttachmentError
+			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "CreateMessageAttachment", func(_ *Plugin, _ string) (*serializer.MessageAttachment, error) {
+				return &serializer.MessageAttachment{}, testCase.createMessageAttachmentError
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *MessageAttachment) error {
+			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *serializer.MessageAttachment) error {
 				return testCase.sendMessageToVirtualAgentAPIError
 			})
 
