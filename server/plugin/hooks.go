@@ -26,7 +26,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 	isBotDMChannel := true
 	cacheVal, err := p.channelCache.Get(post.ChannelId)
 	if err == nil {
-		isBotDMChannel = cacheVal.(bool)
+		isBotDMChannel, _ = cacheVal.(bool)
 	} else {
 		channel, channelErr := p.API.GetChannel(post.ChannelId)
 		if channelErr != nil {

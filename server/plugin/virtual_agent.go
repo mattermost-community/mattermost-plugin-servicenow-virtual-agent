@@ -3,7 +3,6 @@ package plugin
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -199,13 +198,18 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				}
 			}
 		case *serializer.OutputImage:
-			var post *model.Post
-			post, err = p.CreateOutputImagePost(res, userID)
-			if err != nil {
-				return err
+			linkContents := strings.Split(res.Value, "/")
+			if len(linkContents) < 1 {
+				if _, err = p.DM(userID, fmt.Sprintf("Image: %s", res.AltText)); err != nil {
+					return err
+				}
+
+				p.API.LogError(InvalidImageLinkError, "Link", res.Value)
+				return errors.New(InvalidImageLinkError)
 			}
 
-			if _, err = p.dm(userID, post); err != nil {
+			completeFileName := linkContents[len(linkContents)-1]
+			if _, err = p.DM(userID, fmt.Sprintf("![%s](%s)", completeFileName, res.Value)); err != nil {
 				return err
 			}
 		case *serializer.DefaultDate:
@@ -216,68 +220,6 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 	}
 
 	return nil
-}
-
-func (p *Plugin) CreateOutputImagePost(body *serializer.OutputImage, userID string) (*model.Post, error) {
-	channel, appErr := p.API.GetDirectChannel(userID, p.botUserID)
-	if appErr != nil {
-		p.API.LogError("Couldn't get the bot's DM channel", "UserID", userID, "Error", appErr.Message)
-		return nil, appErr
-	}
-
-	resp, err := http.Get(body.Value)
-	if err != nil {
-		p.API.LogError("Error in getting file data from the link", "Error", err.Error())
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		p.API.LogError("Error in reading the file data", "Error", err.Error())
-		return nil, err
-	}
-
-	linkContents := strings.Split(body.Value, "/")
-	if len(linkContents) < 1 {
-		p.API.LogError(InvalidImageLinkError)
-		return nil, errors.New(InvalidImageLinkError)
-	}
-
-	completeFilename := linkContents[len(linkContents)-1]
-
-	filenameContents := strings.Split(completeFilename, ".")
-
-	contentTypeInHeaders := ""
-	if len(resp.Header["Content-Type"]) > 0 {
-		contentTypeInHeaders = resp.Header["Content-Type"][0]
-	}
-
-	if len(strings.Split(contentTypeInHeaders, "/")) == 2 {
-		fileExtension := ""
-		if len(filenameContents) == 2 {
-			fileExtension = filenameContents[1]
-		}
-
-		fileExtensionInHeaders := strings.Split(strings.Split(contentTypeInHeaders, "/")[1], ";")[0]
-		if fileExtension == "" {
-			fileExtension = fileExtensionInHeaders
-		}
-
-		filename := filenameContents[0]
-		completeFilename = fmt.Sprintf("%s.%s", filename, fileExtension)
-	}
-
-	post := &model.Post{}
-	file, appErr := p.API.UploadFile(data, channel.Id, completeFilename)
-	if appErr != nil {
-		post.Message = body.AltText
-		p.API.LogError("Couldn't upload the file on mattermost", "ChannelID", channel.Id, "Error", appErr.Message)
-	} else {
-		post.FileIds = model.StringArray{file.Id}
-	}
-
-	return post, nil
 }
 
 func (p *Plugin) CreateDefaultDateAttachment(body *serializer.DefaultDate) *model.SlackAttachment {
