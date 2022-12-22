@@ -569,9 +569,11 @@ func (p *Plugin) HandleCarouselInput(userID string, body *Picker) error {
 						Integration: &model.PostActionIntegration{
 							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
 							Context: map[string]interface{}{
-								ContextKeySelectedLabel: fmt.Sprintf("%v) %s", i+1, option.Label),
-								ContextKeySelectedValue: option.Value,
-								StyleCarousel:           true,
+								ContextKeySelectedLabel:            fmt.Sprintf("%v) %s", i+1, option.Label),
+								ContextKeySelectedValue:            option.Value,
+								StyleCarousel:                      true,
+								ContextKeySelectedImageDescription: option.Description,
+								ContextKeySelectedImageURL:         option.Attachment,
 							},
 						},
 					},

@@ -446,8 +446,6 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
-	var selectedOption, selectedValue, message string
-	messageTyped := true
 	_, isCarousel := postActionIntegrationRequest.Context[StyleCarousel].(bool)
 	go func() {
 		if isCarousel {
@@ -475,14 +473,29 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	var message string
+	var newAttachment *model.SlackAttachment
+	messageTyped := true
 	if isCarousel {
-		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
-		selectedValue = postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
+		selectedOption := postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
+		selectedValue := postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
+		description := postActionIntegrationRequest.Context[ContextKeySelectedImageDescription].(string)
+		imageURL := postActionIntegrationRequest.Context[ContextKeySelectedImageURL].(string)
+		newAttachment = &model.SlackAttachment{
+			Title:    selectedOption,
+			Text:     description,
+			ImageURL: imageURL,
+			Footer:   "You selected this image",
+		}
 		messageTyped = false
 		message = selectedValue
 	} else {
-		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedOption].(string)
+		selectedOption := postActionIntegrationRequest.Context[ContextKeySelectedOption].(string)
 		message = selectedOption
+		newAttachment = &model.SlackAttachment{
+			Text:  fmt.Sprintf("You selected: %s", selectedOption),
+			Color: updatedPostBorderColor,
+		}
 	}
 
 	attachment := &MessageAttachment{}
@@ -493,18 +506,15 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newAttachment := []*model.SlackAttachment{}
-	newAttachment = append(newAttachment, &model.SlackAttachment{
-		Text:  fmt.Sprintf("You selected: %s", selectedOption),
-		Color: updatedPostBorderColor,
-	})
+	newAttachments := []*model.SlackAttachment{}
+	newAttachments = append(newAttachments, newAttachment)
 
 	newPost := &model.Post{
 		ChannelId: postActionIntegrationRequest.ChannelId,
 		UserId:    p.botUserID,
 	}
 
-	model.ParseSlackAttachment(newPost, newAttachment)
+	model.ParseSlackAttachment(newPost, newAttachments)
 	response = &model.PostActionIntegrationResponse{
 		Update: newPost,
 	}
