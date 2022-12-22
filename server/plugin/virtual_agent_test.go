@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"reflect"
-	"strings"
 	"testing"
 
 	"bou.ke/monkey"
@@ -17,8 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
 
 func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
@@ -351,96 +347,6 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 		t.Run(testCase.description, func(t *testing.T) {
 			res := p.CreateDefaultDateAttachment(testCase.body)
 			require.EqualValues(t, testCase.response, res)
-		})
-	}
-}
-
-func Test_CreateOutputImagePost(t *testing.T) {
-	defer monkey.UnpatchAll()
-
-	mockBody := &OutputImage{
-		Value:   "https://test/test.jpg",
-		AltText: "mockAltText",
-	}
-
-	for _, testCase := range []struct {
-		description           string
-		body                  *OutputImage
-		getDirectChannelError *model.AppError
-		uploadFileError       *model.AppError
-		isErrorExpected       bool
-		expectedError         string
-		readAllError          error
-		httpGetError          error
-		contentType           string
-	}{
-		{
-			description: "Image post is created",
-			body:        mockBody,
-			contentType: "image/jpg",
-		},
-		{
-			description:     "No image post is created due to invalid image URL",
-			body:            mockBody,
-			isErrorExpected: true,
-			httpGetError:    errors.New("unsupported protocol scheme"),
-			expectedError:   "unsupported protocol scheme",
-		},
-		{
-			description: "Not able to get direct channel",
-			body:        mockBody,
-			getDirectChannelError: &model.AppError{
-				Message: "error getting direct channel info",
-			},
-			isErrorExpected: true,
-			expectedError:   "error getting direct channel info",
-		},
-		{
-			description:     "Not able to upload file on Mattermost",
-			body:            mockBody,
-			uploadFileError: &model.AppError{},
-			contentType:     "image/jpg",
-		},
-		{
-			description:     "Error reading file data",
-			body:            mockBody,
-			readAllError:    errors.New("error reading file data"),
-			isErrorExpected: true,
-			expectedError:   "error reading file data",
-		},
-	} {
-		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-			mockAPI := &plugintest.API{}
-
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
-
-			mockAPI.On("GetDirectChannel", testutils.GetMockArgumentsWithType("string", 2)...).Return(&model.Channel{}, testCase.getDirectChannelError)
-
-			mockAPI.On("UploadFile", []byte{}, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.FileInfo{}, testCase.uploadFileError)
-
-			p.SetAPI(mockAPI)
-
-			monkey.Patch(http.Get, func(_ string) (*http.Response, error) {
-				return &http.Response{
-					Body: io.NopCloser(strings.NewReader("mockResponseBody")),
-					Header: map[string][]string{
-						"Content-Type": {testCase.contentType},
-					},
-				}, testCase.httpGetError
-			})
-
-			monkey.Patch(io.ReadAll, func(_ io.Reader) ([]byte, error) {
-				return []byte{}, testCase.readAllError
-			})
-
-			post, err := p.CreateOutputImagePost(testCase.body, "mockUserID")
-			if testCase.isErrorExpected {
-				assert.Contains(t, err.Error(), testCase.expectedError)
-			} else {
-				assert.NotNil(t, post)
-				assert.Nil(t, err)
-			}
 		})
 	}
 }
