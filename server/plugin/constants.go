@@ -67,11 +67,9 @@ const (
 	DateTimeDialogType    = "type"
 	DateLayout            = "2006-01-02"
 
-	ContextKeySelectedLabel            = "selected_label"
-	ContextKeySelectedValue            = "selected_value"
-	ContextKeySelectedOption           = "selected_option"
-	ContextKeySelectedImageDescription = "selected_image_description"
-	ContextKeySelectedImageURL         = "selected_image_url"
+	ContextKeySelectedLabel  = "selected_label"
+	ContextKeySelectedValue  = "selected_value"
+	ContextKeySelectedOption = "selected_option"
 
 	StyleCarousel = "carousel"
 

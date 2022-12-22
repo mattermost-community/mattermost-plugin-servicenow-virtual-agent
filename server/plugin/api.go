@@ -479,14 +479,22 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	if isCarousel {
 		selectedOption := postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
 		selectedValue := postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
-		description := postActionIntegrationRequest.Context[ContextKeySelectedImageDescription].(string)
-		imageURL := postActionIntegrationRequest.Context[ContextKeySelectedImageURL].(string)
-		newAttachment = &model.SlackAttachment{
-			Title:    selectedOption,
-			Text:     description,
-			ImageURL: imageURL,
-			Footer:   "You selected this image",
+		post, err := p.API.GetPost(postActionIntegrationRequest.PostId)
+		if err != nil {
+			p.API.LogDebug("Unable to get the post", "Error", err.Error())
+			p.returnPostActionIntegrationResponse(w, response)
+			return
 		}
+
+		attachments := post.Attachments()
+		for _, attachment := range attachments {
+			if strings.EqualFold(attachment.Title, selectedOption) {
+				newAttachment = attachment
+				break
+			}
+		}
+		newAttachment.Footer = "You selected this image"
+		newAttachment.Actions = nil
 		messageTyped = false
 		message = selectedValue
 	} else {
