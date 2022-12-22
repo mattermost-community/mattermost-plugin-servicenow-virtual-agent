@@ -132,7 +132,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 				return &client{}
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "CreateMessageAttachment", func(_ *Plugin, _ string) (*MessageAttachment, error) {
+			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "CreateMessageAttachment", func(_ *Plugin, _, _ string) (*MessageAttachment, error) {
 				return &MessageAttachment{}, testCase.createMessageAttachmentError
 			})
 

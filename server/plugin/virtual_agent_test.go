@@ -15,6 +15,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
 
 func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
@@ -357,40 +359,65 @@ func Test_CreateMessageAttachment(t *testing.T) {
 	defer monkey.UnpatchAll()
 
 	for _, testCase := range []struct {
-		description      string
-		fileID           string
-		response         *MessageAttachment
-		getFileInfoError *model.AppError
-		marshalError     error
-		encryptError     error
-		expectedError    string
+		description   string
+		userID        string
+		response      *MessageAttachment
+		setupAPI      func(api *plugintest.API)
+		marshalError  error
+		encryptError  error
+		expectedError string
 	}{
 		{
 			description: "CreateMessageAttachment returns a valid attachment",
-			fileID:      "mockFileID",
+			userID:      testutils.GetID(),
 			response: &MessageAttachment{
 				URL:         "mockSiteURL" + p.GetPluginURLPath() + "/file/" + encode([]byte{}),
 				ContentType: "mockMimeType",
 				FileName:    "mockName",
 			},
+			setupAPI: func(api *plugintest.API) {
+				api.On("GetFileInfo", mock.AnythingOfType("string")).Return(testutils.GetFile(false), nil)
+			},
 		},
 		{
 			description: "CreateMessageAttachment returns an error while getting file info",
-			fileID:      "mockFileID",
-			getFileInfoError: &model.AppError{
-				Message: "error in getting the file info",
+			userID:      testutils.GetID(),
+			setupAPI: func(api *plugintest.API) {
+				api.On("GetFileInfo", mock.AnythingOfType("string")).Return(nil, testutils.GetAppError("error in getting the file info"))
 			},
 			expectedError: "error getting the file info. Error: error in getting the file info",
 		},
 		{
-			description:   "CreateMessageAttachment returns an error while marshaling file",
-			fileID:        "mockFileID",
+			description: "CreateMessageAttachment returns an error because the file is already deleted",
+			userID:      testutils.GetID(),
+			setupAPI: func(api *plugintest.API) {
+				api.On("GetFileInfo", mock.AnythingOfType("string")).Return(testutils.GetFile(true), nil)
+			},
+			expectedError: "file is deleted from the server",
+		},
+		{
+			description: "CreateMessageAttachment returns an error because the file does not belong to the user",
+			userID:      "mock-userID",
+			setupAPI: func(api *plugintest.API) {
+				api.On("GetFileInfo", mock.AnythingOfType("string")).Return(testutils.GetFile(false), nil)
+			},
+			expectedError: "file does not belong to the Mattermost user: mock-userID",
+		},
+		{
+			description: "CreateMessageAttachment returns an error while marshaling file",
+			userID:      testutils.GetID(),
+			setupAPI: func(api *plugintest.API) {
+				api.On("GetFileInfo", mock.AnythingOfType("string")).Return(testutils.GetFile(false), nil)
+			},
 			marshalError:  errors.New("error in marshaling the file"),
 			expectedError: "error occurred while marshaling the file. Error: error in marshaling the file",
 		},
 		{
-			description:   "CreateMessageAttachment returns an error while encrypting file",
-			fileID:        "mockFileID",
+			description: "CreateMessageAttachment returns an error while encrypting file",
+			userID:      testutils.GetID(),
+			setupAPI: func(api *plugintest.API) {
+				api.On("GetFileInfo", mock.AnythingOfType("string")).Return(testutils.GetFile(false), nil)
+			},
 			encryptError:  errors.New("error in encrypting the file"),
 			expectedError: "error occurred while encrypting the file. Error: error in encrypting the file",
 		},
@@ -402,14 +429,9 @@ func Test_CreateMessageAttachment(t *testing.T) {
 					MattermostSiteURL: "mockSiteURL",
 				})
 
-			mockAPI := plugintest.API{}
-
-			mockAPI.On("GetFileInfo", mock.AnythingOfType("string")).Return(&model.FileInfo{
-				MimeType: "mockMimeType",
-				Name:     "mockName",
-			}, testCase.getFileInfoError)
-
-			p.SetAPI(&mockAPI)
+			mockAPI := &plugintest.API{}
+			testCase.setupAPI(mockAPI)
+			p.SetAPI(mockAPI)
 
 			monkey.Patch(json.Marshal, func(_ interface{}) ([]byte, error) {
 				return []byte{}, testCase.marshalError
@@ -419,7 +441,7 @@ func Test_CreateMessageAttachment(t *testing.T) {
 				return []byte{}, testCase.encryptError
 			})
 
-			res, err := p.CreateMessageAttachment(testCase.fileID)
+			res, err := p.CreateMessageAttachment(testutils.GetID(), testCase.userID)
 
 			assert.EqualValues(t, testCase.response, res)
 
