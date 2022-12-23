@@ -1,12 +1,12 @@
 {
     "id": "mattermost-plugin-servicenow-virtual-agent",
     "name": "ServiceNow Virtual Agent",
+    "description": "This plugin is for integrating Mattermost with ServiceNow Virtual Agent.",
     "homepage_url": "https://github.com/mattermost/mattermost-plugin-servicenow-virtual-agent",
     "support_url": "https://github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/issues",
-    "release_notes_url": "https://github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/releases/tag/v2.1.1",
-    "description": "This plugin is for integrating Mattermost with ServiceNow Virtual Agent.",
+    "release_notes_url": "https://github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/releases/tag/v2.1.2",
     "icon_path": "assets/starter-template-icon.svg",
-    "version": "2.1.1",
+    "version": "2.1.2",
     "min_server_version": "5.37.0",
     "server": {
         "executables": {
@@ -71,6 +71,7 @@
                 "display_name": "DM Channel Cache Size:",
                 "type": "number",
                 "help_text": "The size of the cache that is used to store DM channel IDs. This value represents no. of entries in the cache, not the memory it will take.",
+                "placeholder": "",
                 "default": 10000
             }
         ]
