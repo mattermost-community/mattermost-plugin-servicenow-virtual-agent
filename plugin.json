@@ -5,7 +5,7 @@
     "support_url": "https://github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/issues",
     "release_notes_url": "https://github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/releases/tag/v2.1.1",
     "description": "This plugin is for integrating Mattermost with ServiceNow Virtual Agent.",
-    "icon_path": "assets/starter-template-icon.svg",
+    "icon_path": "assets/icon.svg",
     "version": "2.1.1",
     "min_server_version": "5.37.0",
     "server": {
