@@ -196,7 +196,7 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed bool, attachment *MessageAttachment) error {
+func (c *client) SendMessageToVirtualAgentAPI(serviceNowUserID, messageText string, typed bool, attachment *MessageAttachment) error {
 	requestBody := &VirtualAgentRequestBody{
 		Message: &MessageBody{
 			Attachment: attachment,
@@ -204,7 +204,7 @@ func (c *client) SendMessageToVirtualAgentAPI(userID, messageText string, typed 
 			Typed:      typed,
 		},
 		RequestID: c.plugin.generateUUID(),
-		UserID:    userID,
+		UserID:    serviceNowUserID,
 	}
 
 	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
@@ -457,11 +457,19 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	return postOptions
 }
 
-func (p *Plugin) CreateMessageAttachment(fileID string) (*MessageAttachment, error) {
+func (p *Plugin) CreateMessageAttachment(fileID, userID string) (*MessageAttachment, error) {
 	var attachment *MessageAttachment
 	fileInfo, appErr := p.API.GetFileInfo(fileID)
 	if appErr != nil {
 		return nil, fmt.Errorf("error getting the file info. Error: %s", appErr.Message)
+	}
+
+	if fileInfo.DeleteAt != 0 {
+		return nil, fmt.Errorf("file is deleted from the server")
+	}
+
+	if fileInfo.CreatorId != userID {
+		return nil, fmt.Errorf("file does not belong to the Mattermost user: %s", userID)
 	}
 
 	//TODO: Add a configuration setting for expiry time

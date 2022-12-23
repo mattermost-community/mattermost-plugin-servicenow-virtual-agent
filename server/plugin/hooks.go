@@ -76,7 +76,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	var attachment *MessageAttachment
 	if len(post.FileIds) == 1 {
-		attachment, err = p.CreateMessageAttachment(post.FileIds[0])
+		attachment, err = p.CreateMessageAttachment(post.FileIds[0], mattermostUserID)
 		if err != nil {
 			p.logAndSendErrorToUser(mattermostUserID, post.ChannelId, err.Error())
 			return
