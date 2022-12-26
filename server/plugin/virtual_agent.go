@@ -336,9 +336,11 @@ func (p *Plugin) handlePreviousCarouselPosts(userID string) {
 			if err != nil {
 				p.API.LogDebug("Unable to get the post", "PostID", postID, "Error", err.Error())
 			}
+
 			if post == nil {
 				return
 			}
+
 			attachments := post.Attachments()
 			for _, attachment := range attachments {
 				attachment.Actions = nil
