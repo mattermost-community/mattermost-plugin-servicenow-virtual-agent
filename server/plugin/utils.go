@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 )
 
 func (p *Plugin) logAndSendErrorToUser(mattermostUserID, channelID, errorMessage string) {
 	p.API.LogError(errorMessage)
-	p.Ephemeral(mattermostUserID, channelID, GenericErrorMessage)
+	p.Ephemeral(mattermostUserID, channelID, constants.GenericErrorMessage)
 }
 
 func (p *Plugin) generateUUID() string {
@@ -18,9 +19,9 @@ func (p *Plugin) generateUUID() string {
 }
 
 func (p *Plugin) validateDate(date string) string {
-	parsedDate, err := time.Parse(DateLayout, date)
+	parsedDate, err := time.Parse(constants.DateLayout, date)
 	if err != nil {
-		return DateValidationError
+		return constants.DateValidationError
 	}
 
 	year := parsedDate.Year()
@@ -38,7 +39,7 @@ func (p *Plugin) validateTime(time string) string {
 	timeRegex := regexp.MustCompile(`^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$`)
 	timeMatched = timeRegex.FindAllStringSubmatch(time, -1)
 	if timeMatched == nil {
-		return TimeValidationError
+		return constants.TimeValidationError
 	}
 
 	return ""

@@ -12,6 +12,7 @@ import (
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/stretchr/testify/require"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
 
@@ -99,7 +100,7 @@ func TestPlugin_httpOAuth2Connect(t *testing.T) {
 			})
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, test.userID)
+			req.Header.Add(constants.HeaderMattermostUserID, test.userID)
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
@@ -210,7 +211,7 @@ func TestPlugin_httpOAuth2Complete(t *testing.T) {
 			})
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, test.userID)
+			req.Header.Add(constants.HeaderMattermostUserID, test.userID)
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)

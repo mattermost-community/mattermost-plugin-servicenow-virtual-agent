@@ -3,6 +3,7 @@ package plugin
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +30,7 @@ func TestIsValid(t *testing.T) {
 			config: &configuration{
 				ServiceNowURL: "",
 			},
-			errMsg: EmptyServiceNowURLErrorMessage,
+			errMsg: constants.EmptyServiceNowURLErrorMessage,
 		},
 		{
 			description: "invalid configuration: ServiceNowOAuthClientID empty",
@@ -37,7 +38,7 @@ func TestIsValid(t *testing.T) {
 				ServiceNowURL:           "mockServiceNowURL",
 				ServiceNowOAuthClientID: "",
 			},
-			errMsg: EmptyServiceNowOAuthClientIDErrorMessage,
+			errMsg: constants.EmptyServiceNowOAuthClientIDErrorMessage,
 		},
 		{
 			description: "invalid configuration: ServiceNowOAuthClientSecret empty",
@@ -46,7 +47,7 @@ func TestIsValid(t *testing.T) {
 				ServiceNowOAuthClientID:     "mockServiceNowOAuthClientID",
 				ServiceNowOAuthClientSecret: "",
 			},
-			errMsg: EmptyServiceNowOAuthClientSecretErrorMessage,
+			errMsg: constants.EmptyServiceNowOAuthClientSecretErrorMessage,
 		},
 		{
 			description: "invalid configuration: EncryptionSecret empty",
@@ -56,7 +57,7 @@ func TestIsValid(t *testing.T) {
 				ServiceNowOAuthClientSecret: "mockServiceNowOAuthClientSecret",
 				EncryptionSecret:            "",
 			},
-			errMsg: EmptyEncryptionSecretErrorMessage,
+			errMsg: constants.EmptyEncryptionSecretErrorMessage,
 		},
 		{
 			description: "invalid configuration: WebhookSecret empty",
@@ -67,7 +68,7 @@ func TestIsValid(t *testing.T) {
 				EncryptionSecret:            "mockEncryptionSecret",
 				WebhookSecret:               "",
 			},
-			errMsg: EmptyWebhookSecretErrorMessage,
+			errMsg: constants.EmptyWebhookSecretErrorMessage,
 		},
 		{
 			description: "invalid configuration: ChannelCacheSize invalid",
@@ -79,7 +80,7 @@ func TestIsValid(t *testing.T) {
 				WebhookSecret:               "mockWebhookSecret",
 				ChannelCacheSize:            -1,
 			},
-			errMsg: InvalidChannelCacheSizeErrorMessage,
+			errMsg: constants.InvalidChannelCacheSizeErrorMessage,
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {

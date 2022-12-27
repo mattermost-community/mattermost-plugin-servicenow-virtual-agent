@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"fmt"
 	"testing"
 
 	"bou.ke/monkey"
@@ -77,6 +78,37 @@ func Test_StoreUser(t *testing.T) {
 			err := s.StoreUser(&serializer.User{})
 
 			require.Nil(t, err)
+		})
+	}
+}
+
+func Test_LoadPostIDs(t *testing.T) {
+	defer monkey.UnpatchAll()
+	for _, testCase := range []struct {
+		description string
+		loadError   error
+	}{
+		{
+			description: "Post IDs are loaded successfully from the KV store",
+		},
+		{
+			description: "Post IDs are not loaded successfully from the KV store",
+			loadError:   fmt.Errorf("error in loading post IDs"),
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			s := pluginStore{}
+
+			monkey.Patch(kvstore.LoadJSON, func(_ kvstore.KVStore, _ string, _ interface{}) error {
+				return testCase.loadError
+			})
+
+			_, err := s.LoadPostIDs("mock-userID")
+			if testCase.loadError == nil {
+				require.Nil(t, err)
+			} else {
+				require.NotNil(t, err)
+			}
 		})
 	}
 }

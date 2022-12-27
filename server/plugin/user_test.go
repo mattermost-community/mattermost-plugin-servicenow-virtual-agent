@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	mock_plugin "github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/mocks"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
@@ -103,9 +104,9 @@ func Test_CreateDisconnectUserAttachment(t *testing.T) {
 	t.Run("CreateDisconnectUserAttachment created successfully", func(t *testing.T) {
 		p := Plugin{}
 
-		disconnectUserPath := fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathUserDisconnect)
+		disconnectUserPath := fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathUserDisconnect)
 		expectedResponse := &model.SlackAttachment{
-			Title: DisconnectUserConfirmationMessge,
+			Title: constants.DisconnectUserConfirmationMessge,
 			Color: "#FF0000",
 			Actions: []*model.PostAction{
 				{
@@ -114,7 +115,7 @@ func Test_CreateDisconnectUserAttachment(t *testing.T) {
 					Integration: &model.PostActionIntegration{
 						URL: disconnectUserPath,
 						Context: map[string]interface{}{
-							DisconnectUserContextName: true,
+							constants.DisconnectUserContextName: true,
 						},
 					},
 				},
@@ -124,7 +125,7 @@ func Test_CreateDisconnectUserAttachment(t *testing.T) {
 					Integration: &model.PostActionIntegration{
 						URL: disconnectUserPath,
 						Context: map[string]interface{}{
-							DisconnectUserContextName: false,
+							constants.DisconnectUserContextName: false,
 						},
 					},
 				},

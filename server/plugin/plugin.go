@@ -7,6 +7,7 @@ import (
 
 	"github.com/bluele/gcache"
 	"github.com/gorilla/mux"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
@@ -58,9 +59,9 @@ func (p *Plugin) OnDeactivate() error {
 
 func (p *Plugin) initBotUser() error {
 	botID, err := p.Helpers.EnsureBot(&model.Bot{
-		Username:    BotUsername,
-		DisplayName: BotDisplayName,
-		Description: BotDescription,
+		Username:    constants.BotUsername,
+		DisplayName: constants.BotDisplayName,
+		Description: constants.BotDescription,
 	}, plugin.ProfileImagePath(filepath.Join("assets", "profile.png")))
 	if err != nil {
 		return errors.Wrap(err, "can't ensure bot")

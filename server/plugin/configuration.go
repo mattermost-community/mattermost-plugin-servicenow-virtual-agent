@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/pkg/errors"
 )
 
@@ -83,22 +84,22 @@ func (p *Plugin) setConfiguration(configuration *configuration) {
 // IsValid checks if all needed fields are set.
 func (c *configuration) IsValid() error {
 	if c.ServiceNowURL == "" {
-		return fmt.Errorf(EmptyServiceNowURLErrorMessage)
+		return fmt.Errorf(constants.EmptyServiceNowURLErrorMessage)
 	}
 	if c.ServiceNowOAuthClientID == "" {
-		return fmt.Errorf(EmptyServiceNowOAuthClientIDErrorMessage)
+		return fmt.Errorf(constants.EmptyServiceNowOAuthClientIDErrorMessage)
 	}
 	if c.ServiceNowOAuthClientSecret == "" {
-		return fmt.Errorf(EmptyServiceNowOAuthClientSecretErrorMessage)
+		return fmt.Errorf(constants.EmptyServiceNowOAuthClientSecretErrorMessage)
 	}
 	if c.EncryptionSecret == "" {
-		return fmt.Errorf(EmptyEncryptionSecretErrorMessage)
+		return fmt.Errorf(constants.EmptyEncryptionSecretErrorMessage)
 	}
 	if c.WebhookSecret == "" {
-		return fmt.Errorf(EmptyWebhookSecretErrorMessage)
+		return fmt.Errorf(constants.EmptyWebhookSecretErrorMessage)
 	}
 	if c.ChannelCacheSize <= 0 {
-		return fmt.Errorf(InvalidChannelCacheSizeErrorMessage)
+		return fmt.Errorf(constants.InvalidChannelCacheSizeErrorMessage)
 	}
 	return nil
 }
