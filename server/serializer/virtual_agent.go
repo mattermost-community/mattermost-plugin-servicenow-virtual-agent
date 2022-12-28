@@ -26,6 +26,7 @@ type OutputText struct {
 	ItemType string `json:"type"`
 	MaskType string `json:"maskType"`
 	Label    string `json:"label"`
+	Required bool   `json:"required"`
 }
 
 type OutputLinkValue struct {

@@ -45,10 +45,49 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(PathSetDateTime, p.checkAuth(p.checkOAuth(p.handleSetDateTime))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(fmt.Sprintf("/file/{%s}", PathParamEncryptedFileInfo), p.handleFileAttachments).Methods(http.MethodGet)
+	apiRouter.HandleFunc(PathSkip, p.checkAuth(p.checkOAuth(p.handleSkip)))
 
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
+}
+
+func (p *Plugin) handleSkip(w http.ResponseWriter, r *http.Request) {
+	response := &model.PostActionIntegrationResponse{}
+	decoder := json.NewDecoder(r.Body)
+	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
+	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
+		p.API.LogError("Error while decoding the PostActionIntegrationRequest params.", "Error", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+
+	token := r.Context().Value(ContextTokenKey).(*oauth2.Token)
+	userID := r.Header.Get(HeaderServiceNowUserID)
+
+	client := p.MakeClient(r.Context(), token)
+	if err := client.SendMessageToVirtualAgentAPI(userID, SkipInternal, true, &serializer.MessageAttachment{}); err != nil {
+		p.API.LogError("Error while sending the message to VA.", "Error", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+
+	newAttachment := model.SlackAttachment{
+		Text:  Skipped,
+		Color: updatedPostBorderColor,
+	}
+
+	newPost := &model.Post{
+		ChannelId: postActionIntegrationRequest.ChannelId,
+		UserId:    p.botUserID,
+	}
+
+	model.ParseSlackAttachment(newPost, []*model.SlackAttachment{&newAttachment})
+	response = &model.PostActionIntegrationResponse{
+		Update: newPost,
+	}
+
+	p.returnPostActionIntegrationResponse(w, response)
 }
 
 func (p *Plugin) handleAPIError(w http.ResponseWriter, apiErr *serializer.APIErrorResponse) {
@@ -325,8 +364,7 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 		},
 	}
 
-	ctx := r.Context()
-	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
+	token := r.Context().Value(ContextTokenKey).(*oauth2.Token)
 	client := p.MakeClient(r.Context(), token)
 	if err := client.OpenDialogRequest(&requestBody); err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
@@ -346,8 +384,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
+	token := r.Context().Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	var selectedOption string
@@ -415,11 +452,10 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newAttachment := []*model.SlackAttachment{}
-	newAttachment = append(newAttachment, &model.SlackAttachment{
+	newAttachment := model.SlackAttachment{
 		Text:  fmt.Sprintf("You selected %s: %s", inputType, selectedOption),
 		Color: updatedPostBorderColor,
-	})
+	}
 
 	newPost := &model.Post{
 		Id:        postID,
@@ -427,7 +463,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		UserId:    p.botUserID,
 	}
 
-	model.ParseSlackAttachment(newPost, newAttachment)
+	model.ParseSlackAttachment(newPost, []*model.SlackAttachment{&newAttachment})
 
 	if _, appErr := p.API.UpdatePost(newPost); appErr != nil {
 		p.API.LogError("Error updating the post.", "Error", appErr.Message)
@@ -448,8 +484,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
+	token := r.Context().Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
 	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 
