@@ -108,7 +108,6 @@ func Test_LoadPostIDs(t *testing.T) {
 			if testCase.loadError == nil {
 				require.Nil(t, err)
 			} else {
-				require.NotNil(t, err)
 				assert.EqualError(t, err, testCase.loadError.Error())
 			}
 		})
