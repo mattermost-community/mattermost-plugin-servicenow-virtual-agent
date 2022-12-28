@@ -17,6 +17,8 @@ const (
 	VideoQueryParam = "target_url"
 	SecretParam     = "secret"
 
+	PathParamEncryptedFileInfo = "encryptedFileInfo"
+
 	BotUsername    = "servicenow-virtual-agent"
 	BotDisplayName = "ServiceNow Virtual Agent"
 	BotDescription = "A bot account created by the plugin ServiceNow Virtual Agent."

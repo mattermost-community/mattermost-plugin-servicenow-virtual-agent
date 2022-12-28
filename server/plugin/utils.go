@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 )
 

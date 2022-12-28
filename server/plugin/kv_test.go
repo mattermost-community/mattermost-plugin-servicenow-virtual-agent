@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
@@ -108,6 +109,7 @@ func Test_LoadPostIDs(t *testing.T) {
 				require.Nil(t, err)
 			} else {
 				require.NotNil(t, err)
+				assert.EqualError(t, err, testCase.loadError.Error())
 			}
 		})
 	}

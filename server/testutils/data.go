@@ -1,9 +1,10 @@
 package testutils
 
 import (
+	"github.com/mattermost/mattermost-server/v5/model"
+
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
-	"github.com/mattermost/mattermost-server/v5/model"
 )
 
 func GetID() string {

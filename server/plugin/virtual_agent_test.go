@@ -465,7 +465,7 @@ func Test_HandleCarouselInput(t *testing.T) {
 		setupStore    func(s *mock_plugin.MockStore)
 	}{
 		{
-			description: "carousel is handled successfully and there is no error",
+			description: "carousel is handled successfully with no error",
 			setupPlugin: func(p *Plugin, api *plugintest.API) {
 				monkey.PatchInstanceMethod(reflect.TypeOf(p), "DMWithAttachments", func(_ *Plugin, _ string, _ ...*model.SlackAttachment) (string, error) {
 					return testutils.GetID(), nil

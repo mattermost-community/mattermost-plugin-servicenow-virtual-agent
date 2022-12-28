@@ -5,8 +5,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/pkg/errors"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 )
 
 // configuration captures the plugin's external configuration as exposed in the Mattermost server

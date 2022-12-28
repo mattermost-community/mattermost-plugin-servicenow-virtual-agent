@@ -7,10 +7,11 @@ import (
 
 	"github.com/bluele/gcache"
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 )
 
 // Plugin implements the interface expected by the Mattermost server to communicate between the server and plugin processes.
