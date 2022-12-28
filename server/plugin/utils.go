@@ -1,11 +1,15 @@
 package plugin
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
+
+	"github.com/mattermost/mattermost-server/v5/model"
 
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 )
@@ -44,4 +48,13 @@ func (p *Plugin) validateTime(time string) string {
 	}
 
 	return ""
+}
+
+func (p *Plugin) IsCharCountSafe(attachments []*model.SlackAttachment) bool {
+	bytes, err := json.Marshal(attachments)
+	if err != nil {
+		p.API.LogDebug("Error in marshaling the attachments", "Error", err.Error())
+	}
+	// 35 is the approx. length of one line added by the MM server for post action IDs and 100 is a buffer
+	return utf8.RuneCountInString(string(bytes)) < model.POST_PROPS_MAX_RUNES-100-(len(attachments)*35)
 }

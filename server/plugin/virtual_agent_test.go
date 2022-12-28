@@ -483,7 +483,7 @@ func Test_HandleCarouselInput(t *testing.T) {
 				monkey.PatchInstanceMethod(reflect.TypeOf(p), "DMWithAttachments", func(_ *Plugin, _ string, _ ...*model.SlackAttachment) (string, error) {
 					return testutils.GetID(), errors.New("error in sending attachments to the user")
 				})
-				monkey.Patch(IsCharCountSafe, func([]*model.SlackAttachment) bool {
+				monkey.PatchInstanceMethod(reflect.TypeOf(p), "IsCharCountSafe", func(_ *Plugin, _ []*model.SlackAttachment) bool {
 					return false
 				})
 			},
