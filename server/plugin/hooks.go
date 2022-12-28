@@ -8,6 +8,8 @@ import (
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
 type FileStruct struct {
@@ -74,7 +76,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		return
 	}
 
-	var attachment *MessageAttachment
+	var attachment *serializer.MessageAttachment
 	if len(post.FileIds) == 1 {
 		attachment, err = p.CreateMessageAttachment(post.FileIds[0], mattermostUserID)
 		if err != nil {

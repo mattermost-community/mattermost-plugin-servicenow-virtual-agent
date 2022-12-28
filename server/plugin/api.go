@@ -404,7 +404,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &MessageAttachment{}); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
 		p.returnSubmitDialogResponse(w, response)
 		return
@@ -446,19 +446,67 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
-	var selectedOption, selectedValue, message string
+	_, isCarousel := postActionIntegrationRequest.Context[StyleCarousel].(bool)
+	go func() {
+		if isCarousel {
+			postIDs, err := p.store.LoadPostIDs(postActionIntegrationRequest.UserId)
+			if err != nil {
+				p.API.LogDebug("Unable to load the post IDs from KV store", "UserID", userID, "Error", err.Error())
+				return
+			}
+
+			if len(postIDs) == 0 {
+				return
+			}
+
+			if err = p.store.StorePostIDs(userID, make([]string, 0)); err != nil {
+				p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
+			}
+
+			for _, postID := range postIDs {
+				if postID != postActionIntegrationRequest.PostId {
+					if err := p.API.DeletePost(postID); err != nil {
+						p.API.LogDebug("Unable to delete the post", "PostID", postID, "Error", err.Error())
+					}
+				}
+			}
+		}
+	}()
+
+	var message string
+	var newAttachment *model.SlackAttachment
 	messageTyped := true
-	if _, ok := postActionIntegrationRequest.Context[StyleCarousel].(bool); ok {
-		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
-		selectedValue = postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
+	if isCarousel {
+		selectedOption := postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
+		selectedValue := postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
+		post, err := p.API.GetPost(postActionIntegrationRequest.PostId)
+		if err != nil {
+			p.API.LogDebug("Unable to get the post", "Error", err.Error())
+			p.returnPostActionIntegrationResponse(w, response)
+			return
+		}
+
+		attachments := post.Attachments()
+		for _, attachment := range attachments {
+			if strings.EqualFold(attachment.Title, selectedOption) {
+				newAttachment = attachment
+				break
+			}
+		}
+		newAttachment.Footer = "You selected this image"
+		newAttachment.Actions = nil
 		messageTyped = false
 		message = selectedValue
 	} else {
-		selectedOption = postActionIntegrationRequest.Context[ContextKeySelectedOption].(string)
+		selectedOption := postActionIntegrationRequest.Context[ContextKeySelectedOption].(string)
 		message = selectedOption
+		newAttachment = &model.SlackAttachment{
+			Text:  fmt.Sprintf("You selected: %s", selectedOption),
+			Color: updatedPostBorderColor,
+		}
 	}
 
-	attachment := &MessageAttachment{}
+	attachment := &serializer.MessageAttachment{}
 	client := p.MakeClient(r.Context(), token)
 	if err := client.SendMessageToVirtualAgentAPI(userID, message, messageTyped, attachment); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
@@ -466,19 +514,15 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newAttachment := []*model.SlackAttachment{}
-	newAttachment = append(newAttachment, &model.SlackAttachment{
-		Text:  fmt.Sprintf("You selected: %s", selectedOption),
-		Color: updatedPostBorderColor,
-	})
+	newAttachments := []*model.SlackAttachment{}
+	newAttachments = append(newAttachments, newAttachment)
 
 	newPost := &model.Post{
 		ChannelId: postActionIntegrationRequest.ChannelId,
 		UserId:    p.botUserID,
 	}
 
-	model.ParseSlackAttachment(newPost, newAttachment)
-
+	model.ParseSlackAttachment(newPost, newAttachments)
 	response = &model.PostActionIntegrationResponse{
 		Update: newPost,
 	}

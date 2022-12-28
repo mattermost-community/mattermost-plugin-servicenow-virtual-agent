@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
 
@@ -46,7 +47,7 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 				}
 				return nil, nil
 			})
-			attachment := &MessageAttachment{}
+			attachment := &serializer.MessageAttachment{}
 
 			err := c.SendMessageToVirtualAgentAPI("mock-userID", "mockMessage", true, attachment)
 			if testCase.errMessage != nil {
@@ -102,15 +103,15 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 func Test_CreateOutputLinkAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		body        *OutputLink
+		body        *serializer.OutputLink
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateOutputLinkAttachment returns proper slack attachment",
-			body: &OutputLink{
+			body: &serializer.OutputLink{
 				Header: "mockHeader",
 				Label:  "mockLabel",
-				Value: OutputLinkValue{
+				Value: serializer.OutputLinkValue{
 					Action: "mockAction",
 				},
 			},
@@ -132,12 +133,12 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 func Test_CreateOutputCardImageAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		body        *OutputCardImageData
+		body        *serializer.OutputCardImageData
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateOutputCardImageAttachment returns proper slack attachment",
-			body: &OutputCardImageData{
+			body: &serializer.OutputCardImageData{
 				Image:       "mockImage",
 				Title:       "mockTitle",
 				Description: "mockDescription",
@@ -161,12 +162,12 @@ func Test_CreateOutputCardImageAttachment(t *testing.T) {
 func Test_CreateOutputCardVideoAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		body        *OutputCardVideoData
+		body        *serializer.OutputCardVideoData
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateOutputCardVideoAttachment returns proper slack attachment",
-			body: &OutputCardVideoData{
+			body: &serializer.OutputCardVideoData{
 				Title:       "mockTitle",
 				Link:        "mockLink",
 				URL:         "mockURL",
@@ -190,16 +191,16 @@ func Test_CreateOutputCardVideoAttachment(t *testing.T) {
 func Test_CreateOutputCardRecordAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		body        *OutputCardRecordData
+		body        *serializer.OutputCardRecordData
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateOutputCardRecordAttachment returns proper slack attachment",
-			body: &OutputCardRecordData{
+			body: &serializer.OutputCardRecordData{
 				Title:    "mockTitle",
 				Subtitle: "mockSubtitle",
 				URL:      "mockURL",
-				Fields: []*RecordFields{
+				Fields: []*serializer.RecordFields{
 					{
 						FieldLabel: "mockLabel",
 						FieldValue: "mockValue",
@@ -235,14 +236,14 @@ func Test_CreateTopicPickerControlAttachment(t *testing.T) {
 
 	for _, testCase := range []struct {
 		description string
-		body        *TopicPickerControl
+		body        *serializer.TopicPickerControl
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateTopicPickerControlAttachment returns proper slack attachment",
-			body: &TopicPickerControl{
+			body: &serializer.TopicPickerControl{
 				PromptMessage: "mockPrompt",
-				Options: []Option{{
+				Options: []serializer.Option{{
 					Label: "mockLabel",
 				}},
 			},
@@ -278,14 +279,14 @@ func Test_CreatePickerAttachment(t *testing.T) {
 
 	for _, testCase := range []struct {
 		description string
-		body        *Picker
+		body        *serializer.Picker
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreatePickerAttachment returns proper slack attachment",
-			body: &Picker{
+			body: &serializer.Picker{
 				Label: "mockLabel",
-				Options: []Option{{
+				Options: []serializer.Option{{
 					Label: "mockLabel",
 				}},
 			},
@@ -320,12 +321,12 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 
 	for _, testCase := range []struct {
 		description string
-		body        *DefaultDate
+		body        *serializer.DefaultDate
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateDefaultDateAttachment returns proper slack attachment",
-			body: &DefaultDate{
+			body: &serializer.DefaultDate{
 				UIType: "mockUIType",
 				Label:  "mockLabel",
 			},
@@ -361,7 +362,7 @@ func Test_CreateMessageAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description   string
 		userID        string
-		response      *MessageAttachment
+		response      *serializer.MessageAttachment
 		setupAPI      func(api *plugintest.API)
 		marshalError  error
 		encryptError  error
@@ -370,7 +371,7 @@ func Test_CreateMessageAttachment(t *testing.T) {
 		{
 			description: "CreateMessageAttachment returns a valid attachment",
 			userID:      testutils.GetID(),
-			response: &MessageAttachment{
+			response: &serializer.MessageAttachment{
 				URL:         "mockSiteURL" + p.GetPluginURLPath() + "/file/" + encode([]byte{}),
 				ContentType: "mockMimeType",
 				FileName:    "mockName",

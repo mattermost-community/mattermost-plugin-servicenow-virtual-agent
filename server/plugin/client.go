@@ -14,7 +14,7 @@ import (
 type Client interface {
 	GetMe(mattermostUserID string) (*serializer.ServiceNowUser, error)
 	StartConverstaionWithVirtualAgent(userID string) error
-	SendMessageToVirtualAgentAPI(serviceNowUserID, messageText string, typed bool, attachment *MessageAttachment) error
+	SendMessageToVirtualAgentAPI(serviceNowUserID, messageText string, typed bool, attachment *serializer.MessageAttachment) error
 	OpenDialogRequest(body *model.OpenDialogRequest) error
 }
 
