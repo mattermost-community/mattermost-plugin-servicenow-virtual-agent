@@ -349,6 +349,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
+	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
 	var selectedOption string
 
 	if len(strings.Split(submitRequest.CallbackId, "__")) != 2 {
@@ -403,6 +404,10 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := p.ScheduleJob(mattermostUserID); err != nil {
+		return
+	}
+
 	client := p.MakeClient(r.Context(), token)
 	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
@@ -446,6 +451,12 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := ctx.Value(ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(HeaderServiceNowUserID)
+	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+
+	if err := p.ScheduleJob(mattermostUserID); err != nil {
+		return
+	}
+
 	_, isCarousel := postActionIntegrationRequest.Context[StyleCarousel].(bool)
 	go func() {
 		if isCarousel {
@@ -531,6 +542,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {
+	p.deactivateJob()
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		p.API.LogError("Error occurred while reading webhook body.", "Error", err.Error())

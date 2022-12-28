@@ -85,6 +85,10 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		}
 	}
 
+	if err = p.ScheduleJob(mattermostUserID); err != nil {
+		return
+	}
+
 	client := p.MakeClient(context.Background(), token)
 	if err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message, true, attachment); err != nil {
 		p.logAndSendErrorToUser(mattermostUserID, post.ChannelId, err.Error())

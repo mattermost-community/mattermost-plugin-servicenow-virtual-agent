@@ -88,6 +88,8 @@ const (
 
 	YoutubeURL = "https://www.youtube.com/watch?v=%s"
 
+	PublishSeriveNowVAIsTypingJobName = "PublishSeriveNowVAIsTypingJob"
+	cronPrefix                        = "cron_"
 	// ChannelCacheTTL contains the value after which cache entries are expired. This value is in minutes.
 	ChannelCacheTTL = 1440
 )
