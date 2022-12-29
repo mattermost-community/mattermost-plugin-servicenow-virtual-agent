@@ -51,10 +51,7 @@ func (p *Plugin) validateTime(time string) string {
 }
 
 func (p *Plugin) IsCharCountSafe(attachments []*model.SlackAttachment) bool {
-	bytes, err := json.Marshal(attachments)
-	if err != nil {
-		p.API.LogDebug("Error in marshaling the attachments", "Error", err.Error())
-	}
+	bytes, _ := json.Marshal(attachments)
 	// 35 is the approx. length of one line added by the MM server for post action IDs and 100 is a buffer
 	return utf8.RuneCountInString(string(bytes)) < model.POST_PROPS_MAX_RUNES-100-(len(attachments)*35)
 }

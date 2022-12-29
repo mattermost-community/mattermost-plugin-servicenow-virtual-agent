@@ -534,7 +534,7 @@ func Test_HandlePreviousCarouselPosts(t *testing.T) {
 		setupStore  func(s *mock_plugin.MockStore)
 	}{
 		{
-			description: "error in loading postIDs",
+			description: "error occurred while loading postIDs",
 			setupAPI: func(api *plugintest.API) {
 				api.On("LogDebug", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 			},
@@ -550,7 +550,7 @@ func Test_HandlePreviousCarouselPosts(t *testing.T) {
 			},
 		},
 		{
-			description: "error in storing postIDs and getting post from API",
+			description: "error occurred while storing postIDs and getting post from API",
 			setupAPI: func(api *plugintest.API) {
 				api.On("LogDebug", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 				api.On("GetPost", testutils.GetID()).Return(nil, testutils.GetAppError("error in getting post"))
@@ -561,7 +561,7 @@ func Test_HandlePreviousCarouselPosts(t *testing.T) {
 			},
 		},
 		{
-			description: "error in updating post",
+			description: "error occurred while updating post",
 			setupAPI: func(api *plugintest.API) {
 				api.On("GetPost", testutils.GetID()).Return(testutils.GetPostWithAttachments(2), nil)
 				api.On("UpdatePost", mock.AnythingOfType("*model.Post")).Return(nil, testutils.GetAppError("error in updating post"))

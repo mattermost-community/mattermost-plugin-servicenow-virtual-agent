@@ -93,7 +93,7 @@ func Test_LoadPostIDs(t *testing.T) {
 			description: "Post IDs are loaded successfully from the KV store",
 		},
 		{
-			description: "Post IDs are not loaded successfully from the KV store",
+			description: "Post IDs are not loaded from the KV store",
 			loadError:   fmt.Errorf("error in loading post IDs"),
 		},
 	} {

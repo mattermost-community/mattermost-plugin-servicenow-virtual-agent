@@ -79,10 +79,7 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 		return err
 	}
 
-	if err = p.ScheduleJob(mattermostUserID); err != nil {
-		return err
-	}
-
+	_ = p.ScheduleJob(mattermostUserID)
 	err = client.StartConverstaionWithVirtualAgent(mattermostUserID)
 	if err != nil {
 		return err

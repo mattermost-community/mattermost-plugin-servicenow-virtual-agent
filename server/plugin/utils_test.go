@@ -1,11 +1,8 @@
 package plugin
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 
-	"bou.ke/monkey"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/stretchr/testify/assert"
@@ -121,28 +118,15 @@ func Test_validateTime(t *testing.T) {
 func Test_IsCharCountSafe(t *testing.T) {
 	p := Plugin{}
 	for _, test := range []struct {
-		description  string
-		marshalError error
+		description string
 	}{
 		{
-			description: "result is returned successfully with no error",
-		},
-		{
-			description:  "result is returned successfully with an error",
-			marshalError: fmt.Errorf("error in marshaling the attachments"),
+			description: "result is returned successfully",
 		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
-			mockAPI := &plugintest.API{}
-			if test.marshalError != nil {
-				mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 3)...).Return()
-			}
-			monkey.Patch(json.Marshal, func(_ interface{}) ([]byte, error) {
-				return []byte{}, test.marshalError
-			})
-
-			p.SetAPI(mockAPI)
-			_ = p.IsCharCountSafe([]*model.SlackAttachment{})
+			isSafe := p.IsCharCountSafe([]*model.SlackAttachment{})
+			assert.Equal(t, true, isSafe)
 		})
 	}
 }

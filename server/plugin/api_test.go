@@ -770,6 +770,9 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
 				return &oauth2.Token{}, test.ParseAuthTokenErr
 			})
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ScheduleJob", func(_ *Plugin, _ string) error {
+				return nil
+			})
 
 			var c client
 			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
@@ -828,7 +831,6 @@ func Test_handleDateTimeSelection(t *testing.T) {
 		expectedResponse  testutils.ExpectedResponse
 		userID            string
 		ParseAuthTokenErr error
-		scheduleJobErr    error
 	}{
 		"User is unauthorized": {
 			httpTest: httpTestJSON,
@@ -953,19 +955,6 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			},
 			userID: "mock-userID",
 		},
-		"Error while scheduling the job": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTime),
-				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusOK,
-			},
-			userID:         "mock-userID",
-			scheduleJobErr: errors.New("error while scheduling the job"),
-		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			mockInterval := int64(1000)
@@ -997,7 +986,7 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			})
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ScheduleJob", func(_ *Plugin, _ string) error {
-				return test.scheduleJobErr
+				return nil
 			})
 
 			if test.userID != "" {

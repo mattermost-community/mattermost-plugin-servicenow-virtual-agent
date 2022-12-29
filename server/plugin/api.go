@@ -443,10 +443,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := p.ScheduleJob(mattermostUserID); err != nil {
-		return
-	}
-
+	_ = p.ScheduleJob(mattermostUserID)
 	client := p.MakeClient(r.Context(), token)
 	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
@@ -490,10 +487,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get(constants.HeaderServiceNowUserID)
 	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 
-	if err := p.ScheduleJob(mattermostUserID); err != nil {
-		return
-	}
-
+	_ = p.ScheduleJob(mattermostUserID)
 	_, isCarousel := postActionIntegrationRequest.Context[constants.StyleCarousel].(bool)
 
 	// Using waitgroup to make this function testable
