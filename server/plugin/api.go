@@ -47,10 +47,49 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter.HandleFunc(constants.PathSetDateTime, p.checkAuth(p.checkOAuth(p.handleSetDateTime))).Methods(http.MethodPost)
 	apiRouter.HandleFunc(constants.PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
 	apiRouter.HandleFunc(fmt.Sprintf("/file/{%s}", constants.PathParamEncryptedFileInfo), p.handleFileAttachments).Methods(http.MethodGet)
+	apiRouter.HandleFunc(constants.PathSkip, p.checkAuth(p.checkOAuth(p.handleSkip)))
 
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
 	return r
+}
+
+func (p *Plugin) handleSkip(w http.ResponseWriter, r *http.Request) {
+	response := &model.PostActionIntegrationResponse{}
+	decoder := json.NewDecoder(r.Body)
+	postActionIntegrationRequest := &model.PostActionIntegrationRequest{}
+	if err := decoder.Decode(&postActionIntegrationRequest); err != nil {
+		p.API.LogError("Error while decoding the PostActionIntegrationRequest params.", "Error", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+
+	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
+	userID := r.Header.Get(constants.HeaderServiceNowUserID)
+
+	client := p.MakeClient(r.Context(), token)
+	if err := client.SendMessageToVirtualAgentAPI(userID, constants.SkipInternal, true, &serializer.MessageAttachment{}); err != nil {
+		p.API.LogError("Error while sending the message to VA.", "Error", err.Error())
+		p.returnPostActionIntegrationResponse(w, response)
+		return
+	}
+
+	newAttachment := model.SlackAttachment{
+		Text:  constants.Skipped,
+		Color: constants.UpdatedPostBorderColor,
+	}
+
+	newPost := &model.Post{
+		ChannelId: postActionIntegrationRequest.ChannelId,
+		UserId:    p.botUserID,
+	}
+
+	model.ParseSlackAttachment(newPost, []*model.SlackAttachment{&newAttachment})
+	response = &model.PostActionIntegrationResponse{
+		Update: newPost,
+	}
+
+	p.returnPostActionIntegrationResponse(w, response)
 }
 
 func (p *Plugin) handleAPIError(w http.ResponseWriter, apiErr *serializer.APIErrorResponse) {
@@ -327,8 +366,7 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 		},
 	}
 
-	ctx := r.Context()
-	token := ctx.Value(constants.ContextTokenKey).(*oauth2.Token)
+	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
 	client := p.MakeClient(r.Context(), token)
 	if err := client.OpenDialogRequest(&requestBody); err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
@@ -348,9 +386,9 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	token := ctx.Value(constants.ContextTokenKey).(*oauth2.Token)
+	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(constants.HeaderServiceNowUserID)
+	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 	var selectedOption string
 
 	if len(strings.Split(submitRequest.CallbackId, "__")) != 2 {
@@ -405,6 +443,10 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := p.ScheduleJob(mattermostUserID); err != nil {
+		return
+	}
+
 	client := p.MakeClient(r.Context(), token)
 	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
@@ -412,11 +454,10 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newAttachment := []*model.SlackAttachment{}
-	newAttachment = append(newAttachment, &model.SlackAttachment{
+	newAttachment := &model.SlackAttachment{
 		Text:  fmt.Sprintf("You selected %s: %s", inputType, selectedOption),
 		Color: constants.UpdatedPostBorderColor,
-	})
+	}
 
 	newPost := &model.Post{
 		Id:        postID,
@@ -424,7 +465,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		UserId:    p.botUserID,
 	}
 
-	model.ParseSlackAttachment(newPost, newAttachment)
+	model.ParseSlackAttachment(newPost, []*model.SlackAttachment{newAttachment})
 
 	if _, appErr := p.API.UpdatePost(newPost); appErr != nil {
 		p.API.LogError("Error updating the post.", "Error", appErr.Message)
@@ -445,9 +486,14 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	token := ctx.Value(constants.ContextTokenKey).(*oauth2.Token)
+	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(constants.HeaderServiceNowUserID)
+	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
+
+	if err := p.ScheduleJob(mattermostUserID); err != nil {
+		return
+	}
+
 	_, isCarousel := postActionIntegrationRequest.Context[constants.StyleCarousel].(bool)
 
 	// Using waitgroup to make this function testable
@@ -539,6 +585,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Request) {
+	p.deactivateJob()
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		p.API.LogError("Error occurred while reading webhook body.", "Error", err.Error())

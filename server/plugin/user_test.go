@@ -250,6 +250,7 @@ func Test_CompleteOAuth2(t *testing.T) {
 		storeUserError                         error
 		dMError                                error
 		startConverstaionWithVirtualAgentError error
+		scheduleJobErr                         error
 	}{
 		{
 			description:  "OAuth2 is completed successfully",
@@ -341,6 +342,14 @@ func Test_CompleteOAuth2(t *testing.T) {
 			expectedErr:                            "error starting conversation with Virtual Agent",
 			startConverstaionWithVirtualAgentError: errors.New("error starting conversation with Virtual Agent"),
 		},
+		{
+			description:    "Error while scheduling the job",
+			authedUserID:   "mock-authedUserID",
+			code:           "mockCode",
+			state:          "mockState_mock-authedUserID",
+			expectedErr:    "error while scheduling the job",
+			scheduleJobErr: errors.New("error while scheduling the job"),
+		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
@@ -376,10 +385,18 @@ func Test_CompleteOAuth2(t *testing.T) {
 				return "mockToken", testCase.dMError
 			})
 
+			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "ScheduleJob", func(_ *Plugin, _ string) error {
+				return testCase.scheduleJobErr
+			})
+
 			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "StartConverstaionWithVirtualAgent", func(_ *client, _ string) error {
 				return testCase.startConverstaionWithVirtualAgentError
 			})
 
+			mockAPI := &plugintest.API{}
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
+
+			p.SetAPI(mockAPI)
 			p.store = mockedStore
 
 			err := p.CompleteOAuth2(testCase.authedUserID, testCase.code, testCase.state)

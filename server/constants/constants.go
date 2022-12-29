@@ -75,7 +75,13 @@ const (
 	UpdatedPostBorderColor            = "#74ccac"
 	AttachmentLinkExpiryTimeInMinutes = 15
 
+	Skipped      = "Skipped"
+	SkipButton   = "Skip"
+	SkipInternal = "_skip_internal"
+
 	YoutubeURL = "https://www.youtube.com/watch?v=%s"
+
+	PublishSeriveNowVAIsTypingJobName = "PublishSeriveNowVAIsTypingJob"
 
 	// ChannelCacheTTL contains the value after which cache entries are expired. This value is in minutes.
 	ChannelCacheTTL = 1440

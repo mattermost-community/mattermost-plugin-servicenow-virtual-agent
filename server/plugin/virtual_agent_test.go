@@ -308,6 +308,13 @@ func Test_CreatePickerAttachment(t *testing.T) {
 							},
 						},
 					},
+					{
+						Name: constants.SkipButton,
+						Type: model.POST_ACTION_TYPE_BUTTON,
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
+						},
+					},
 				},
 			},
 		},
@@ -345,6 +352,13 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 							},
 						},
 						Type: model.POST_ACTION_TYPE_BUTTON,
+					},
+					{
+						Name: constants.SkipButton,
+						Type: model.POST_ACTION_TYPE_BUTTON,
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
+						},
 					},
 				},
 			},

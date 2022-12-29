@@ -117,8 +117,14 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				}
 			}
 
-			if _, err = p.DM(userID, message); err != nil {
-				return err
+			if res.UIType != constants.OutputTextUIType && !res.Required {
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputTextAttachmentWithSkipAction(message)); err != nil {
+					return err
+				}
+			} else {
+				if _, err = p.DM(userID, message); err != nil {
+					return err
+				}
 			}
 		case *serializer.TopicPickerControl:
 			if len(res.Options) == 0 {
@@ -224,7 +230,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 }
 
 func (p *Plugin) CreateDefaultDateAttachment(body *serializer.DefaultDate) *model.SlackAttachment {
-	return &model.SlackAttachment{
+	slackAttachment := &model.SlackAttachment{
 		Text: body.Label,
 		Actions: []*model.PostAction{
 			{
@@ -239,6 +245,11 @@ func (p *Plugin) CreateDefaultDateAttachment(body *serializer.DefaultDate) *mode
 			},
 		},
 	}
+
+	if !body.Required {
+		slackAttachment.Actions = append(slackAttachment.Actions, p.PostActionToSkip())
+	}
+	return slackAttachment
 }
 
 func (p *Plugin) CreateOutputLinkAttachment(body *serializer.OutputLink) *model.SlackAttachment {
@@ -301,8 +312,15 @@ func (p *Plugin) CreateTopicPickerControlAttachment(body *serializer.TopicPicker
 	}
 }
 
-func (p *Plugin) CreatePickerAttachment(body *serializer.Picker) *model.SlackAttachment {
+func (p *Plugin) CreateOutputTextAttachmentWithSkipAction(message string) *model.SlackAttachment {
 	return &model.SlackAttachment{
+		Text:    message,
+		Actions: []*model.PostAction{p.PostActionToSkip()},
+	}
+}
+
+func (p *Plugin) CreatePickerAttachment(body *serializer.Picker) *model.SlackAttachment {
+	slackAttachment := &model.SlackAttachment{
 		Actions: []*model.PostAction{
 			{
 				Name: "Select an option...",
@@ -312,6 +330,21 @@ func (p *Plugin) CreatePickerAttachment(body *serializer.Picker) *model.SlackAtt
 				Type:    model.POST_ACTION_TYPE_SELECT,
 				Options: p.getPostActionOptions(body.Options),
 			},
+		},
+	}
+
+	if !body.Required {
+		slackAttachment.Actions = append(slackAttachment.Actions, p.PostActionToSkip())
+	}
+	return slackAttachment
+}
+
+func (p *Plugin) PostActionToSkip() *model.PostAction {
+	return &model.PostAction{
+		Name: constants.SkipButton,
+		Type: model.POST_ACTION_TYPE_BUTTON,
+		Integration: &model.PostActionIntegration{
+			URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
 		},
 	}
 }
