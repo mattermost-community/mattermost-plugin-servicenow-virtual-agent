@@ -63,6 +63,61 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 	}
 }
 
+func Test_PostActionToSkip(t *testing.T) {
+	p := Plugin{}
+	for _, testCase := range []struct {
+		description string
+		response    *model.PostAction
+	}{
+		{
+			description: "PostActionToSkip returns a proper post action to skip",
+			response: &model.PostAction{
+				Name: constants.SkipButton,
+				Type: model.POST_ACTION_TYPE_BUTTON,
+				Integration: &model.PostActionIntegration{
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
+				},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			res := p.PostActionToSkip()
+			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
+
+func Test_CreateOutputTextAttachmentWithSkipAction(t *testing.T) {
+	p := Plugin{}
+	for _, testCase := range []struct {
+		description string
+		message     string
+		response    *model.SlackAttachment
+	}{
+		{
+			description: "CreateOutputTextAttachmentWithSkipAction returns proper slack attachment",
+			message:     "mock-message",
+			response: &model.SlackAttachment{
+				Text: "mock-message",
+				Actions: []*model.PostAction{
+					{
+						Name: constants.SkipButton,
+						Type: model.POST_ACTION_TYPE_BUTTON,
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			res := p.CreateOutputTextAttachmentWithSkipAction(testCase.message)
+			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
+
 func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 	defer monkey.UnpatchAll()
 

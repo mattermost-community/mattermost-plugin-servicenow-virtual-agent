@@ -64,6 +64,9 @@ func (p *Plugin) handleSkip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
+	_ = p.ScheduleJob(mattermostUserID)
+
 	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(constants.HeaderServiceNowUserID)
 

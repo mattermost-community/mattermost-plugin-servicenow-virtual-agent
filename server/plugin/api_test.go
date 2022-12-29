@@ -63,6 +63,157 @@ func TestWithRecovery(t *testing.T) {
 	}
 }
 
+func TestPlugin_handleSkip(t *testing.T) {
+	httpTestJSON := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeJSON,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest          testutils.HTTPTest
+		request           testutils.Request
+		expectedResponse  testutils.ExpectedResponse
+		userID            string
+		parseAuthTokenErr error
+		loadUserErr       error
+		callError         error
+	}{
+		"Skip message is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+				Body: model.PostActionIntegrationRequest{
+					ChannelId: testutils.GetID(),
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID: testutils.GetID(),
+		},
+		"User is unauthorized": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+				Body: model.PostActionIntegrationRequest{
+					ChannelId: testutils.GetID(),
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusUnauthorized,
+			},
+			userID: "",
+		},
+		"Error while decoding response body": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID: testutils.GetID(),
+		},
+		"User is not present in store": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+				Body: model.PostActionIntegrationRequest{
+					ChannelId: testutils.GetID(),
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID:      testutils.GetID(),
+			loadUserErr: errors.New("error in loading the user from KVstore"),
+		},
+		"Error occurs while parsing OAuth token": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+				Body: model.PostActionIntegrationRequest{
+					ChannelId: testutils.GetID(),
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID:            testutils.GetID(),
+			parseAuthTokenErr: errors.New("error while parsing OAuth token"),
+		},
+		"Error while sending skip message to Virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+				Body: model.PostActionIntegrationRequest{
+					ChannelId: testutils.GetID(),
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			userID:    testutils.GetID(),
+			callError: errors.New("error while sending skip message to Virtual Agent"),
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := new(Plugin)
+			p.setConfiguration(
+				&configuration{
+					ServiceNowURL:               "mockURL",
+					ServiceNowOAuthClientID:     "mockCLientID",
+					ServiceNowOAuthClientSecret: "mockClientSecret",
+					EncryptionSecret:            "mockEncryptionSecret",
+					WebhookSecret:               "mockWebhookSecret",
+					MattermostSiteURL:           "mockSiteURL",
+					PluginID:                    "mockPluginID",
+					PluginURL:                   "mockPluginURL",
+					PluginURLPath:               "mockPluginURLPath",
+				})
+
+			mockAPI := &plugintest.API{}
+			mockAPI.On("GetBundlePath").Return("mockString", nil)
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+			p.SetAPI(mockAPI)
+
+			p.initializeAPI()
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+				return &oauth2.Token{}, test.parseAuthTokenErr
+			})
+
+			var c client
+			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
+				return nil, test.callError
+			})
+
+			if test.userID != "" {
+				mockCtrl := gomock.NewController(t)
+				mockedStore := mock_plugin.NewMockStore(mockCtrl)
+				mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, test.loadUserErr)
+				p.store = mockedStore
+			}
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(constants.HeaderMattermostUserID, test.userID)
+			rr := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, rr, req)
+			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+			if test.parseAuthTokenErr != nil || test.callError != nil || test.loadUserErr != nil {
+				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
+		})
+	}
+}
+
 func TestPlugin_handleUserDisconnect(t *testing.T) {
 	defer monkey.UnpatchAll()
 
@@ -957,7 +1108,6 @@ func Test_handleDateTimeSelection(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			mockInterval := int64(1000)
 			p := new(Plugin)
 
 			mockAPI := &plugintest.API{}
@@ -965,12 +1115,6 @@ func Test_handleDateTimeSelection(t *testing.T) {
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 			mockAPI.On("UpdatePost", mock.AnythingOfType("*model.Post")).Return(nil, nil)
-
-			mockAPI.On("GetConfig").Return(&model.Config{
-				ServiceSettings: model.ServiceSettings{
-					TimeBetweenUserTypingUpdatesMilliseconds: &mockInterval,
-				},
-			})
 
 			p.SetAPI(mockAPI)
 
