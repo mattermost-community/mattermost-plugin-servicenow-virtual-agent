@@ -6,13 +6,14 @@ import (
 
 	"golang.org/x/oauth2"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
 func (p *Plugin) httpOAuth2Connect(w http.ResponseWriter, r *http.Request) {
-	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 	if mattermostUserID == "" {
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: constants.NotAuthorizedError})
 		return
 	}
 
@@ -38,9 +39,9 @@ func (p *Plugin) httpOAuth2Complete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 	if mattermostUserID == "" {
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
+		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: constants.NotAuthorizedError})
 		return
 	}
 
@@ -74,7 +75,7 @@ func (p *Plugin) NewOAuth2Config() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     p.getConfiguration().ServiceNowOAuthClientID,
 		ClientSecret: p.getConfiguration().ServiceNowOAuthClientSecret,
-		RedirectURL:  fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Complete),
+		RedirectURL:  fmt.Sprintf("%s%s", p.GetPluginURL(), constants.PathOAuth2Complete),
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  fmt.Sprintf("%s/oauth_auth.do", p.getConfiguration().ServiceNowURL),
 			TokenURL: fmt.Sprintf("%s/oauth_token.do", p.getConfiguration().ServiceNowURL),

@@ -12,7 +12,11 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 )
+
+const cronPrefix = "cron_"
 
 // Plugin implements the interface expected by the Mattermost server to communicate between the server and plugin processes.
 type Plugin struct {
@@ -68,7 +72,7 @@ func (p *Plugin) closeBackgroundJob() {
 func (p *Plugin) deactivateJob() {
 	if p.backgroundJob != nil {
 		p.closeBackgroundJob()
-		if err := p.API.KVDelete(cronPrefix + PublishSeriveNowVAIsTypingJobName); err != nil {
+		if err := p.API.KVDelete(cronPrefix + constants.PublishSeriveNowVAIsTypingJobName); err != nil {
 			p.API.LogError("Failed to delete the job", "Error", err.Error())
 		}
 	}
@@ -91,7 +95,7 @@ func (p *Plugin) ScheduleJob(mattermostUserID string) error {
 	// cluster.Schedule creates a scheduled job and stores job metadata in kv store using key "cron_<jobName>"
 	job, cronErr := cluster.Schedule(
 		p.API,
-		PublishSeriveNowVAIsTypingJobName,
+		constants.PublishSeriveNowVAIsTypingJobName,
 		cluster.MakeWaitForRoundedInterval(intervalInSecond),
 		func() {
 			if err = p.API.PublishUserTyping(p.botUserID, channel.Id, ""); err != nil {
@@ -110,9 +114,9 @@ func (p *Plugin) ScheduleJob(mattermostUserID string) error {
 
 func (p *Plugin) initBotUser() error {
 	botID, err := p.Helpers.EnsureBot(&model.Bot{
-		Username:    BotUsername,
-		DisplayName: BotDisplayName,
-		Description: BotDescription,
+		Username:    constants.BotUsername,
+		DisplayName: constants.BotDisplayName,
+		Description: constants.BotDescription,
 	}, plugin.ProfileImagePath(filepath.Join("assets", "profile.png")))
 	if err != nil {
 		return errors.Wrap(err, "can't ensure bot")

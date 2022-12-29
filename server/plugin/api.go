@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -19,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
@@ -37,15 +39,15 @@ func (p *Plugin) initializeAPI() *mux.Router {
 	apiRouter := r.PathPrefix("/api/v1").Subrouter()
 
 	// Add custom routes here
-	apiRouter.HandleFunc(PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
-	apiRouter.HandleFunc(PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
-	apiRouter.HandleFunc(PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathSetDateTimeDialog, p.checkAuth(p.checkOAuth(p.handleSetDateTimeDialog))).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathSetDateTime, p.checkAuth(p.checkOAuth(p.handleSetDateTime))).Methods(http.MethodPost)
-	apiRouter.HandleFunc(PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
-	apiRouter.HandleFunc(fmt.Sprintf("/file/{%s}", PathParamEncryptedFileInfo), p.handleFileAttachments).Methods(http.MethodGet)
-	apiRouter.HandleFunc(PathSkip, p.checkAuth(p.checkOAuth(p.handleSkip)))
+	apiRouter.HandleFunc(constants.PathOAuth2Connect, p.checkAuth(p.httpOAuth2Connect)).Methods(http.MethodGet)
+	apiRouter.HandleFunc(constants.PathOAuth2Complete, p.checkAuth(p.httpOAuth2Complete)).Methods(http.MethodGet)
+	apiRouter.HandleFunc(constants.PathUserDisconnect, p.checkAuth(p.handleUserDisconnect)).Methods(http.MethodPost)
+	apiRouter.HandleFunc(constants.PathActionOptions, p.checkAuth(p.checkOAuth(p.handlePickerSelection))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(constants.PathSetDateTimeDialog, p.checkAuth(p.checkOAuth(p.handleSetDateTimeDialog))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(constants.PathSetDateTime, p.checkAuth(p.checkOAuth(p.handleSetDateTime))).Methods(http.MethodPost)
+	apiRouter.HandleFunc(constants.PathVirtualAgentWebhook, p.checkAuthBySecret(p.handleVirtualAgentWebhook)).Methods(http.MethodPost)
+	apiRouter.HandleFunc(fmt.Sprintf("/file/{%s}", constants.PathParamEncryptedFileInfo), p.handleFileAttachments).Methods(http.MethodGet)
+	apiRouter.HandleFunc(constants.PathSkip, p.checkAuth(p.checkOAuth(p.handleSkip)))
 
 	r.Handle("{anything:.*}", http.NotFoundHandler())
 
@@ -62,19 +64,19 @@ func (p *Plugin) handleSkip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.Context().Value(ContextTokenKey).(*oauth2.Token)
-	userID := r.Header.Get(HeaderServiceNowUserID)
+	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
+	userID := r.Header.Get(constants.HeaderServiceNowUserID)
 
 	client := p.MakeClient(r.Context(), token)
-	if err := client.SendMessageToVirtualAgentAPI(userID, SkipInternal, true, &serializer.MessageAttachment{}); err != nil {
+	if err := client.SendMessageToVirtualAgentAPI(userID, constants.SkipInternal, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error while sending the message to VA.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
 		return
 	}
 
 	newAttachment := model.SlackAttachment{
-		Text:  Skipped,
-		Color: updatedPostBorderColor,
+		Text:  constants.Skipped,
+		Color: constants.UpdatedPostBorderColor,
 	}
 
 	newPost := &model.Post{
@@ -110,7 +112,7 @@ func (p *Plugin) handleAPIError(w http.ResponseWriter, apiErr *serializer.APIErr
 func (p *Plugin) checkAuthBySecret(handleFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Replace all occurrences of " " with "+" in WebhookSecret.
-		webhookSecret := strings.ReplaceAll(r.FormValue(SecretParam), " ", "+")
+		webhookSecret := strings.ReplaceAll(r.FormValue(constants.SecretParam), " ", "+")
 		if statusCode, err := verifyHTTPSecret(p.getConfiguration().WebhookSecret, webhookSecret); err != nil {
 			p.API.LogError("Invalid secret", "Error", err.Error())
 			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: statusCode, Message: fmt.Sprintf("Invalid Secret. Error: %s", err.Error())})
@@ -153,7 +155,7 @@ func (p *Plugin) handleStaticFiles(r *mux.Router) {
 // handleFileAttachments returns the data of the fileID passed in the request URL.
 func (p *Plugin) handleFileAttachments(w http.ResponseWriter, r *http.Request) {
 	pathParams := mux.Vars(r)
-	encryptedFileInfo := pathParams[PathParamEncryptedFileInfo]
+	encryptedFileInfo := pathParams[constants.PathParamEncryptedFileInfo]
 
 	decoded, err := decode(encryptedFileInfo)
 	if err != nil {
@@ -214,9 +216,9 @@ func (p *Plugin) withRecovery(next http.Handler) http.Handler {
 
 func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Header.Get(HeaderMattermostUserID)
+		userID := r.Header.Get(constants.HeaderMattermostUserID)
 		if userID == "" {
-			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: NotAuthorizedError})
+			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: constants.NotAuthorizedError})
 			return
 		}
 
@@ -226,14 +228,14 @@ func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 
 func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Header.Get(HeaderMattermostUserID)
+		userID := r.Header.Get(constants.HeaderMattermostUserID)
 		user, err := p.store.LoadUser(userID)
 		if err != nil {
 			p.API.LogError("Error loading user from KV store.", "Error", err.Error())
 			return
 		}
 		// Adding the ServiceNow User ID in the request headers to pass it to the next handler
-		r.Header.Set(HeaderServiceNowUserID, user.UserID)
+		r.Header.Set(constants.HeaderServiceNowUserID, user.UserID)
 
 		token, err := p.ParseAuthToken(user.OAuth2Token)
 		if err != nil {
@@ -241,7 +243,7 @@ func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), ContextTokenKey, token)
+		ctx := context.WithValue(r.Context(), constants.ContextTokenKey, token)
 		r = r.Clone(ctx)
 		handler(w, r)
 	}
@@ -257,14 +259,14 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 	// Check if the user is connected to ServiceNow
 	if _, err := p.GetUser(mattermostUserID); err != nil {
 		if err != ErrNotFound {
 			p.API.LogError("Error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error())
 		} else {
 			var notConnectedPost *model.Post
-			notConnectedPost, err = p.GetDisconnectUserPost(mattermostUserID, AlreadyDisconnectedMessage)
+			notConnectedPost, err = p.GetDisconnectUserPost(mattermostUserID, constants.AlreadyDisconnectedMessage)
 			if err != nil {
 				p.API.LogError("Error occurred while creating user not connected post", "Error", err.Error())
 			} else {
@@ -277,10 +279,10 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	disconnectUser := postActionIntegrationRequest.Context[DisconnectUserContextName].(bool)
+	disconnectUser := postActionIntegrationRequest.Context[constants.DisconnectUserContextName].(bool)
 	if !disconnectUser {
 		var rejectionPost *model.Post
-		rejectionPost, err := p.GetDisconnectUserPost(mattermostUserID, DisconnectUserRejectedMessage)
+		rejectionPost, err := p.GetDisconnectUserPost(mattermostUserID, constants.DisconnectUserRejectedMessage)
 		if err != nil {
 			p.API.LogError("Error occurred while creating disconnect user rejection post.", "Error", err.Error())
 		} else {
@@ -298,7 +300,7 @@ func (p *Plugin) handleUserDisconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	successPost, err := p.GetDisconnectUserPost(mattermostUserID, DisconnectUserSuccessMessage)
+	successPost, err := p.GetDisconnectUserPost(mattermostUserID, constants.DisconnectUserSuccessMessage)
 	if err != nil {
 		p.API.LogError("Error occurred while creating disconnect user success post", "Error", err.Error())
 	} else {
@@ -323,7 +325,7 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 	var elements []model.DialogElement
 	date := model.DialogElement{
 		DisplayName: "Date:",
-		Name:        DateValue,
+		Name:        constants.DateValue,
 		Type:        "text",
 		Placeholder: "YYYY-MM-DD",
 		HelpText:    "Please enter the date in the format YYYY-MM-DD. Example: 2001-11-04",
@@ -334,7 +336,7 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 
 	time := model.DialogElement{
 		DisplayName: "Time:",
-		Name:        TimeValue,
+		Name:        constants.TimeValue,
 		Type:        "text",
 		Placeholder: "HH:MM",
 		HelpText:    "Please enter the time in 24 hour format as HH:MM. Example: 20:04",
@@ -343,19 +345,19 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 		MaxLength:   5,
 	}
 
-	inputType := fmt.Sprintf("%v", postActionIntegrationRequest.Context[DateTimeDialogType])
+	inputType := fmt.Sprintf("%v", postActionIntegrationRequest.Context[constants.DateTimeDialogType])
 	switch inputType {
-	case DateUIType:
+	case constants.DateUIType:
 		elements = append(elements, date)
-	case TimeUIType:
+	case constants.TimeUIType:
 		elements = append(elements, time)
-	case DateTimeUIType:
+	case constants.DateTimeUIType:
 		elements = append(elements, date, time)
 	}
 
 	requestBody := model.OpenDialogRequest{
 		TriggerId: postActionIntegrationRequest.TriggerId,
-		URL:       fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathSetDateTime),
+		URL:       fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSetDateTime),
 		Dialog: model.Dialog{
 			Title:       fmt.Sprintf("Set %s", inputType),
 			CallbackId:  fmt.Sprintf("%s__%s", postActionIntegrationRequest.PostId, inputType),
@@ -364,7 +366,7 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 		},
 	}
 
-	token := r.Context().Value(ContextTokenKey).(*oauth2.Token)
+	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
 	client := p.MakeClient(r.Context(), token)
 	if err := client.OpenDialogRequest(&requestBody); err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
@@ -384,14 +386,14 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.Context().Value(ContextTokenKey).(*oauth2.Token)
-	userID := r.Header.Get(HeaderServiceNowUserID)
-	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
+	userID := r.Header.Get(constants.HeaderServiceNowUserID)
+	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 	var selectedOption string
 
 	if len(strings.Split(submitRequest.CallbackId, "__")) != 2 {
-		p.API.LogError(InvalidCallbackIDError)
-		response.Error = InvalidCallbackIDError
+		p.API.LogError(constants.InvalidCallbackIDError)
+		response.Error = constants.InvalidCallbackIDError
 		p.returnSubmitDialogResponse(w, response)
 		return
 	}
@@ -401,37 +403,37 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 
 	var dateValidationError, timeValidationError string
 	switch inputType {
-	case DateTimeUIType:
-		selectedOption = fmt.Sprintf("%v %v:00", submitRequest.Submission[DateValue], submitRequest.Submission[TimeValue])
+	case constants.DateTimeUIType:
+		selectedOption = fmt.Sprintf("%v %v:00", submitRequest.Submission[constants.DateValue], submitRequest.Submission[constants.TimeValue])
 
 		response.Errors = map[string]string{}
 
-		dateValidationError = p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
+		dateValidationError = p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[constants.DateValue]))
 		if dateValidationError != "" {
-			response.Errors[DateValue] = dateValidationError
+			response.Errors[constants.DateValue] = dateValidationError
 		}
 
-		timeValidationError = p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
+		timeValidationError = p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[constants.TimeValue]))
 		if timeValidationError != "" {
-			response.Errors[TimeValue] = timeValidationError
+			response.Errors[constants.TimeValue] = timeValidationError
 		}
-	case DateUIType:
-		selectedOption = fmt.Sprintf("%v", submitRequest.Submission[DateValue])
+	case constants.DateUIType:
+		selectedOption = fmt.Sprintf("%v", submitRequest.Submission[constants.DateValue])
 
-		dateValidationError = p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[DateValue]))
+		dateValidationError = p.validateDate(fmt.Sprintf("%v", submitRequest.Submission[constants.DateValue]))
 		if dateValidationError != "" {
 			response.Errors = map[string]string{
-				DateValue: dateValidationError,
+				constants.DateValue: dateValidationError,
 			}
 		}
-	case TimeUIType:
-		selectedOption = fmt.Sprintf("%v:00", submitRequest.Submission[TimeValue])
+	case constants.TimeUIType:
+		selectedOption = fmt.Sprintf("%v:00", submitRequest.Submission[constants.TimeValue])
 
-		timeValidationError = p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[TimeValue]))
+		timeValidationError = p.validateTime(fmt.Sprintf("%v", submitRequest.Submission[constants.TimeValue]))
 
 		if timeValidationError != "" {
 			response.Errors = map[string]string{
-				TimeValue: timeValidationError,
+				constants.TimeValue: timeValidationError,
 			}
 		}
 	}
@@ -441,10 +443,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := p.ScheduleJob(mattermostUserID); err != nil {
-		return
-	}
-
+	_ = p.ScheduleJob(mattermostUserID)
 	client := p.MakeClient(r.Context(), token)
 	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
@@ -452,9 +451,9 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newAttachment := model.SlackAttachment{
+	newAttachment := &model.SlackAttachment{
 		Text:  fmt.Sprintf("You selected %s: %s", inputType, selectedOption),
-		Color: updatedPostBorderColor,
+		Color: constants.UpdatedPostBorderColor,
 	}
 
 	newPost := &model.Post{
@@ -463,7 +462,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		UserId:    p.botUserID,
 	}
 
-	model.ParseSlackAttachment(newPost, []*model.SlackAttachment{&newAttachment})
+	model.ParseSlackAttachment(newPost, []*model.SlackAttachment{newAttachment})
 
 	if _, appErr := p.API.UpdatePost(newPost); appErr != nil {
 		p.API.LogError("Error updating the post.", "Error", appErr.Message)
@@ -484,16 +483,19 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.Context().Value(ContextTokenKey).(*oauth2.Token)
-	userID := r.Header.Get(HeaderServiceNowUserID)
-	mattermostUserID := r.Header.Get(HeaderMattermostUserID)
+	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
+	userID := r.Header.Get(constants.HeaderServiceNowUserID)
+	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 
-	if err := p.ScheduleJob(mattermostUserID); err != nil {
-		return
-	}
+	_ = p.ScheduleJob(mattermostUserID)
+	_, isCarousel := postActionIntegrationRequest.Context[constants.StyleCarousel].(bool)
 
-	_, isCarousel := postActionIntegrationRequest.Context[StyleCarousel].(bool)
+	// Using waitgroup to make this function testable
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	defer wg.Wait()
 	go func() {
+		defer wg.Done()
 		if isCarousel {
 			postIDs, err := p.store.LoadPostIDs(postActionIntegrationRequest.UserId)
 			if err != nil {
@@ -523,8 +525,8 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	var newAttachment *model.SlackAttachment
 	messageTyped := true
 	if isCarousel {
-		selectedOption := postActionIntegrationRequest.Context[ContextKeySelectedLabel].(string)
-		selectedValue := postActionIntegrationRequest.Context[ContextKeySelectedValue].(string)
+		selectedOption := postActionIntegrationRequest.Context[constants.ContextKeySelectedLabel].(string)
+		selectedValue := postActionIntegrationRequest.Context[constants.ContextKeySelectedValue].(string)
 		post, err := p.API.GetPost(postActionIntegrationRequest.PostId)
 		if err != nil {
 			p.API.LogDebug("Unable to get the post", "Error", err.Error())
@@ -544,11 +546,11 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		messageTyped = false
 		message = selectedValue
 	} else {
-		selectedOption := postActionIntegrationRequest.Context[ContextKeySelectedOption].(string)
+		selectedOption := postActionIntegrationRequest.Context[constants.ContextKeySelectedOption].(string)
 		message = selectedOption
 		newAttachment = &model.SlackAttachment{
 			Text:  fmt.Sprintf("You selected: %s", selectedOption),
-			Color: updatedPostBorderColor,
+			Color: constants.UpdatedPostBorderColor,
 		}
 	}
 

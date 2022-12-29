@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
@@ -73,15 +74,12 @@ func (p *Plugin) CompleteOAuth2(authedUserID, code, state string) error {
 		return err
 	}
 
-	_, err = p.DM(mattermostUserID, ConnectSuccessMessage, serviceNowUser.Email)
+	_, err = p.DM(mattermostUserID, constants.ConnectSuccessMessage, serviceNowUser.Email)
 	if err != nil {
 		return err
 	}
 
-	if err = p.ScheduleJob(mattermostUserID); err != nil {
-		return err
-	}
-
+	_ = p.ScheduleJob(mattermostUserID)
 	err = client.StartConverstaionWithVirtualAgent(mattermostUserID)
 	if err != nil {
 		return err
@@ -108,9 +106,9 @@ func (p *Plugin) DisconnectUser(mattermostUserID string) error {
 }
 
 func (p *Plugin) CreateDisconnectUserAttachment() *model.SlackAttachment {
-	disconnectUserPath := fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathUserDisconnect)
+	disconnectUserPath := fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathUserDisconnect)
 	disconnectUserAttachment := &model.SlackAttachment{
-		Title: DisconnectUserConfirmationMessge,
+		Title: constants.DisconnectUserConfirmationMessge,
 		Color: "#FF0000",
 		Actions: []*model.PostAction{
 			{
@@ -119,7 +117,7 @@ func (p *Plugin) CreateDisconnectUserAttachment() *model.SlackAttachment {
 				Integration: &model.PostActionIntegration{
 					URL: disconnectUserPath,
 					Context: map[string]interface{}{
-						DisconnectUserContextName: true,
+						constants.DisconnectUserContextName: true,
 					},
 				},
 			},
@@ -129,7 +127,7 @@ func (p *Plugin) CreateDisconnectUserAttachment() *model.SlackAttachment {
 				Integration: &model.PostActionIntegration{
 					URL: disconnectUserPath,
 					Context: map[string]interface{}{
-						DisconnectUserContextName: false,
+						constants.DisconnectUserContextName: false,
 					},
 				},
 			},
@@ -160,9 +158,9 @@ func (c *client) GetMe(mattermostUserID string) (*serializer.ServiceNowUser, err
 	}
 
 	userDetails := &serializer.UserDetails{}
-	path := fmt.Sprintf("%s%s", c.plugin.getConfiguration().ServiceNowURL, PathGetUser)
+	path := fmt.Sprintf("%s%s", c.plugin.getConfiguration().ServiceNowURL, constants.PathGetUser)
 	params := url.Values{}
-	params.Add(SysQueryParam, fmt.Sprintf("email=%s", mattermostUser.Email))
+	params.Add(constants.SysQueryParam, fmt.Sprintf("email=%s", mattermostUser.Email))
 
 	_, err := c.CallJSON(http.MethodGet, path, nil, userDetails, params)
 	if err != nil {

@@ -1,4 +1,4 @@
-package plugin
+package constants
 
 const (
 	HeaderMattermostUserID = "Mattermost-User-ID"
@@ -13,21 +13,11 @@ const (
 		"I'm here to help you. Let's start by linking your ServiceNow account.\n[Link to ServiceNow](%s)"
 	GenericErrorMessage = "Something went wrong. Please try again later."
 
-	PathOAuth2Connect              = "/oauth2/connect"
-	PathOAuth2Complete             = "/oauth2/complete"
-	PathUserDisconnect             = "/user/disconnect"
-	PathGetUser                    = "/api/now/table/sys_user"
-	PathVirtualAgentWebhook        = "/nowbot/processResponse"
-	PathVirtualAgentBotIntegration = "/api/sn_va_as_service/bot/integration"
-	PathActionOptions              = "/action_options"
-	PathOpenDialog                 = "/api/v4/actions/dialogs/open"
-	PathSetDateTimeDialog          = "/date_time"
-	PathSetDateTime                = "/selected_date_time"
-	PathSkip                       = "/skip"
-
 	SysQueryParam   = "sysparm_query"
 	VideoQueryParam = "target_url"
 	SecretParam     = "secret"
+
+	PathParamEncryptedFileInfo = "encryptedFileInfo"
 
 	BotUsername    = "servicenow-virtual-agent"
 	BotDisplayName = "ServiceNow Virtual Agent"
@@ -82,9 +72,7 @@ const (
 	UploadImageMessage = "\n(**Note:** Please upload an image using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
 	UploadFileMessage  = "\n(**Note:** Please upload a file using the Mattermost `Upload files` option OR use the shorthand `Ctrl+U`.)"
 
-	PathParamEncryptedFileInfo = "encryptedFileInfo"
-
-	updatedPostBorderColor            = "#74ccac"
+	UpdatedPostBorderColor            = "#74ccac"
 	AttachmentLinkExpiryTimeInMinutes = 15
 
 	Skipped      = "Skipped"
@@ -94,7 +82,7 @@ const (
 	YoutubeURL = "https://www.youtube.com/watch?v=%s"
 
 	PublishSeriveNowVAIsTypingJobName = "PublishSeriveNowVAIsTypingJob"
-	cronPrefix                        = "cron_"
+
 	// ChannelCacheTTL contains the value after which cache entries are expired. This value is in minutes.
 	ChannelCacheTTL = 1440
 )

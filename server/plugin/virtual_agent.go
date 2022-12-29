@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
@@ -33,21 +34,21 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	}
 
 	switch uiType.UIType {
-	case OutputTextUIType, InputTextUIType, FileUploadUIType:
+	case constants.OutputTextUIType, constants.InputTextUIType, constants.FileUploadUIType:
 		m.Value = new(serializer.OutputText)
-	case TopicPickerControlUIType:
+	case constants.TopicPickerControlUIType:
 		m.Value = new(serializer.TopicPickerControl)
-	case PickerUIType, BooleanUIType:
+	case constants.PickerUIType, constants.BooleanUIType:
 		m.Value = new(serializer.Picker)
-	case OutputLinkUIType:
+	case constants.OutputLinkUIType:
 		m.Value = new(serializer.OutputLink)
-	case GroupedPartsOutputControlUIType:
+	case constants.GroupedPartsOutputControlUIType:
 		m.Value = new(serializer.GroupedPartsOutputControl)
-	case OutputCardUIType:
+	case constants.OutputCardUIType:
 		m.Value = new(serializer.OutputCard)
-	case OutputImageUIType:
+	case constants.OutputImageUIType:
 		m.Value = new(serializer.OutputImage)
-	case DateTimeUIType, DateUIType, TimeUIType:
+	case constants.DateTimeUIType, constants.DateUIType, constants.TimeUIType:
 		m.Value = new(serializer.DefaultDate)
 	}
 
@@ -69,7 +70,7 @@ func (c *client) SendMessageToVirtualAgentAPI(serviceNowUserID, messageText stri
 		UserID:    serviceNowUserID,
 	}
 
-	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
+	if _, err := c.CallJSON(http.MethodPost, constants.PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
 		return errors.Wrap(err, "failed to call virtual agent bot integration API")
 	}
 
@@ -78,12 +79,12 @@ func (c *client) SendMessageToVirtualAgentAPI(serviceNowUserID, messageText stri
 
 func (c *client) StartConverstaionWithVirtualAgent(userID string) error {
 	requestBody := &serializer.VirtualAgentRequestBody{
-		Action:    StartConversationAction,
+		Action:    constants.StartConversationAction,
 		RequestID: c.plugin.generateUUID(),
 		UserID:    userID,
 	}
 
-	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
+	if _, err := c.CallJSON(http.MethodPost, constants.PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
 		return errors.Wrap(err, "failed to start conversation with virtual agent bot")
 	}
 
@@ -109,14 +110,14 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			message := res.Value
 			if res.Label != "" {
 				message = res.Label
-				if res.ItemType == ItemTypeImage {
-					message += UploadImageMessage
-				} else if res.ItemType == ItemTypeFile {
-					message += UploadFileMessage
+				if res.ItemType == constants.ItemTypeImage {
+					message += constants.UploadImageMessage
+				} else if res.ItemType == constants.ItemTypeFile {
+					message += constants.UploadFileMessage
 				}
 			}
 
-			if res.UIType != OutputTextUIType && !res.Required {
+			if res.UIType != constants.OutputTextUIType && !res.Required {
 				if _, err = p.DMWithAttachments(userID, p.CreateOutputTextAttachmentWithSkipAction(message)); err != nil {
 					return err
 				}
@@ -143,7 +144,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				return nil
 			}
 
-			if res.ItemType == ItemTypePicture && res.Style == StyleCarousel {
+			if res.ItemType == constants.ItemTypePicture && res.Style == constants.StyleCarousel {
 				if err = p.HandleCarouselInput(userID, res); err != nil {
 					return err
 				}
@@ -169,7 +170,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			}
 		case *serializer.OutputCard:
 			switch res.TemplateName {
-			case OutputCardSmallImageType, OutputCardLargeImageType:
+			case constants.OutputCardSmallImageType, constants.OutputCardLargeImageType:
 				var data serializer.OutputCardImageData
 				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
 					return err
@@ -178,7 +179,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardImageAttachment(&data)); err != nil {
 					return err
 				}
-			case OutputCardVideoType:
+			case constants.OutputCardVideoType:
 				var data serializer.OutputCardVideoData
 				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
 					return err
@@ -189,11 +190,11 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				}
 
 				if _, err = p.dm(userID, &model.Post{
-					Message: fmt.Sprintf(YoutubeURL, data.ID),
+					Message: fmt.Sprintf(constants.YoutubeURL, data.ID),
 				}); err != nil {
 					return err
 				}
-			case OutputCardRecordType:
+			case constants.OutputCardRecordType:
 				var data serializer.OutputCardRecordData
 				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
 					return err
@@ -210,8 +211,8 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 
-				p.API.LogError(InvalidImageLinkError, "Link", res.Value)
-				return errors.New(InvalidImageLinkError)
+				p.API.LogError(constants.InvalidImageLinkError, "Link", res.Value)
+				return errors.New(constants.InvalidImageLinkError)
 			}
 
 			completeFileName := linkContents[len(linkContents)-1]
@@ -235,7 +236,7 @@ func (p *Plugin) CreateDefaultDateAttachment(body *serializer.DefaultDate) *mode
 			{
 				Name: fmt.Sprintf("Set %s", body.UIType),
 				Integration: &model.PostActionIntegration{
-					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathSetDateTimeDialog),
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSetDateTimeDialog),
 					Context: map[string]interface{}{
 						"type": body.UIType,
 					},
@@ -302,7 +303,7 @@ func (p *Plugin) CreateTopicPickerControlAttachment(body *serializer.TopicPicker
 			{
 				Name: "Select an option...",
 				Integration: &model.PostActionIntegration{
-					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathActionOptions),
 				},
 				Type:    model.POST_ACTION_TYPE_SELECT,
 				Options: p.getPostActionOptions(body.Options),
@@ -324,7 +325,7 @@ func (p *Plugin) CreatePickerAttachment(body *serializer.Picker) *model.SlackAtt
 			{
 				Name: "Select an option...",
 				Integration: &model.PostActionIntegration{
-					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathActionOptions),
 				},
 				Type:    model.POST_ACTION_TYPE_SELECT,
 				Options: p.getPostActionOptions(body.Options),
@@ -340,10 +341,10 @@ func (p *Plugin) CreatePickerAttachment(body *serializer.Picker) *model.SlackAtt
 
 func (p *Plugin) PostActionToSkip() *model.PostAction {
 	return &model.PostAction{
-		Name: SkipButton,
+		Name: constants.SkipButton,
 		Type: model.POST_ACTION_TYPE_BUTTON,
 		Integration: &model.PostActionIntegration{
-			URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathSkip),
+			URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
 		},
 	}
 }
@@ -363,8 +364,13 @@ func (p *Plugin) handlePreviousCarouselPosts(userID string) {
 		p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
 	}
 
+	// TODO: Think of a better way to do this
+	// Adding wait group to avoid race conditions in unit tests
+	wg := sync.WaitGroup{}
 	for _, postID := range postIDs {
+		wg.Add(1)
 		go func(postID string) {
+			defer wg.Done()
 			post, err := p.API.GetPost(postID)
 			if err != nil {
 				p.API.LogDebug("Unable to get the post", "PostID", postID, "Error", err.Error())
@@ -385,6 +391,7 @@ func (p *Plugin) handlePreviousCarouselPosts(userID string) {
 			}
 		}(postID)
 	}
+	wg.Wait()
 }
 
 func (p *Plugin) HandleCarouselInput(userID string, body *serializer.Picker) error {
@@ -403,11 +410,11 @@ func (p *Plugin) HandleCarouselInput(userID string, body *serializer.Picker) err
 						Name: "Select",
 						Type: model.POST_ACTION_TYPE_BUTTON,
 						Integration: &model.PostActionIntegration{
-							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathActionOptions),
 							Context: map[string]interface{}{
-								ContextKeySelectedLabel: fmt.Sprintf("%v) %s", i+1, option.Label),
-								ContextKeySelectedValue: option.Value,
-								StyleCarousel:           true,
+								constants.ContextKeySelectedLabel: fmt.Sprintf("%v) %s", i+1, option.Label),
+								constants.ContextKeySelectedValue: option.Value,
+								constants.StyleCarousel:           true,
 							},
 						},
 					},
@@ -443,15 +450,6 @@ func (p *Plugin) HandleCarouselInput(userID string, body *serializer.Picker) err
 	return nil
 }
 
-func (p *Plugin) IsCharCountSafe(attachments []*model.SlackAttachment) bool {
-	bytes, err := json.Marshal(attachments)
-	if err != nil {
-		p.API.LogDebug("Error in marshaling the attachments", "Error", err.Error())
-	}
-	// 35 is the approx. length of one line added by the MM server for post action IDs and 100 is a buffer
-	return utf8.RuneCountInString(string(bytes)) < model.POST_PROPS_MAX_RUNES-100-(len(attachments)*35)
-}
-
 func (p *Plugin) getPostActionOptions(options []serializer.Option) []*model.PostActionOptions {
 	var postOptions []*model.PostActionOptions
 	for _, option := range options {
@@ -480,7 +478,7 @@ func (p *Plugin) CreateMessageAttachment(fileID, userID string) (*serializer.Mes
 	}
 
 	//TODO: Add a configuration setting for expiry time
-	expiryTime := time.Now().UTC().Add(time.Minute * AttachmentLinkExpiryTimeInMinutes)
+	expiryTime := time.Now().UTC().Add(time.Minute * constants.AttachmentLinkExpiryTimeInMinutes)
 
 	file := &FileStruct{
 		ID:     fileID,

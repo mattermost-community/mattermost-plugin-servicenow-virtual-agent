@@ -31,7 +31,6 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 		parseAuthTokenError               error
 		sendMessageToVirtualAgentAPIError error
 		createMessageAttachmentError      error
-		scheduleJobErr                    error
 	}{
 		{
 			description: "Message is successfully sent to Virtual Agent when the channel is found in cache",
@@ -78,11 +77,6 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			createMessageAttachmentError: errors.New("error in creating message attachment"),
 			Message:                      "mockMessage",
 		},
-		{
-			description:    "Failed to schedule the job",
-			scheduleJobErr: errors.New("error while scheduling the job"),
-			Message:        "mockMessage",
-		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{
@@ -118,7 +112,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			}
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "ScheduleJob", func(_ *Plugin, _ string) error {
-				return testCase.scheduleJobErr
+				return nil
 			})
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "Ephemeral", func(_ *Plugin, _, _, _ string, _ ...interface{}) {})
