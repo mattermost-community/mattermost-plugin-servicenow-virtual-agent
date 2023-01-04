@@ -12,11 +12,6 @@ import (
 
 func (p *Plugin) httpOAuth2Connect(w http.ResponseWriter, r *http.Request) {
 	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
-	if mattermostUserID == "" {
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: constants.NotAuthorizedError})
-		return
-	}
-
 	redirectURL, err := p.InitOAuth2(mattermostUserID)
 	if err != nil {
 		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()})
@@ -40,13 +35,7 @@ func (p *Plugin) httpOAuth2Complete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
-	if mattermostUserID == "" {
-		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: constants.NotAuthorizedError})
-		return
-	}
-
-	err := p.CompleteOAuth2(mattermostUserID, code, state)
-	if err != nil {
+	if err := p.CompleteOAuth2(mattermostUserID, code, state); err != nil {
 		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: err.Error()})
 		return
 	}

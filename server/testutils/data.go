@@ -32,6 +32,20 @@ func GetAppError(message string) *model.AppError {
 	}
 }
 
+func GetServiceNowSysID() string {
+	return "d5d4f60807861110da0ef4be7c1ed0d6"
+}
+
+func GetSerializerUser() *serializer.User {
+	return &serializer.User{
+		MattermostUserID: GetID(),
+		OAuth2Token:      "test-oauthtoken",
+		ServiceNowUser: serializer.ServiceNowUser{
+			UserID: GetServiceNowSysID(),
+		},
+	}
+}
+
 func GetPostWithAttachments(numOfAttachments int) *model.Post {
 	post := &model.Post{
 		Id:        GetID(),

@@ -18,7 +18,6 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
-	"golang.org/x/oauth2"
 
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
@@ -27,8 +26,7 @@ import (
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)
-
-	p.initializeAPI().ServeHTTP(w, r)
+	p.router.ServeHTTP(w, r)
 }
 
 func (p *Plugin) initializeAPI() *mux.Router {
@@ -67,10 +65,8 @@ func (p *Plugin) handleSkip(w http.ResponseWriter, r *http.Request) {
 	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 	_ = p.ScheduleJob(mattermostUserID)
 
-	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(constants.HeaderServiceNowUserID)
-
-	client := p.MakeClient(r.Context(), token)
+	client := p.GetClientFromRequest(r)
 	if err := client.SendMessageToVirtualAgentAPI(userID, constants.SkipInternal, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error while sending the message to VA.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
@@ -221,7 +217,7 @@ func (p *Plugin) checkAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Header.Get(constants.HeaderMattermostUserID)
 		if userID == "" {
-			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: constants.NotAuthorizedError})
+			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusUnauthorized, Message: constants.ErrorNotAuthorized})
 			return
 		}
 
@@ -234,6 +230,7 @@ func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
 		userID := r.Header.Get(constants.HeaderMattermostUserID)
 		user, err := p.store.LoadUser(userID)
 		if err != nil {
+			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: fmt.Sprintf("%s Error: %s", constants.ErrorGeneric, err.Error())})
 			p.API.LogError("Error loading user from KV store.", "Error", err.Error())
 			return
 		}
@@ -242,6 +239,7 @@ func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
 
 		token, err := p.ParseAuthToken(user.OAuth2Token)
 		if err != nil {
+			p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: fmt.Sprintf("%s Error: %s", constants.ErrorGeneric, err.Error())})
 			p.API.LogError("Error parsing OAuth2 token.", "Error", err.Error())
 			return
 		}
@@ -369,8 +367,7 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 		},
 	}
 
-	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
-	client := p.MakeClient(r.Context(), token)
+	client := p.GetClientFromRequest(r)
 	if err := client.OpenDialogRequest(&requestBody); err != nil {
 		p.API.LogError("Error opening date-time selction dialog.", "Error", err.Error())
 		p.handleAPIError(w, &serializer.APIErrorResponse{StatusCode: http.StatusInternalServerError, Message: "Error in opening date-time selection dialog."})
@@ -389,14 +386,13 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(constants.HeaderServiceNowUserID)
 	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 	var selectedOption string
 
 	if len(strings.Split(submitRequest.CallbackId, "__")) != 2 {
-		p.API.LogError(constants.InvalidCallbackIDError)
-		response.Error = constants.InvalidCallbackIDError
+		p.API.LogError(constants.ErrorInvalidCallbackID)
+		response.Error = constants.ErrorInvalidCallbackID
 		p.returnSubmitDialogResponse(w, response)
 		return
 	}
@@ -447,7 +443,7 @@ func (p *Plugin) handleSetDateTime(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = p.ScheduleJob(mattermostUserID)
-	client := p.MakeClient(r.Context(), token)
+	client := p.GetClientFromRequest(r)
 	if err := client.SendMessageToVirtualAgentAPI(userID, selectedOption, true, &serializer.MessageAttachment{}); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
 		p.returnSubmitDialogResponse(w, response)
@@ -486,7 +482,6 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := r.Context().Value(constants.ContextTokenKey).(*oauth2.Token)
 	userID := r.Header.Get(constants.HeaderServiceNowUserID)
 	mattermostUserID := r.Header.Get(constants.HeaderMattermostUserID)
 
@@ -500,9 +495,9 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer wg.Done()
 		if isCarousel {
-			postIDs, err := p.store.LoadPostIDs(postActionIntegrationRequest.UserId)
+			postIDs, err := p.store.LoadPostIDs(mattermostUserID)
 			if err != nil {
-				p.API.LogDebug("Unable to load the post IDs from KV store", "UserID", userID, "Error", err.Error())
+				p.API.LogDebug("Unable to load the post IDs from KV store", "UserID", mattermostUserID, "Error", err.Error())
 				return
 			}
 
@@ -510,8 +505,8 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if err = p.store.StorePostIDs(userID, make([]string, 0)); err != nil {
-				p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
+			if err = p.store.StorePostIDs(mattermostUserID, make([]string, 0)); err != nil {
+				p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", mattermostUserID, "Error", err.Error())
 			}
 
 			for _, postID := range postIDs {
@@ -558,7 +553,7 @@ func (p *Plugin) handlePickerSelection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	attachment := &serializer.MessageAttachment{}
-	client := p.MakeClient(r.Context(), token)
+	client := p.GetClientFromRequest(r)
 	if err := client.SendMessageToVirtualAgentAPI(userID, message, messageTyped, attachment); err != nil {
 		p.API.LogError("Error sending message to VA.", "Error", err.Error())
 		p.returnPostActionIntegrationResponse(w, response)
