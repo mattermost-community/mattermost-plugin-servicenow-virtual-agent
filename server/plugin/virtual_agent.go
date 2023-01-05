@@ -103,7 +103,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 	}
 
 	userID := user.MattermostUserID
-	p.handlePreviousCarouselPosts(userID)
+	p.handlePreviousCarouselPosts(userID, nil)
 	for _, messageResponse := range vaResponse.Body {
 		switch res := messageResponse.Value.(type) {
 		case *serializer.OutputText:
@@ -349,7 +349,7 @@ func (p *Plugin) PostActionToSkip() *model.PostAction {
 	}
 }
 
-func (p *Plugin) handlePreviousCarouselPosts(userID string) {
+func (p *Plugin) handlePreviousCarouselPosts(userID string, wg *sync.WaitGroup) {
 	postIDs, err := p.store.LoadPostIDs(userID)
 	if err != nil {
 		p.API.LogDebug("Unable to load the post IDs from KV store", "UserID", userID, "Error", err.Error())
@@ -364,13 +364,16 @@ func (p *Plugin) handlePreviousCarouselPosts(userID string) {
 		p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
 	}
 
-	// TODO: Think of a better way to do this
-	// Adding wait group to avoid race conditions in unit tests
-	wg := sync.WaitGroup{}
 	for _, postID := range postIDs {
-		wg.Add(1)
+		if wg != nil {
+			wg.Add(1)
+		}
+
 		go func(postID string) {
-			defer wg.Done()
+			if wg != nil {
+				defer wg.Done()
+			}
+
 			post, err := p.API.GetPost(postID)
 			if err != nil {
 				p.API.LogDebug("Unable to get the post", "PostID", postID, "Error", err.Error())
@@ -391,7 +394,10 @@ func (p *Plugin) handlePreviousCarouselPosts(userID string) {
 			}
 		}(postID)
 	}
-	wg.Wait()
+
+	if wg != nil {
+		wg.Wait()
+	}
 }
 
 func (p *Plugin) HandleCarouselInput(userID string, body *serializer.Picker) error {

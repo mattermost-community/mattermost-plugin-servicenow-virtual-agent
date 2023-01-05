@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"reflect"
+	"sync"
 	"testing"
 
 	"bou.ke/monkey"
@@ -637,7 +638,8 @@ func Test_HandlePreviousCarouselPosts(t *testing.T) {
 			test.setupStore(mockedStore)
 			p.store = mockedStore
 
-			p.handlePreviousCarouselPosts(testutils.GetID())
+			wg := sync.WaitGroup{}
+			p.handlePreviousCarouselPosts(testutils.GetID(), &wg)
 		})
 	}
 }
