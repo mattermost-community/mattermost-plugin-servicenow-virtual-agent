@@ -472,9 +472,7 @@ func (p *Plugin) CreateMessageAttachment(fileID, userID string) (*MessageAttachm
 		return nil, fmt.Errorf("file does not belong to the Mattermost user: %s", userID)
 	}
 
-	//TODO: Add a configuration setting for expiry time
-	expiryTime := time.Now().UTC().Add(time.Minute * AttachmentLinkExpiryTimeInMinutes)
-
+	expiryTime := time.Now().UTC().Add(time.Minute * time.Duration(p.getConfiguration().AttachmentLinkExpirationTime))
 	file := &FileStruct{
 		ID:     fileID,
 		Expiry: expiryTime,
