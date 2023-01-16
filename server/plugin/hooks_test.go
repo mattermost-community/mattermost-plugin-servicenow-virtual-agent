@@ -9,11 +9,13 @@ import (
 
 	"bou.ke/monkey"
 	"github.com/bluele/gcache"
+	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"golang.org/x/oauth2"
 
+	mock_plugin "github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/mocks"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
@@ -68,7 +70,7 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 			Message:             "mockMessage",
 		},
 		{
-			description:                       "Message is posted but failed to parse auth token",
+			description:                       "Message is posted but failed to send message to virtual agent API",
 			sendMessageToVirtualAgentAPIError: errors.New("error in parsing the auth token"),
 			Message:                           "mockMessage",
 		},
@@ -79,14 +81,14 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{
-				channelCache: &gcache.SimpleCache{},
-			}
-			p.botUserID = "mock-botID"
-
-			mockAPI := &plugintest.API{}
-
+			mockCtrl := gomock.NewController(t)
+			mockedClient := mock_plugin.NewMockClient(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
 			defer mockAPI.AssertExpectations(t)
+
+			p.channelCache = &gcache.SimpleCache{}
+			p.botUserID = "mock-botID"
+			mockedClient.EXPECT().SendMessageToVirtualAgentAPI("", testCase.Message, true, &serializer.MessageAttachment{}).MinTimes(0).MaxTimes(1).Return(testCase.sendMessageToVirtualAgentAPIError)
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(p.channelCache), "Get", func(_ *gcache.SimpleCache, _ interface{}) (interface{}, error) {
 				return true, testCase.cacheGetError
@@ -111,41 +113,35 @@ func Test_MessageHasBeenPosted(t *testing.T) {
 				mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 3)...).Return()
 			}
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "ScheduleJob", func(_ *Plugin, _ string) error {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ScheduleJob", func(_ *Plugin, _ string) error {
 				return nil
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "Ephemeral", func(_ *Plugin, _, _, _ string, _ ...interface{}) {})
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "Ephemeral", func(_ *Plugin, _, _, _ string, _ ...interface{}) {})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "GetUser", func(_ *Plugin, _ string) (*serializer.User, error) {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "GetUser", func(_ *Plugin, _ string) (*serializer.User, error) {
 				return &serializer.User{}, testCase.getUserError
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "DM", func(_ *Plugin, _, _ string, _ ...interface{}) (string, error) {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "DM", func(_ *Plugin, _, _ string, _ ...interface{}) (string, error) {
 				return "mockPostID", nil
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "DMWithAttachments", func(_ *Plugin, _ string, _ ...*model.SlackAttachment) (string, error) {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "DMWithAttachments", func(_ *Plugin, _ string, _ ...*model.SlackAttachment) (string, error) {
 				return "mockPostID", nil
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
 				return &oauth2.Token{}, testCase.parseAuthTokenError
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "MakeClient", func(_ *Plugin, _ context.Context, _ *oauth2.Token) Client {
-				return &client{}
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "MakeClient", func(_ *Plugin, _ context.Context, _ *oauth2.Token) Client {
+				return mockedClient
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "CreateMessageAttachment", func(_ *Plugin, _, _ string) (*serializer.MessageAttachment, error) {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "CreateMessageAttachment", func(_ *Plugin, _, _ string) (*serializer.MessageAttachment, error) {
 				return &serializer.MessageAttachment{}, testCase.createMessageAttachmentError
 			})
-
-			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *serializer.MessageAttachment) error {
-				return testCase.sendMessageToVirtualAgentAPIError
-			})
-
-			p.SetAPI(mockAPI)
 
 			post := &model.Post{
 				ChannelId: "mockChannelID",

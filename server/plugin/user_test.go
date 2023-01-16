@@ -41,15 +41,11 @@ func Test_GetUser(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, _ := setupTestPlugin(&plugintest.API{}, mockedStore)
 
 			mockedStore.EXPECT().LoadUser("mock-userID").Return(testCase.loadedUser, testCase.errMessage)
-
-			p.store = mockedStore
-
 			user, err := p.GetUser("mock-userID")
 
 			if testCase.expectedErr != "" {
@@ -80,15 +76,11 @@ func Test_DisconnectUser(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, _ := setupTestPlugin(&plugintest.API{}, mockedStore)
 
 			mockedStore.EXPECT().DeleteUser("mock-userID").Return(testCase.errMessage)
-
-			p.store = mockedStore
-
 			err := p.DisconnectUser("mock-userID")
 
 			if testCase.expectedErr != "" {
@@ -161,15 +153,10 @@ func Test_GetDisconnectUserPost(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-
-			mockAPI := &plugintest.API{}
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
 
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
-
 			mockAPI.On("GetDirectChannel", testCase.userID, mock.AnythingOfType("string")).Return(testCase.getPostWithSlackAttachmentResult, testCase.errMessage)
-
-			p.SetAPI(mockAPI)
 
 			res, err := p.GetDisconnectUserPost(testCase.userID, "mockMessage")
 			if testCase.expectedErr != "" {
@@ -209,18 +196,14 @@ func Test_InitOAuth2(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, _ := setupTestPlugin(&plugintest.API{}, mockedStore)
 
 			mockedStore.EXPECT().LoadUser("mock-userID").Return(testCase.loadedUser, testCase.loadUserError)
-
 			if testCase.loadUserError != nil {
 				mockedStore.EXPECT().StoreOAuth2State(gomock.Any()).Return(testCase.errMessage)
 			}
-
-			p.store = mockedStore
 
 			res, err := p.InitOAuth2("mock-userID")
 			if testCase.expectedErr != "" {
@@ -343,10 +326,14 @@ func Test_CompleteOAuth2(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			mockedClient := mock_plugin.NewMockClient(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
+
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
+			mockedClient.EXPECT().GetMe("mock-authedUserID").MinTimes(0).MaxTimes(1).Return(&serializer.ServiceNowUser{}, testCase.getMeError)
+			mockedClient.EXPECT().StartConverstaionWithVirtualAgent("mock-authedUserID").MinTimes(0).MaxTimes(1).Return(testCase.startConverstaionWithVirtualAgentError)
 
 			if testCase.authedUserID != "" && testCase.code != "" && testCase.state != "" {
 				mockedStore.EXPECT().VerifyOAuth2State(testCase.state).Return(testCase.verifyOAuth2StateErr)
@@ -356,15 +343,11 @@ func Test_CompleteOAuth2(t *testing.T) {
 				return &oauth2.Token{}, testCase.exchangeError
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "MakeClient", func(_ *Plugin, _ context.Context, _ *oauth2.Token) Client {
-				return &client{}
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "MakeClient", func(_ *Plugin, _ context.Context, _ *oauth2.Token) Client {
+				return mockedClient
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "GetMe", func(_ *client, _ string) (*serializer.ServiceNowUser, error) {
-				return &serializer.ServiceNowUser{}, testCase.getMeError
-			})
-
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "NewEncodedAuthToken", func(_ *Plugin, _ *oauth2.Token) (string, error) {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "NewEncodedAuthToken", func(_ *Plugin, _ *oauth2.Token) (string, error) {
 				return "mockToken", testCase.newEncodedAuthTokenError
 			})
 
@@ -372,23 +355,13 @@ func Test_CompleteOAuth2(t *testing.T) {
 				mockedStore.EXPECT().StoreUser(gomock.Any()).Return(testCase.storeUserError)
 			}
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "DM", func(_ *Plugin, _, _ string, _ ...interface{}) (string, error) {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "DM", func(_ *Plugin, _, _ string, _ ...interface{}) (string, error) {
 				return "mockToken", testCase.dMError
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(&p), "ScheduleJob", func(_ *Plugin, _ string) error {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ScheduleJob", func(_ *Plugin, _ string) error {
 				return nil
 			})
-
-			monkey.PatchInstanceMethod(reflect.TypeOf(&client{}), "StartConverstaionWithVirtualAgent", func(_ *client, _ string) error {
-				return testCase.startConverstaionWithVirtualAgentError
-			})
-
-			mockAPI := &plugintest.API{}
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
-
-			p.SetAPI(mockAPI)
-			p.store = mockedStore
 
 			err := p.CompleteOAuth2(testCase.authedUserID, testCase.code, testCase.state)
 			if testCase.expectedErr != "" {

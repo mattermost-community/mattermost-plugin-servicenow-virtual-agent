@@ -182,8 +182,8 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.CreateOutputLinkAttachment(testCase.body)
+
 			require.EqualValues(t, testCase.response, res)
 		})
 	}
@@ -210,7 +210,6 @@ func Test_CreateOutputCardImageAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.CreateOutputCardImageAttachment(testCase.body)
 
 			require.EqualValues(t, testCase.response, res)
@@ -239,7 +238,6 @@ func Test_CreateOutputCardVideoAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.CreateOutputCardVideoAttachment(testCase.body)
 
 			require.EqualValues(t, testCase.response, res)
@@ -282,7 +280,6 @@ func Test_CreateOutputCardRecordAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.CreateOutputCardRecordAttachment(testCase.body)
 
 			require.EqualValues(t, testCase.response, res)
@@ -429,9 +426,7 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 
 func Test_CreateMessageAttachment(t *testing.T) {
 	p := Plugin{}
-
 	defer monkey.UnpatchAll()
-
 	for _, testCase := range []struct {
 		description   string
 		userID        string
@@ -497,15 +492,8 @@ func Test_CreateMessageAttachment(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p.setConfiguration(
-				&configuration{
-					EncryptionSecret:  "mockEncryptionSecret",
-					MattermostSiteURL: "mockSiteURL",
-				})
-
-			mockAPI := &plugintest.API{}
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
 			testCase.setupAPI(mockAPI)
-			p.SetAPI(mockAPI)
 
 			monkey.Patch(json.Marshal, func(_ interface{}) ([]byte, error) {
 				return []byte{}, testCase.marshalError
@@ -527,7 +515,6 @@ func Test_CreateMessageAttachment(t *testing.T) {
 }
 
 func Test_HandleCarouselInput(t *testing.T) {
-	p := Plugin{}
 	for _, test := range []struct {
 		description   string
 		expectedError error
@@ -563,14 +550,13 @@ func Test_HandleCarouselInput(t *testing.T) {
 	} {
 		t.Run(test.description, func(t *testing.T) {
 			defer monkey.UnpatchAll()
-			mockAPI := &plugintest.API{}
-			test.setupPlugin(&p, mockAPI)
-			p.SetAPI(mockAPI)
-			defer mockAPI.AssertExpectations(t)
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
+			defer mockAPI.AssertExpectations(t)
+
+			test.setupPlugin(p, mockAPI)
 			test.setupStore(mockedStore)
-			p.store = mockedStore
 
 			err := p.HandleCarouselInput(testutils.GetID(), testutils.GetPickerBodyWithCarouselOptions(3))
 			if test.expectedError == nil {
@@ -583,7 +569,6 @@ func Test_HandleCarouselInput(t *testing.T) {
 }
 
 func Test_HandlePreviousCarouselPosts(t *testing.T) {
-	p := Plugin{}
 	for _, test := range []struct {
 		description string
 		setupAPI    func(api *plugintest.API)
@@ -630,13 +615,11 @@ func Test_HandlePreviousCarouselPosts(t *testing.T) {
 		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
-			mockAPI := &plugintest.API{}
-			test.setupAPI(mockAPI)
-			p.SetAPI(mockAPI)
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
+			test.setupAPI(mockAPI)
 			test.setupStore(mockedStore)
-			p.store = mockedStore
 
 			wg := sync.WaitGroup{}
 			p.handlePreviousCarouselPosts(testutils.GetID(), &wg)
