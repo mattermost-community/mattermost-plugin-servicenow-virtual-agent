@@ -70,6 +70,11 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 
 	token, err := p.ParseAuthToken(user.OAuth2Token)
 	if err != nil {
+		if err.Error() == ErrorMessageAuthenticationFailed {
+			p.API.LogError(err.Error())
+			p.Ephemeral(mattermostUserID, post.ChannelId, ReconnectMessage)
+			return
+		}
 		p.logAndSendErrorToUser(mattermostUserID, post.ChannelId, fmt.Sprintf("Error occurred while decrypting token. Error: %s", err.Error()))
 		return
 	}
