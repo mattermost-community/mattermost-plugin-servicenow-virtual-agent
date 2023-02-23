@@ -190,6 +190,9 @@ func (p *Plugin) checkOAuth(handler http.HandlerFunc) http.HandlerFunc {
 		userID := r.Header.Get(HeaderMattermostUserID)
 		user, err := p.store.LoadUser(userID)
 		if err != nil {
+			if err == ErrNotFound {
+				_, _ = p.DM(userID, WelcomePretextMessage, fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Connect))
+			}
 			p.API.LogError("Error loading user from KV store.", "Error", err.Error())
 			return
 		}

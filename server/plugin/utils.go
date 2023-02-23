@@ -1,8 +1,10 @@
 package plugin
 
 import (
+	"encoding/base64"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,4 +44,27 @@ func (p *Plugin) validateTime(time string) string {
 	}
 
 	return ""
+}
+
+func IsValidUserKey(key string) (string, bool) {
+	if strings.HasPrefix(key, UserKeyPrefix) {
+		res := strings.Split(key, "_")
+		if len(res) > 1 {
+			return res[len(res)-1], true
+		}
+	}
+	return "", false
+}
+
+func decodeKey(key string) (string, error) {
+	if key == "" {
+		return "", nil
+	}
+
+	decodedKey, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return "", err
+	}
+
+	return string(decodedKey), nil
 }
