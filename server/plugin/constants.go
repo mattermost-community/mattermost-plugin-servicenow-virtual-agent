@@ -11,7 +11,9 @@ const (
 		"Your ServiceNow account (*%s*) has been connected to Mattermost."
 	WelcomePretextMessage = "Welcome to the Mattermost ServiceNow Virtual Agent.\n" +
 		"I'm here to help you. Let's start by linking your ServiceNow account.\n[Link to ServiceNow](%s)"
-	GenericErrorMessage = "Something went wrong. Please try again later."
+	GenericErrorMessage              = "Something went wrong. Please try again later."
+	ErrorMessageAuthenticationFailed = "cipher: message authentication failed"
+	ReconnectMessage                 = "Something went wrong. Please disconnect your account and then reconnect again."
 
 	PathOAuth2Connect              = "/oauth2/connect"
 	PathOAuth2Complete             = "/oauth2/complete"
@@ -78,6 +80,7 @@ const (
 
 	updatedPostBorderColor            = "#74ccac"
 	AttachmentLinkExpiryTimeInMinutes = 15
+	DefaultPerPage                    = 20
 
 	YoutubeURL = "https://www.youtube.com/watch?v=%s"
 

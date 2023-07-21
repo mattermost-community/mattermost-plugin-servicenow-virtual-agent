@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"sync"
 	"time"
 
 	"github.com/mattermost/mattermost-server/v5/plugin"
@@ -32,6 +33,7 @@ type UserStore interface {
 	StoreUser(user *serializer.User) error
 	DeleteUser(mattermostUserID string) error
 	LoadUserWithSysID(mattermostUserID string) (*serializer.User, error)
+	DeleteUserTokenOnEncryptionSecretChange()
 }
 
 // OAuth2StateStore manages OAuth2 state
@@ -119,4 +121,57 @@ func (s *pluginStore) VerifyOAuth2State(state string) error {
 
 func (s *pluginStore) StoreOAuth2State(state string) error {
 	return s.oauth2KV.StoreTTL(state, []byte(state), oAuth2StateTimeToLive)
+}
+
+func (s *pluginStore) DeleteUserTokenOnEncryptionSecretChange() {
+	page := 0
+	wg := new(sync.WaitGroup)
+
+	for {
+		kvList, err := s.plugin.API.KVList(page, DefaultPerPage)
+		if err != nil {
+			s.plugin.API.LogError("Failed to get the users.", "Error", err.Error())
+			return
+		}
+
+		// isUserDeleted flag is used to check the condition for increasing the page number.
+		// When a key is deleted, the users get shifted to the previous page, so if we fetch the next page, some users are missed.
+		// If a key is deleted we don't increase the page number, else we increase it by 1.
+		isUserDeleted := false
+		for _, key := range kvList {
+			wg.Add(1)
+
+			go func(key string) {
+				defer wg.Done()
+
+				userID, isValidUserKey := IsValidUserKey(key)
+				if !isValidUserKey {
+					return
+				}
+
+				isUserDeleted = true
+				decodedKey, decodeErr := decodeKey(userID)
+				if decodeErr != nil {
+					s.plugin.API.LogError("Unable to decode key", "UserID", userID, "Error", decodeErr.Error())
+					return
+				}
+
+				if err := s.DeleteUser(decodedKey); err != nil {
+					s.plugin.API.LogError("Unable to delete a user", "UserID", userID, "Error", err.Error())
+					return
+				}
+			}(key)
+		}
+
+		// Wait for all goroutines to complete before continuing.
+		wg.Wait()
+
+		if len(kvList) < DefaultPerPage {
+			break
+		}
+
+		if !isUserDeleted {
+			page++
+		}
+	}
 }
