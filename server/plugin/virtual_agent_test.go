@@ -6,9 +6,11 @@ import (
 	"io"
 	"net/url"
 	"reflect"
+	"sync"
 	"testing"
 
 	"bou.ke/monkey"
+	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest/mock"
@@ -16,6 +18,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
+	mock_plugin "github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/mocks"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
 )
 
@@ -46,7 +51,7 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 				}
 				return nil, nil
 			})
-			attachment := &MessageAttachment{}
+			attachment := &serializer.MessageAttachment{}
 
 			err := c.SendMessageToVirtualAgentAPI("mock-userID", "mockMessage", true, attachment)
 			if testCase.errMessage != nil {
@@ -55,6 +60,61 @@ func Test_SendMessageToVirtualAgentAPI(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func Test_PostActionToSkip(t *testing.T) {
+	p := Plugin{}
+	for _, testCase := range []struct {
+		description string
+		response    *model.PostAction
+	}{
+		{
+			description: "PostActionToSkip returns a proper post action to skip",
+			response: &model.PostAction{
+				Name: constants.SkipButton,
+				Type: model.POST_ACTION_TYPE_BUTTON,
+				Integration: &model.PostActionIntegration{
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
+				},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			res := p.PostActionToSkip()
+			require.EqualValues(t, testCase.response, res)
+		})
+	}
+}
+
+func Test_CreateOutputTextAttachmentWithSkipAction(t *testing.T) {
+	p := Plugin{}
+	for _, testCase := range []struct {
+		description string
+		message     string
+		response    *model.SlackAttachment
+	}{
+		{
+			description: "CreateOutputTextAttachmentWithSkipAction returns proper slack attachment",
+			message:     "mock-message",
+			response: &model.SlackAttachment{
+				Text: "mock-message",
+				Actions: []*model.PostAction{
+					{
+						Name: constants.SkipButton,
+						Type: model.POST_ACTION_TYPE_BUTTON,
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			res := p.CreateOutputTextAttachmentWithSkipAction(testCase.message)
+			require.EqualValues(t, testCase.response, res)
 		})
 	}
 }
@@ -102,15 +162,15 @@ func Test_StartConverstaionWithVirtualAgent(t *testing.T) {
 func Test_CreateOutputLinkAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		body        *OutputLink
+		body        *serializer.OutputLink
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateOutputLinkAttachment returns proper slack attachment",
-			body: &OutputLink{
+			body: &serializer.OutputLink{
 				Header: "mockHeader",
 				Label:  "mockLabel",
-				Value: OutputLinkValue{
+				Value: serializer.OutputLinkValue{
 					Action: "mockAction",
 				},
 			},
@@ -122,8 +182,8 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.CreateOutputLinkAttachment(testCase.body)
+
 			require.EqualValues(t, testCase.response, res)
 		})
 	}
@@ -132,12 +192,12 @@ func Test_CreateOutputLinkAttachment(t *testing.T) {
 func Test_CreateOutputCardImageAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		body        *OutputCardImageData
+		body        *serializer.OutputCardImageData
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateOutputCardImageAttachment returns proper slack attachment",
-			body: &OutputCardImageData{
+			body: &serializer.OutputCardImageData{
 				Image:       "mockImage",
 				Title:       "mockTitle",
 				Description: "mockDescription",
@@ -150,7 +210,6 @@ func Test_CreateOutputCardImageAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.CreateOutputCardImageAttachment(testCase.body)
 
 			require.EqualValues(t, testCase.response, res)
@@ -161,12 +220,12 @@ func Test_CreateOutputCardImageAttachment(t *testing.T) {
 func Test_CreateOutputCardVideoAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		body        *OutputCardVideoData
+		body        *serializer.OutputCardVideoData
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateOutputCardVideoAttachment returns proper slack attachment",
-			body: &OutputCardVideoData{
+			body: &serializer.OutputCardVideoData{
 				Title:       "mockTitle",
 				Link:        "mockLink",
 				URL:         "mockURL",
@@ -179,7 +238,6 @@ func Test_CreateOutputCardVideoAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.CreateOutputCardVideoAttachment(testCase.body)
 
 			require.EqualValues(t, testCase.response, res)
@@ -190,16 +248,16 @@ func Test_CreateOutputCardVideoAttachment(t *testing.T) {
 func Test_CreateOutputCardRecordAttachment(t *testing.T) {
 	for _, testCase := range []struct {
 		description string
-		body        *OutputCardRecordData
+		body        *serializer.OutputCardRecordData
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateOutputCardRecordAttachment returns proper slack attachment",
-			body: &OutputCardRecordData{
+			body: &serializer.OutputCardRecordData{
 				Title:    "mockTitle",
 				Subtitle: "mockSubtitle",
 				URL:      "mockURL",
-				Fields: []*RecordFields{
+				Fields: []*serializer.RecordFields{
 					{
 						FieldLabel: "mockLabel",
 						FieldValue: "mockValue",
@@ -222,7 +280,6 @@ func Test_CreateOutputCardRecordAttachment(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			p := Plugin{}
-
 			res := p.CreateOutputCardRecordAttachment(testCase.body)
 
 			require.EqualValues(t, testCase.response, res)
@@ -235,14 +292,14 @@ func Test_CreateTopicPickerControlAttachment(t *testing.T) {
 
 	for _, testCase := range []struct {
 		description string
-		body        *TopicPickerControl
+		body        *serializer.TopicPickerControl
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateTopicPickerControlAttachment returns proper slack attachment",
-			body: &TopicPickerControl{
+			body: &serializer.TopicPickerControl{
 				PromptMessage: "mockPrompt",
-				Options: []Option{{
+				Options: []serializer.Option{{
 					Label: "mockLabel",
 				}},
 			},
@@ -252,9 +309,9 @@ func Test_CreateTopicPickerControlAttachment(t *testing.T) {
 					{
 						Name: "Select an option...",
 						Integration: &model.PostActionIntegration{
-							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathActionOptions),
 						},
-						Type: "select",
+						Type: model.POST_ACTION_TYPE_SELECT,
 						Options: []*model.PostActionOptions{
 							{
 								Text:  "mockLabel",
@@ -278,14 +335,14 @@ func Test_CreatePickerAttachment(t *testing.T) {
 
 	for _, testCase := range []struct {
 		description string
-		body        *Picker
+		body        *serializer.Picker
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreatePickerAttachment returns proper slack attachment",
-			body: &Picker{
+			body: &serializer.Picker{
 				Label: "mockLabel",
-				Options: []Option{{
+				Options: []serializer.Option{{
 					Label: "mockLabel",
 				}},
 			},
@@ -294,14 +351,21 @@ func Test_CreatePickerAttachment(t *testing.T) {
 					{
 						Name: "Select an option...",
 						Integration: &model.PostActionIntegration{
-							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathActionOptions),
 						},
-						Type: "select",
+						Type: model.POST_ACTION_TYPE_SELECT,
 						Options: []*model.PostActionOptions{
 							{
 								Text:  "mockLabel",
 								Value: "mockLabel",
 							},
+						},
+					},
+					{
+						Name: constants.SkipButton,
+						Type: model.POST_ACTION_TYPE_BUTTON,
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
 						},
 					},
 				},
@@ -320,12 +384,12 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 
 	for _, testCase := range []struct {
 		description string
-		body        *DefaultDate
+		body        *serializer.DefaultDate
 		response    *model.SlackAttachment
 	}{
 		{
 			description: "CreateDefaultDateAttachment returns proper slack attachment",
-			body: &DefaultDate{
+			body: &serializer.DefaultDate{
 				UIType: "mockUIType",
 				Label:  "mockLabel",
 			},
@@ -335,12 +399,19 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 					{
 						Name: "Set mockUIType",
 						Integration: &model.PostActionIntegration{
-							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathSetDateTimeDialog),
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSetDateTimeDialog),
 							Context: map[string]interface{}{
 								"type": "mockUIType",
 							},
 						},
-						Type: "button",
+						Type: model.POST_ACTION_TYPE_BUTTON,
+					},
+					{
+						Name: constants.SkipButton,
+						Type: model.POST_ACTION_TYPE_BUTTON,
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
+						},
 					},
 				},
 			},
@@ -355,13 +426,11 @@ func Test_CreateDefaultDateAttachment(t *testing.T) {
 
 func Test_CreateMessageAttachment(t *testing.T) {
 	p := Plugin{}
-
 	defer monkey.UnpatchAll()
-
 	for _, testCase := range []struct {
 		description   string
 		userID        string
-		response      *MessageAttachment
+		response      *serializer.MessageAttachment
 		setupAPI      func(api *plugintest.API)
 		marshalError  error
 		encryptError  error
@@ -370,7 +439,7 @@ func Test_CreateMessageAttachment(t *testing.T) {
 		{
 			description: "CreateMessageAttachment returns a valid attachment",
 			userID:      testutils.GetID(),
-			response: &MessageAttachment{
+			response: &serializer.MessageAttachment{
 				URL:         "mockSiteURL" + p.GetPluginURLPath() + "/file/" + encode([]byte{}),
 				ContentType: "mockMimeType",
 				FileName:    "mockName",
@@ -423,15 +492,8 @@ func Test_CreateMessageAttachment(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p.setConfiguration(
-				&configuration{
-					EncryptionSecret:  "mockEncryptionSecret",
-					MattermostSiteURL: "mockSiteURL",
-				})
-
-			mockAPI := &plugintest.API{}
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
 			testCase.setupAPI(mockAPI)
-			p.SetAPI(mockAPI)
 
 			monkey.Patch(json.Marshal, func(_ interface{}) ([]byte, error) {
 				return []byte{}, testCase.marshalError
@@ -448,6 +510,119 @@ func Test_CreateMessageAttachment(t *testing.T) {
 			if testCase.expectedError != "" {
 				assert.EqualError(t, err, testCase.expectedError)
 			}
+		})
+	}
+}
+
+func Test_HandleCarouselInput(t *testing.T) {
+	for _, test := range []struct {
+		description   string
+		expectedError error
+		setupPlugin   func(p *Plugin, api *plugintest.API)
+		setupStore    func(s *mock_plugin.MockStore)
+	}{
+		{
+			description: "carousel is handled successfully with no error",
+			setupPlugin: func(p *Plugin, api *plugintest.API) {
+				monkey.PatchInstanceMethod(reflect.TypeOf(p), "DMWithAttachments", func(_ *Plugin, _ string, _ ...*model.SlackAttachment) (string, error) {
+					return testutils.GetID(), nil
+				})
+
+				api.On("LogDebug", testutils.GetMockArgumentsWithType("string", 5)...).Return()
+			},
+			setupStore: func(s *mock_plugin.MockStore) {
+				s.EXPECT().StorePostIDs(testutils.GetID(), []string{testutils.GetID()}).Return(errors.New("unable to store post IDs"))
+			},
+		},
+		{
+			description: "error while sending attachments to the user and IsCharCountSafe returns false",
+			setupPlugin: func(p *Plugin, api *plugintest.API) {
+				monkey.PatchInstanceMethod(reflect.TypeOf(p), "DMWithAttachments", func(_ *Plugin, _ string, _ ...*model.SlackAttachment) (string, error) {
+					return testutils.GetID(), errors.New("error in sending attachments to the user")
+				})
+				monkey.PatchInstanceMethod(reflect.TypeOf(p), "IsCharCountSafe", func(_ *Plugin, _ []*model.SlackAttachment) bool {
+					return false
+				})
+			},
+			setupStore:    func(s *mock_plugin.MockStore) {},
+			expectedError: errors.New("error in sending attachments to the user"),
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			defer monkey.UnpatchAll()
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
+			defer mockAPI.AssertExpectations(t)
+
+			test.setupPlugin(p, mockAPI)
+			test.setupStore(mockedStore)
+
+			err := p.HandleCarouselInput(testutils.GetID(), testutils.GetPickerBodyWithCarouselOptions(3))
+			if test.expectedError == nil {
+				require.Nil(t, err)
+			} else {
+				assert.EqualError(t, err, test.expectedError.Error())
+			}
+		})
+	}
+}
+
+func Test_HandlePreviousCarouselPosts(t *testing.T) {
+	for _, test := range []struct {
+		description string
+		setupAPI    func(api *plugintest.API)
+		setupStore  func(s *mock_plugin.MockStore)
+	}{
+		{
+			description: "error occurred while loading postIDs",
+			setupAPI: func(api *plugintest.API) {
+				api.On("LogDebug", testutils.GetMockArgumentsWithType("string", 5)...).Return()
+			},
+			setupStore: func(s *mock_plugin.MockStore) {
+				s.EXPECT().LoadPostIDs(testutils.GetID()).Return(nil, errors.New("error in loading post IDs"))
+			},
+		},
+		{
+			description: "no postIDs present in KV store",
+			setupAPI:    func(api *plugintest.API) {},
+			setupStore: func(s *mock_plugin.MockStore) {
+				s.EXPECT().LoadPostIDs(testutils.GetID()).Return([]string{}, nil)
+			},
+		},
+		{
+			description: "error occurred while storing postIDs and getting post from API",
+			setupAPI: func(api *plugintest.API) {
+				api.On("LogDebug", testutils.GetMockArgumentsWithType("string", 5)...).Return()
+				api.On("GetPost", testutils.GetID()).Return(nil, testutils.GetAppError("error in getting post"))
+			},
+			setupStore: func(s *mock_plugin.MockStore) {
+				s.EXPECT().LoadPostIDs(testutils.GetID()).Return([]string{testutils.GetID()}, nil)
+				s.EXPECT().StorePostIDs(testutils.GetID(), []string{}).Return(errors.New("error in storing post IDs"))
+			},
+		},
+		{
+			description: "error occurred while updating post",
+			setupAPI: func(api *plugintest.API) {
+				api.On("GetPost", testutils.GetID()).Return(testutils.GetPostWithAttachments(2), nil)
+				api.On("UpdatePost", mock.AnythingOfType("*model.Post")).Return(nil, testutils.GetAppError("error in updating post"))
+				api.On("LogDebug", testutils.GetMockArgumentsWithType("string", 5)...).Return()
+			},
+			setupStore: func(s *mock_plugin.MockStore) {
+				s.EXPECT().LoadPostIDs(testutils.GetID()).Return([]string{testutils.GetID()}, nil)
+				s.EXPECT().StorePostIDs(testutils.GetID(), []string{}).Return(nil)
+			},
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
+			test.setupAPI(mockAPI)
+			test.setupStore(mockedStore)
+
+			wg := sync.WaitGroup{}
+			p.handlePreviousCarouselPosts(testutils.GetID(), &wg)
 		})
 	}
 }

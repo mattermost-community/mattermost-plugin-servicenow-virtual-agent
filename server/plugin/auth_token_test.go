@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
+	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
@@ -63,13 +64,7 @@ func Test_NewEncodedAuthToken(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-
-			p.setConfiguration(
-				&configuration{
-					EncryptionSecret: "mockEncryptionSecret",
-				})
-
+			p, _ := setupTestPlugin(&plugintest.API{}, nil)
 			monkey.Patch(aes.NewCipher, func(a []byte) (cipher.Block, error) {
 				return &mockBLock{}, testCase.newCipherError
 			})
@@ -135,13 +130,7 @@ func Test_ParseAuthToken(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
-
-			p.setConfiguration(
-				&configuration{
-					EncryptionSecret: "mockEncryptionSecret",
-				})
-
+			p, _ := setupTestPlugin(&plugintest.API{}, nil)
 			monkey.Patch(aes.NewCipher, func(a []byte) (cipher.Block, error) {
 				return &mockBLock{}, testCase.newCipherError
 			})

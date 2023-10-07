@@ -5,160 +5,23 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/pkg/errors"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
-
-type VirtualAgentRequestBody struct {
-	Action    string       `json:"action"`
-	Message   *MessageBody `json:"message"`
-	RequestID string       `json:"requestId"`
-	UserID    string       `json:"userId"`
-}
-
-type MessageBody struct {
-	Attachment *MessageAttachment `json:"attachment"`
-	Text       string             `json:"text"`
-	Typed      bool               `json:"typed"`
-}
-
-type MessageAttachment struct {
-	URL         string `json:"url"`
-	ContentType string `json:"contentType"`
-	FileName    string `json:"fileName"`
-}
-
-type VirtualAgentResponse struct {
-	VirtualAgentRequestBody
-	Body []MessageResponseBody `json:"body"`
-}
 
 type MessageResponseBody struct {
 	Value interface{}
 }
 
-type OutputText struct {
-	UIType   string `json:"uiType"`
-	Group    string `json:"group"`
-	Value    string `json:"value"`
-	ItemType string `json:"type"`
-	MaskType string `json:"maskType"`
-	Label    string `json:"label"`
-}
-
-type OutputLinkValue struct {
-	Action string `json:"action"`
-}
-
-type OutputLink struct {
-	UIType        string `json:"uiType"`
-	Group         string `json:"group"`
-	Label         string `json:"label"`
-	Header        string `json:"header"`
-	Type          string `json:"type"`
-	Value         OutputLinkValue
-	PromptMessage string `json:"promptMsg"`
-}
-
-type GroupedPartsOutputControl struct {
-	UIType string                           `json:"uiType"`
-	Group  string                           `json:"group"`
-	Header string                           `json:"header"`
-	Type   string                           `json:"type"`
-	Values []GroupedPartsOutputControlValue `json:"values"`
-}
-
-type GroupedPartsOutputControlValue struct {
-	Label       string `json:"label"`
-	Action      string `json:"action"`
-	Description string `json:"description"`
-}
-
-type TopicPickerControl struct {
-	UIType         string   `json:"uiType"`
-	Group          string   `json:"group"`
-	NLUTextEnabled bool     `json:"nluTextEnabled"`
-	PromptMessage  string   `json:"promptMsg"`
-	Label          string   `json:"label"`
-	Options        []Option `json:"options"`
-}
-
-type OutputCard struct {
-	UIType       string `json:"uiType"`
-	Group        string `json:"group"`
-	Data         string `json:"data"`
-	TemplateName string `json:"templateName"`
-}
-
-type OutputCardRecordData struct {
-	SysID            string          `json:"sys_id"`
-	Subtitle         string          `json:"subtitle"`
-	DataNowSmartLink string          `json:"dataNowSmartLink"`
-	Title            string          `json:"title"`
-	Fields           []*RecordFields `json:"fields"`
-	TableName        string          `json:"table_name"`
-	URL              string          `json:"url"`
-	Target           string          `json:"target"`
-}
-
-type OutputCardVideoData struct {
-	Link             string `json:"link"`
-	Description      string `json:"description"`
-	ID               string `json:"id"`
-	DataNowSmartLink string `json:"dataNowSmartLink"`
-	Title            string `json:"title"`
-	URL              string `json:"url"`
-	Target           string `json:"target"`
-}
-
-type OutputCardImageData struct {
-	Image            string `json:"image"`
-	Description      string `json:"description"`
-	DataNowSmartLink string `json:"dataNowSmartLink"`
-	Title            string `json:"title"`
-	URL              string `json:"url"`
-	ImageAlt         string `json:"imageAlt"`
-	Target           string `json:"target"`
-}
-
-type RecordFields struct {
-	FieldLabel string `json:"fieldLabel"`
-	FieldValue string `json:"fieldValue"`
-}
-
-type Picker struct {
-	UIType         string   `json:"uiType"`
-	Group          string   `json:"group"`
-	Required       bool     `json:"required"`
-	NLUTextEnabled bool     `json:"nluTextEnabled"`
-	Label          string   `json:"label"`
-	ItemType       string   `json:"itemType"`
-	Options        []Option `json:"options"`
-	Style          string   `json:"style"`
-	MultiSelect    bool     `json:"multiSelect"`
-}
-
-type Option struct {
-	Label   string `json:"label"`
-	Value   string `json:"value"`
-	Enabled bool   `json:"enabled"`
-}
-
-type OutputImage struct {
-	UIType  string `json:"uiType"`
-	Group   string `json:"group"`
-	Value   string `json:"value"`
-	AltText string `json:"altText"`
-}
-
-type DefaultDate struct {
-	UIType         string `json:"uiType"`
-	Group          string `json:"group"`
-	Required       bool   `json:"required"`
-	NLUTextEnabled bool   `json:"nluTextEnabled"`
-	Label          string `json:"label"`
+type VirtualAgentResponse struct {
+	serializer.VirtualAgentRequestBody
+	Body []MessageResponseBody `json:"body"`
 }
 
 func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
@@ -171,22 +34,22 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	}
 
 	switch uiType.UIType {
-	case OutputTextUIType, InputTextUIType, FileUploadUIType:
-		m.Value = new(OutputText)
-	case TopicPickerControlUIType:
-		m.Value = new(TopicPickerControl)
-	case PickerUIType, BooleanUIType:
-		m.Value = new(Picker)
-	case OutputLinkUIType:
-		m.Value = new(OutputLink)
-	case GroupedPartsOutputControlUIType:
-		m.Value = new(GroupedPartsOutputControl)
-	case OutputCardUIType:
-		m.Value = new(OutputCard)
-	case OutputImageUIType:
-		m.Value = new(OutputImage)
-	case DateTimeUIType, DateUIType, TimeUIType:
-		m.Value = new(DefaultDate)
+	case constants.OutputTextUIType, constants.InputTextUIType, constants.FileUploadUIType:
+		m.Value = new(serializer.OutputText)
+	case constants.TopicPickerControlUIType:
+		m.Value = new(serializer.TopicPickerControl)
+	case constants.PickerUIType, constants.BooleanUIType:
+		m.Value = new(serializer.Picker)
+	case constants.OutputLinkUIType:
+		m.Value = new(serializer.OutputLink)
+	case constants.GroupedPartsOutputControlUIType:
+		m.Value = new(serializer.GroupedPartsOutputControl)
+	case constants.OutputCardUIType:
+		m.Value = new(serializer.OutputCard)
+	case constants.OutputImageUIType:
+		m.Value = new(serializer.OutputImage)
+	case constants.DateTimeUIType, constants.DateUIType, constants.TimeUIType:
+		m.Value = new(serializer.DefaultDate)
 	}
 
 	if m.Value != nil {
@@ -196,9 +59,9 @@ func (m *MessageResponseBody) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c *client) SendMessageToVirtualAgentAPI(serviceNowUserID, messageText string, typed bool, attachment *MessageAttachment) error {
-	requestBody := &VirtualAgentRequestBody{
-		Message: &MessageBody{
+func (c *client) SendMessageToVirtualAgentAPI(serviceNowUserID, messageText string, typed bool, attachment *serializer.MessageAttachment) error {
+	requestBody := &serializer.VirtualAgentRequestBody{
+		Message: &serializer.MessageBody{
 			Attachment: attachment,
 			Text:       messageText,
 			Typed:      typed,
@@ -207,7 +70,7 @@ func (c *client) SendMessageToVirtualAgentAPI(serviceNowUserID, messageText stri
 		UserID:    serviceNowUserID,
 	}
 
-	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
+	if _, err := c.CallJSON(http.MethodPost, constants.PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
 		return errors.Wrap(err, "failed to call virtual agent bot integration API")
 	}
 
@@ -215,13 +78,13 @@ func (c *client) SendMessageToVirtualAgentAPI(serviceNowUserID, messageText stri
 }
 
 func (c *client) StartConverstaionWithVirtualAgent(userID string) error {
-	requestBody := &VirtualAgentRequestBody{
-		Action:    StartConversationAction,
+	requestBody := &serializer.VirtualAgentRequestBody{
+		Action:    constants.StartConversationAction,
 		RequestID: c.plugin.generateUUID(),
 		UserID:    userID,
 	}
 
-	if _, err := c.CallJSON(http.MethodPost, PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
+	if _, err := c.CallJSON(http.MethodPost, constants.PathVirtualAgentBotIntegration, requestBody, nil, nil); err != nil {
 		return errors.Wrap(err, "failed to start conversation with virtual agent bot")
 	}
 
@@ -240,23 +103,30 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 	}
 
 	userID := user.MattermostUserID
+	p.handlePreviousCarouselPosts(userID, nil)
 	for _, messageResponse := range vaResponse.Body {
 		switch res := messageResponse.Value.(type) {
-		case *OutputText:
+		case *serializer.OutputText:
 			message := res.Value
 			if res.Label != "" {
 				message = res.Label
-				if res.ItemType == ItemTypeImage {
-					message += UploadImageMessage
-				} else if res.ItemType == ItemTypeFile {
-					message += UploadFileMessage
+				if res.ItemType == constants.ItemTypeImage {
+					message += constants.UploadImageMessage
+				} else if res.ItemType == constants.ItemTypeFile {
+					message += constants.UploadFileMessage
 				}
 			}
 
-			if _, err = p.DM(userID, message); err != nil {
-				return err
+			if res.UIType != constants.OutputTextUIType && !res.Required {
+				if _, err = p.DMWithAttachments(userID, p.CreateOutputTextAttachmentWithSkipAction(message)); err != nil {
+					return err
+				}
+			} else {
+				if _, err = p.DM(userID, message); err != nil {
+					return err
+				}
 			}
-		case *TopicPickerControl:
+		case *serializer.TopicPickerControl:
 			if len(res.Options) == 0 {
 				p.API.LogInfo("TopicPickerControl dropdown has no options to display.")
 				return nil
@@ -265,7 +135,7 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			if _, err = p.DMWithAttachments(userID, p.CreateTopicPickerControlAttachment(res)); err != nil {
 				return err
 			}
-		case *Picker:
+		case *serializer.Picker:
 			if _, err = p.DM(userID, res.Label); err != nil {
 				return err
 			}
@@ -273,15 +143,22 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				p.API.LogInfo("Picker dropdown has no options to display.")
 				return nil
 			}
-			if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
-				return err
+
+			if res.ItemType == constants.ItemTypePicture && res.Style == constants.StyleCarousel {
+				if err = p.HandleCarouselInput(userID, res); err != nil {
+					return err
+				}
+			} else {
+				if _, err = p.DMWithAttachments(userID, p.CreatePickerAttachment(res)); err != nil {
+					return err
+				}
 			}
-		case *OutputLink:
+		case *serializer.OutputLink:
 			if _, err = p.DMWithAttachments(userID, p.CreateOutputLinkAttachment(res)); err != nil {
 				return err
 			}
 		// TODO: Modify the UI for this later.
-		case *GroupedPartsOutputControl:
+		case *serializer.GroupedPartsOutputControl:
 			if _, err = p.DM(userID, res.Header); err != nil {
 				return err
 			}
@@ -291,10 +168,10 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 			}
-		case *OutputCard:
+		case *serializer.OutputCard:
 			switch res.TemplateName {
-			case OutputCardSmallImageType, OutputCardLargeImageType:
-				var data OutputCardImageData
+			case constants.OutputCardSmallImageType, constants.OutputCardLargeImageType:
+				var data serializer.OutputCardImageData
 				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
 					return err
 				}
@@ -302,8 +179,8 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				if _, err = p.DMWithAttachments(userID, p.CreateOutputCardImageAttachment(&data)); err != nil {
 					return err
 				}
-			case OutputCardVideoType:
-				var data OutputCardVideoData
+			case constants.OutputCardVideoType:
+				var data serializer.OutputCardVideoData
 				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
 					return err
 				}
@@ -313,12 +190,12 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 				}
 
 				if _, err = p.dm(userID, &model.Post{
-					Message: fmt.Sprintf(YoutubeURL, data.ID),
+					Message: fmt.Sprintf(constants.YoutubeURL, data.ID),
 				}); err != nil {
 					return err
 				}
-			case OutputCardRecordType:
-				var data OutputCardRecordData
+			case constants.OutputCardRecordType:
+				var data serializer.OutputCardRecordData
 				if err = json.Unmarshal([]byte(res.Data), &data); err != nil {
 					return err
 				}
@@ -327,22 +204,22 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 					return err
 				}
 			}
-		case *OutputImage:
+		case *serializer.OutputImage:
 			linkContents := strings.Split(res.Value, "/")
 			if len(linkContents) < 1 {
 				if _, err = p.DM(userID, fmt.Sprintf("Image: %s", res.AltText)); err != nil {
 					return err
 				}
 
-				p.API.LogError(InvalidImageLinkError, "Link", res.Value)
-				return errors.New(InvalidImageLinkError)
+				p.API.LogError(constants.InvalidImageLinkError, "Link", res.Value)
+				return errors.New(constants.InvalidImageLinkError)
 			}
 
 			completeFileName := linkContents[len(linkContents)-1]
 			if _, err = p.DM(userID, fmt.Sprintf("![%s](%s)", completeFileName, res.Value)); err != nil {
 				return err
 			}
-		case *DefaultDate:
+		case *serializer.DefaultDate:
 			if _, err = p.DMWithAttachments(userID, p.CreateDefaultDateAttachment(res)); err != nil {
 				return err
 			}
@@ -352,45 +229,50 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 	return nil
 }
 
-func (p *Plugin) CreateDefaultDateAttachment(body *DefaultDate) *model.SlackAttachment {
-	return &model.SlackAttachment{
+func (p *Plugin) CreateDefaultDateAttachment(body *serializer.DefaultDate) *model.SlackAttachment {
+	slackAttachment := &model.SlackAttachment{
 		Text: body.Label,
 		Actions: []*model.PostAction{
 			{
 				Name: fmt.Sprintf("Set %s", body.UIType),
 				Integration: &model.PostActionIntegration{
-					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathSetDateTimeDialog),
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSetDateTimeDialog),
 					Context: map[string]interface{}{
 						"type": body.UIType,
 					},
 				},
-				Type: "button",
+				Type: model.POST_ACTION_TYPE_BUTTON,
 			},
 		},
 	}
+
+	if !body.Required {
+		slackAttachment.Actions = append(slackAttachment.Actions, p.PostActionToSkip())
+	}
+	return slackAttachment
 }
 
-func (p *Plugin) CreateOutputLinkAttachment(body *OutputLink) *model.SlackAttachment {
+func (p *Plugin) CreateOutputLinkAttachment(body *serializer.OutputLink) *model.SlackAttachment {
 	return &model.SlackAttachment{
 		Pretext: body.Header,
 		Text:    fmt.Sprintf("[%s](%s)", body.Label, body.Value.Action),
 	}
 }
 
-func (p *Plugin) CreateOutputCardImageAttachment(body *OutputCardImageData) *model.SlackAttachment {
+func (p *Plugin) CreateOutputCardImageAttachment(body *serializer.OutputCardImageData) *model.SlackAttachment {
 	return &model.SlackAttachment{
 		Text:     fmt.Sprintf("**%s**\n%s", body.Title, body.Description),
 		ImageURL: body.Image,
 	}
 }
 
-func (p *Plugin) CreateOutputCardVideoAttachment(body *OutputCardVideoData) *model.SlackAttachment {
+func (p *Plugin) CreateOutputCardVideoAttachment(body *serializer.OutputCardVideoData) *model.SlackAttachment {
 	return &model.SlackAttachment{
 		Text: fmt.Sprintf("**[%s](%s)**\n%s", body.Title, body.Link, body.Description),
 	}
 }
 
-func (p *Plugin) CreateOutputCardRecordAttachment(body *OutputCardRecordData) *model.SlackAttachment {
+func (p *Plugin) CreateOutputCardRecordAttachment(body *serializer.OutputCardRecordData) *model.SlackAttachment {
 	fields := make([]*model.SlackAttachmentField, len(body.Fields)+1)
 	fields[0] = &model.SlackAttachmentField{
 		Title: body.Title,
@@ -407,45 +289,174 @@ func (p *Plugin) CreateOutputCardRecordAttachment(body *OutputCardRecordData) *m
 	}
 }
 
-func (p *Plugin) CreateGroupedPartsOutputControlAttachment(body GroupedPartsOutputControlValue) *model.SlackAttachment {
+func (p *Plugin) CreateGroupedPartsOutputControlAttachment(body serializer.GroupedPartsOutputControlValue) *model.SlackAttachment {
 	return &model.SlackAttachment{
 		Title: fmt.Sprintf("[%s](%s)", body.Label, body.Action),
 		Text:  body.Description,
 	}
 }
 
-func (p *Plugin) CreateTopicPickerControlAttachment(body *TopicPickerControl) *model.SlackAttachment {
+func (p *Plugin) CreateTopicPickerControlAttachment(body *serializer.TopicPickerControl) *model.SlackAttachment {
 	return &model.SlackAttachment{
 		Text: body.PromptMessage,
 		Actions: []*model.PostAction{
 			{
 				Name: "Select an option...",
 				Integration: &model.PostActionIntegration{
-					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathActionOptions),
 				},
-				Type:    "select",
+				Type:    model.POST_ACTION_TYPE_SELECT,
 				Options: p.getPostActionOptions(body.Options),
 			},
 		},
 	}
 }
 
-func (p *Plugin) CreatePickerAttachment(body *Picker) *model.SlackAttachment {
+func (p *Plugin) CreateOutputTextAttachmentWithSkipAction(message string) *model.SlackAttachment {
 	return &model.SlackAttachment{
+		Text:    message,
+		Actions: []*model.PostAction{p.PostActionToSkip()},
+	}
+}
+
+func (p *Plugin) CreatePickerAttachment(body *serializer.Picker) *model.SlackAttachment {
+	slackAttachment := &model.SlackAttachment{
 		Actions: []*model.PostAction{
 			{
 				Name: "Select an option...",
 				Integration: &model.PostActionIntegration{
-					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), PathActionOptions),
+					URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathActionOptions),
 				},
-				Type:    "select",
+				Type:    model.POST_ACTION_TYPE_SELECT,
 				Options: p.getPostActionOptions(body.Options),
 			},
 		},
 	}
+
+	if !body.Required {
+		slackAttachment.Actions = append(slackAttachment.Actions, p.PostActionToSkip())
+	}
+	return slackAttachment
 }
 
-func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptions {
+func (p *Plugin) PostActionToSkip() *model.PostAction {
+	return &model.PostAction{
+		Name: constants.SkipButton,
+		Type: model.POST_ACTION_TYPE_BUTTON,
+		Integration: &model.PostActionIntegration{
+			URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathSkip),
+		},
+	}
+}
+
+func (p *Plugin) handlePreviousCarouselPosts(userID string, wg *sync.WaitGroup) {
+	postIDs, err := p.store.LoadPostIDs(userID)
+	if err != nil {
+		p.API.LogDebug("Unable to load the post IDs from KV store", "UserID", userID, "Error", err.Error())
+		return
+	}
+
+	if len(postIDs) == 0 {
+		return
+	}
+
+	if err = p.store.StorePostIDs(userID, make([]string, 0)); err != nil {
+		p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
+	}
+
+	for _, postID := range postIDs {
+		if wg != nil {
+			wg.Add(1)
+		}
+
+		go func(postID string) {
+			if wg != nil {
+				defer wg.Done()
+			}
+
+			post, err := p.API.GetPost(postID)
+			if err != nil {
+				p.API.LogDebug("Unable to get the post", "PostID", postID, "Error", err.Error())
+			}
+
+			if post == nil {
+				return
+			}
+
+			attachments := post.Attachments()
+			for _, attachment := range attachments {
+				attachment.Actions = nil
+			}
+
+			model.ParseSlackAttachment(post, attachments)
+			if _, err = p.API.UpdatePost(post); err != nil {
+				p.API.LogDebug("Unable to update the post", "PostID", postID, "Error", err.Error())
+			}
+		}(postID)
+	}
+
+	if wg != nil {
+		wg.Wait()
+	}
+}
+
+func (p *Plugin) HandleCarouselInput(userID string, body *serializer.Picker) error {
+	postIDs := make([]string, 0)
+	idx := 0
+	for {
+		var attachments []*model.SlackAttachment
+		for i := idx; i < len(body.Options); i++ {
+			option := body.Options[i]
+			attachments = append(attachments, &model.SlackAttachment{
+				Title:    fmt.Sprintf("%v) %s", i+1, option.Label),
+				Text:     option.Description,
+				ImageURL: option.Attachment,
+				Actions: []*model.PostAction{
+					{
+						Name: "Select",
+						Type: model.POST_ACTION_TYPE_BUTTON,
+						Integration: &model.PostActionIntegration{
+							URL: fmt.Sprintf("%s%s", p.GetPluginURLPath(), constants.PathActionOptions),
+							Context: map[string]interface{}{
+								constants.ContextKeySelectedLabel: fmt.Sprintf("%v) %s", i+1, option.Label),
+								constants.ContextKeySelectedValue: option.Value,
+								constants.StyleCarousel:           true,
+							},
+						},
+					},
+				},
+			})
+
+			if !p.IsCharCountSafe(attachments) {
+				attachments = attachments[:len(attachments)-1]
+				idx = i
+				break
+			}
+
+			if i == len(body.Options)-1 {
+				idx = 0
+			}
+		}
+
+		postID, err := p.DMWithAttachments(userID, attachments...)
+		if err != nil {
+			return err
+		}
+
+		postIDs = append(postIDs, postID)
+		if idx == 0 {
+			break
+		}
+	}
+
+	if err := p.store.StorePostIDs(userID, postIDs); err != nil {
+		p.API.LogDebug("Unable to store the post IDs in KV store", "UserID", userID, "Error", err.Error())
+	}
+
+	return nil
+}
+
+func (p *Plugin) getPostActionOptions(options []serializer.Option) []*model.PostActionOptions {
 	var postOptions []*model.PostActionOptions
 	for _, option := range options {
 		postOptions = append(postOptions, &model.PostActionOptions{
@@ -457,8 +468,8 @@ func (p *Plugin) getPostActionOptions(options []Option) []*model.PostActionOptio
 	return postOptions
 }
 
-func (p *Plugin) CreateMessageAttachment(fileID, userID string) (*MessageAttachment, error) {
-	var attachment *MessageAttachment
+func (p *Plugin) CreateMessageAttachment(fileID, userID string) (*serializer.MessageAttachment, error) {
+	var attachment *serializer.MessageAttachment
 	fileInfo, appErr := p.API.GetFileInfo(fileID)
 	if appErr != nil {
 		return nil, fmt.Errorf("error getting the file info. Error: %s", appErr.Message)
@@ -473,7 +484,7 @@ func (p *Plugin) CreateMessageAttachment(fileID, userID string) (*MessageAttachm
 	}
 
 	//TODO: Add a configuration setting for expiry time
-	expiryTime := time.Now().UTC().Add(time.Minute * AttachmentLinkExpiryTimeInMinutes)
+	expiryTime := time.Now().UTC().Add(time.Minute * constants.AttachmentLinkExpiryTimeInMinutes)
 
 	file := &FileStruct{
 		ID:     fileID,
@@ -492,7 +503,7 @@ func (p *Plugin) CreateMessageAttachment(fileID, userID string) (*MessageAttachm
 		return nil, fmt.Errorf("error occurred while encrypting the file. Error: %w", err)
 	}
 
-	attachment = &MessageAttachment{
+	attachment = &serializer.MessageAttachment{
 		URL:         p.GetPluginURL() + "/file/" + encode(encrypted),
 		ContentType: fileInfo.MimeType,
 		FileName:    fileInfo.Name,

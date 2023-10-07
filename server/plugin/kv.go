@@ -13,6 +13,7 @@ import (
 const (
 	UserKeyPrefix   = "user_"
 	OAuth2KeyPrefix = "oauth2_"
+	PostKeyPrefix   = "post_"
 )
 
 const (
@@ -25,6 +26,7 @@ var ErrNotFound = kvstore.ErrNotFound
 type Store interface {
 	UserStore
 	OAuth2StateStore
+	PostIDStore
 }
 
 type UserStore interface {
@@ -40,11 +42,17 @@ type OAuth2StateStore interface {
 	StoreOAuth2State(state string) error
 }
 
+type PostIDStore interface {
+	StorePostIDs(mattermostUserID string, postIDs []string) error
+	LoadPostIDs(mattermostUserID string) ([]string, error)
+}
+
 type pluginStore struct {
 	plugin   *Plugin
 	basicKV  kvstore.KVStore
 	oauth2KV kvstore.KVStore
 	userKV   kvstore.KVStore
+	postKV   kvstore.KVStore
 }
 
 func (p *Plugin) NewStore(api plugin.API) Store {
@@ -54,6 +62,7 @@ func (p *Plugin) NewStore(api plugin.API) Store {
 		basicKV:  basicKV,
 		userKV:   kvstore.NewHashedKeyStore(basicKV, UserKeyPrefix),
 		oauth2KV: kvstore.NewHashedKeyStore(kvstore.NewOneTimePluginStore(api, OAuth2KeyExpiration), OAuth2KeyPrefix),
+		postKV:   kvstore.NewHashedKeyStore(basicKV, PostKeyPrefix),
 	}
 }
 
@@ -119,4 +128,17 @@ func (s *pluginStore) VerifyOAuth2State(state string) error {
 
 func (s *pluginStore) StoreOAuth2State(state string) error {
 	return s.oauth2KV.StoreTTL(state, []byte(state), oAuth2StateTimeToLive)
+}
+
+func (s *pluginStore) StorePostIDs(mattermostUserID string, postIDs []string) error {
+	return kvstore.StoreJSON(s.postKV, mattermostUserID, postIDs)
+}
+
+func (s *pluginStore) LoadPostIDs(mattermostUserID string) ([]string, error) {
+	var postIDs []string
+	if err := kvstore.LoadJSON(s.postKV, mattermostUserID, &postIDs); err != nil {
+		return nil, err
+	}
+
+	return postIDs, nil
 }

@@ -8,13 +8,14 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 	"golang.org/x/oauth2"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
 type Client interface {
 	GetMe(mattermostUserID string) (*serializer.ServiceNowUser, error)
 	StartConverstaionWithVirtualAgent(userID string) error
-	SendMessageToVirtualAgentAPI(serviceNowUserID, messageText string, typed bool, attachment *MessageAttachment) error
+	SendMessageToVirtualAgentAPI(serviceNowUserID, messageText string, typed bool, attachment *serializer.MessageAttachment) error
 	OpenDialogRequest(body *model.OpenDialogRequest) error
 }
 
@@ -35,7 +36,7 @@ func (p *Plugin) MakeClient(ctx context.Context, token *oauth2.Token) Client {
 }
 
 func (c *client) OpenDialogRequest(body *model.OpenDialogRequest) error {
-	postURL := fmt.Sprintf("%s%s", c.plugin.getConfiguration().MattermostSiteURL, PathOpenDialog)
+	postURL := fmt.Sprintf("%s%s", c.plugin.getConfiguration().MattermostSiteURL, constants.PathOpenDialog)
 	_, err := c.CallJSON(http.MethodPost, postURL, body, nil, nil)
 	return err
 }

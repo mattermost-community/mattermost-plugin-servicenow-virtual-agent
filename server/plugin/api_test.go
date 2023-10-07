@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -17,10 +17,12 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
 	mock_plugin "github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/mocks"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"
@@ -35,6 +37,31 @@ func (ph panicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 const pathPrefix = "/api/v1"
 
+func setupTestPlugin(api *plugintest.API, store *mock_plugin.MockStore) (*Plugin, *plugintest.API) {
+	p := &Plugin{}
+	path, _ := filepath.Abs("../..")
+	api.On("GetBundlePath").Return(path, nil)
+	p.SetAPI(api)
+	if store != nil {
+		p.store = store
+	}
+
+	p.router = p.initializeAPI()
+	p.setConfiguration(&configuration{
+		ServiceNowURL:               "mockURL",
+		ServiceNowOAuthClientID:     "mockClientID",
+		ServiceNowOAuthClientSecret: "mockClientSecret",
+		EncryptionSecret:            "mockEncryptionSecret",
+		WebhookSecret:               "mockWebhookSecret",
+		MattermostSiteURL:           "mockSiteURL",
+		PluginID:                    "mockPluginID",
+		PluginURL:                   "mockPluginURL",
+		PluginURLPath:               "mockPluginURLPath",
+	})
+
+	return p, api
+}
+
 func TestWithRecovery(t *testing.T) {
 	defer func() {
 		if x := recover(); x != nil {
@@ -42,10 +69,8 @@ func TestWithRecovery(t *testing.T) {
 		}
 	}()
 
-	p := Plugin{}
-	api := &plugintest.API{}
+	p, api := setupTestPlugin(&plugintest.API{}, nil)
 	api.On("LogError", "Recovered from a panic", "URL", "http://random", "Error", "bad handler", "Stack", mock.Anything)
-	p.SetAPI(api)
 
 	ph := panicHandler{}
 	handler := p.withRecovery(ph)
@@ -62,6 +87,99 @@ func TestWithRecovery(t *testing.T) {
 	}
 }
 
+func setupPluginForCheckOAuthMiddleware(p *Plugin, s *mock_plugin.MockStore, c *mock_plugin.MockClient, t *testing.T) {
+	s.EXPECT().LoadUser(testutils.GetID()).Return(testutils.GetSerializerUser(), nil)
+	monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+		return nil, nil
+	})
+
+	monkey.PatchInstanceMethod(reflect.TypeOf(p), "GetClientFromRequest", func(_ *Plugin, _ *http.Request) Client {
+		return c
+	})
+}
+
+func TestPlugin_handleSkip(t *testing.T) {
+	httpTestJSON := testutils.HTTPTest{
+		T:       t,
+		Encoder: testutils.EncodeJSON,
+	}
+
+	for name, test := range map[string]struct {
+		httpTest         testutils.HTTPTest
+		request          testutils.Request
+		expectedResponse testutils.ExpectedResponse
+		setupClient      func(c *mock_plugin.MockClient)
+	}{
+		"Skip message is successfully sent to virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+				Body: model.PostActionIntegrationRequest{
+					ChannelId: testutils.GetID(),
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), constants.SkipInternal, true, &serializer.MessageAttachment{}).Return(nil)
+			},
+		},
+		"Error while decoding response body": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			setupClient: func(c *mock_plugin.MockClient) {},
+		},
+		"Error while sending skip message to Virtual Agent": {
+			httpTest: httpTestJSON,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathSkip),
+				Body: model.PostActionIntegrationRequest{
+					ChannelId: testutils.GetID(),
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), constants.SkipInternal, true, &serializer.MessageAttachment{}).Return(errors.New("error while sending skip message to Virtual Agent"))
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			mockedClient := mock_plugin.NewMockClient(mockCtrl)
+
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
+
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+
+			setupPluginForCheckOAuthMiddleware(p, mockedStore, mockedClient, t)
+			test.setupClient(mockedClient)
+
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ScheduleJob", func(_ *Plugin, _ string) error {
+				return nil
+			})
+
+			req := test.httpTest.CreateHTTPRequest(test.request)
+			req.Header.Add(constants.HeaderMattermostUserID, testutils.GetID())
+			rr := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, rr, req)
+			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
+		})
+	}
+}
+
 func TestPlugin_handleUserDisconnect(t *testing.T) {
 	defer monkey.UnpatchAll()
 
@@ -74,61 +192,45 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 		httpTest                 testutils.HTTPTest
 		request                  testutils.Request
 		expectedResponse         testutils.ExpectedResponse
-		userID                   string
 		GetUserErr               error
 		GetDisconnectUserPostErr error
 		DisconnectUserErr        error
 	}{
-		"UserID id present in headers does not match and 'CheckAuth' fails": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
-				Body:   model.PostActionIntegrationRequest{},
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusUnauthorized,
-			},
-			userID: "",
-		},
 		"Error while decoding request body": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathUserDisconnect),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID: "mock-userID",
 		},
 		"User is disconnected successfully": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
-						DisconnectUserContextName: true,
+						constants.DisconnectUserContextName: true,
 					},
 				},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID: "mock-userID",
 		},
 		"User not found and failed to create disconnect post": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathUserDisconnect),
 				Body:   model.PostActionIntegrationRequest{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
 			GetUserErr:               ErrNotFound,
 			GetDisconnectUserPostErr: errors.New("failed to create disconnect post"),
 		},
@@ -136,13 +238,12 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathUserDisconnect),
 				Body:   model.PostActionIntegrationRequest{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
 			GetUserErr:               errors.New("error in getting the user from KVstore"),
 			GetDisconnectUserPostErr: errors.New("failed to create disconnect post"),
 		},
@@ -150,86 +251,56 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
-						DisconnectUserContextName: "mockContextName",
+						constants.DisconnectUserContextName: "mockContextName",
 					},
 				},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
-			GetUserErr:               ErrNotFound,
-			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        nil,
+			GetUserErr: ErrNotFound,
 		},
 		"DisconnectUserContextName is false": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
-						DisconnectUserContextName: false,
+						constants.DisconnectUserContextName: false,
 					},
 				},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
-			GetUserErr:               nil,
-			GetDisconnectUserPostErr: nil,
-			DisconnectUserErr:        nil,
 		},
-		"Error occur while disconnecting user": {
+		"Error occurred while disconnecting user": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathUserDisconnect),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathUserDisconnect),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
-						DisconnectUserContextName: true,
+						constants.DisconnectUserContextName: true,
 					},
 				},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			userID:                   "mock-userID",
 			GetUserErr:               nil,
 			GetDisconnectUserPostErr: nil,
 			DisconnectUserErr:        errors.New("error in disconnecting the user"),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			p := new(Plugin)
-			p.setConfiguration(
-				&configuration{
-					ServiceNowURL:               "mockURL",
-					ServiceNowOAuthClientID:     "mockCLientID",
-					ServiceNowOAuthClientSecret: "mockClientSecret",
-					EncryptionSecret:            "mockEncryptionSecret",
-					WebhookSecret:               "mockWebhookSecret",
-					MattermostSiteURL:           "mockSiteURL",
-					PluginID:                    "mockPluginID",
-					PluginURL:                   "mockPluginURL",
-					PluginURLPath:               "mockPluginURLPath",
-				})
-
-			mockAPI := &plugintest.API{}
-
-			mockAPI.On("GetBundlePath").Return("mockString", nil)
-
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
-
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
-
-			p.SetAPI(mockAPI)
-
-			p.initializeAPI()
 
 			monkey.PatchInstanceMethod(reflect.TypeOf(p), "GetUser", func(_ *Plugin, _ string) (*serializer.User, error) {
 				return &serializer.User{}, test.GetUserErr
@@ -244,7 +315,7 @@ func TestPlugin_handleUserDisconnect(t *testing.T) {
 			})
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, test.userID)
+			req.Header.Add(constants.HeaderMattermostUserID, testutils.GetID())
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
@@ -277,7 +348,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, constants.PathVirtualAgentWebhook),
 				Body:   VirtualAgentResponse{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -288,7 +359,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathVirtualAgentWebhook),
 				Body:   VirtualAgentResponse{},
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -300,7 +371,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, constants.PathVirtualAgentWebhook),
 				Body:   nil,
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -312,7 +383,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, constants.PathVirtualAgentWebhook),
 				Body: `{
 					"requestId": "mock-requestId",
 					"message": {
@@ -342,7 +413,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, constants.PathVirtualAgentWebhook),
 				Body: `{
 					"requestId": "mock-requestId",
 					"message": {
@@ -382,7 +453,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, constants.PathVirtualAgentWebhook),
 				Body: `{
 					"requestId": "mock-requestId",
 					"message": {
@@ -409,7 +480,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, constants.PathVirtualAgentWebhook),
 				Body: `{
 					"requestId": "mock-requestId",
 					"message": {
@@ -461,7 +532,7 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 			httpTest: httpTestString,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, PathVirtualAgentWebhook),
+				URL:    fmt.Sprintf("%s%s?secret=mockWebhookSecret", pathPrefix, constants.PathVirtualAgentWebhook),
 				Body: `{
 					"requestId": "mock-requestId",
 					"message": {
@@ -494,23 +565,9 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			p := Plugin{}
-			p.setConfiguration(
-				&configuration{
-					ServiceNowURL:               "mockURL",
-					ServiceNowOAuthClientID:     "mockCLientID",
-					ServiceNowOAuthClientSecret: "mockClientSecret",
-					EncryptionSecret:            "mockEncryptionSecret",
-					WebhookSecret:               "mockWebhookSecret",
-					MattermostSiteURL:           "mockSiteURL",
-					PluginID:                    "mockPluginID",
-					PluginURL:                   "mockPluginURL",
-					PluginURLPath:               "mockPluginURLPath",
-				})
-
-			mockAPI := &plugintest.API{}
-
-			mockAPI.On("GetBundlePath").Return("mockString", nil)
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
 
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
@@ -520,18 +577,10 @@ func TestPlugin_handleVirtualAgentWebhook(t *testing.T) {
 
 			mockAPI.On("DMWithAttachments", mock.AnythingOfType("string"), &model.SlackAttachment{}).Return(nil, nil)
 
-			p.SetAPI(mockAPI)
-
-			p.initializeAPI()
-
-			mockCtrl := gomock.NewController(t)
-			mockedStore := mock_plugin.NewMockStore(mockCtrl)
-
 			if !test.isErrorExpected {
 				mockedStore.EXPECT().LoadUserWithSysID(gomock.Any()).Return(&serializer.User{}, nil)
+				mockedStore.EXPECT().LoadPostIDs(gomock.Any()).Return([]string{}, nil)
 			}
-
-			p.store = mockedStore
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
 			rr := httptest.NewRecorder()
@@ -550,163 +599,183 @@ func TestPlugin_handlePickerSelection(t *testing.T) {
 	}
 
 	for name, test := range map[string]struct {
-		httpTest              testutils.HTTPTest
-		request               testutils.Request
-		expectedResponse      testutils.ExpectedResponse
-		ParseAuthTokenErr     error
-		LoadUserErr           error
-		getDirectChannelError *model.AppError
-		callError             error
+		httpTest               testutils.HTTPTest
+		request                testutils.Request
+		isCarousel             bool
+		expectedResponse       testutils.ExpectedResponse
+		getPostError           *model.AppError
+		loadPostIDsReturnValue []string
+		loadPostIDsError       error
+		storePostIDsError      error
+		setupClient            func(c *mock_plugin.MockClient)
 	}{
-		"Selected option is successfully sent to virtual Agent": {
+		"Picker is not carousel type and selected option is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
-						"selected_option": "mockOption",
+						constants.ContextKeySelectedOption: "mockOption",
 					},
 				},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
+			},
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), "mockOption", true, &serializer.MessageAttachment{}).Return(nil)
+			},
+		},
+		"Picker is carousel type and selected option is successfully sent to virtual Agent": {
+			httpTest:   httpTestJSON,
+			isCarousel: true,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathActionOptions),
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						constants.ContextKeySelectedLabel: "mockLabel",
+						constants.ContextKeySelectedValue: "mockValue",
+						constants.StyleCarousel:           true,
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			loadPostIDsReturnValue: []string{},
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), "mockValue", false, &serializer.MessageAttachment{}).Return(nil)
 			},
 		},
 		"Error while decoding response body": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathActionOptions),
 				Body:   nil,
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-		},
-		"Failed to get direct channel": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
-				Body: model.PostActionIntegrationRequest{
-					Context: map[string]interface{}{
-						"selected_option": "mockOption",
-					},
-				},
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusOK,
-			},
-			getDirectChannelError: &model.AppError{},
-		},
-		"User is not present in store": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
-				Body: model.PostActionIntegrationRequest{
-					Context: map[string]interface{}{
-						"selected_option": "mockOption",
-					},
-				},
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusOK,
-			},
-			LoadUserErr: errors.New("error in loading the user from KVstore"),
-		},
-		"Error occurs while parsing OAuth token": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
-				Body: model.PostActionIntegrationRequest{
-					Context: map[string]interface{}{
-						"selected_option": "mockOption",
-					},
-				},
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusOK,
-			},
-			ParseAuthTokenErr: errors.New("mockErr"),
+			setupClient: func(c *mock_plugin.MockClient) {},
 		},
 		"Error while sending selected option to Virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s%s", pathPrefix, PathActionOptions),
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathActionOptions),
 				Body: model.PostActionIntegrationRequest{
 					Context: map[string]interface{}{
-						"selected_option": "mockOption",
+						constants.ContextKeySelectedOption: "mockOption",
 					},
 				},
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
 			},
-			callError:         errors.New("mockError"),
-			ParseAuthTokenErr: nil,
-			LoadUserErr:       nil,
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), "mockOption", true, &serializer.MessageAttachment{}).Return(errors.New("error in sending message to VA"))
+			},
+		},
+		"Picker is carousel type and error occurs while getting post": {
+			httpTest:   httpTestJSON,
+			isCarousel: true,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathActionOptions),
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						constants.ContextKeySelectedLabel: "mockLabel",
+						constants.ContextKeySelectedValue: "mockValue",
+						constants.StyleCarousel:           true,
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			getPostError:           testutils.GetAppError("error while getting post"),
+			loadPostIDsReturnValue: []string{},
+			setupClient:            func(c *mock_plugin.MockClient) {},
+		},
+		"Picker is carousel type and error occurs while loading postIDs": {
+			httpTest:   httpTestJSON,
+			isCarousel: true,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathActionOptions),
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						constants.ContextKeySelectedLabel: "mockLabel",
+						constants.ContextKeySelectedValue: "mockValue",
+						constants.StyleCarousel:           true,
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			loadPostIDsError: errors.New("error in loading post IDs"),
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), "mockValue", false, &serializer.MessageAttachment{}).Return(nil)
+			},
+		},
+		"Picker is carousel type and error occurs while storing postIDs": {
+			httpTest:   httpTestJSON,
+			isCarousel: true,
+			request: testutils.Request{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s%s", pathPrefix, constants.PathActionOptions),
+				Body: model.PostActionIntegrationRequest{
+					Context: map[string]interface{}{
+						constants.ContextKeySelectedLabel: "mockLabel",
+						constants.ContextKeySelectedValue: "mockValue",
+						constants.StyleCarousel:           true,
+					},
+				},
+			},
+			expectedResponse: testutils.ExpectedResponse{
+				StatusCode: http.StatusOK,
+			},
+			loadPostIDsReturnValue: []string{testutils.GetID()},
+			storePostIDsError:      errors.New("error in storing post IDs"),
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), "mockValue", false, &serializer.MessageAttachment{}).Return(nil)
+			},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			p := new(Plugin)
-			p.setConfiguration(
-				&configuration{
-					ServiceNowURL:               "mockURL",
-					ServiceNowOAuthClientID:     "mockCLientID",
-					ServiceNowOAuthClientSecret: "mockClientSecret",
-					EncryptionSecret:            "mockEncryptionSecret",
-					WebhookSecret:               "mockWebhookSecret",
-					MattermostSiteURL:           "mockSiteURL",
-					PluginID:                    "mockPluginID",
-					PluginURL:                   "mockPluginURL",
-					PluginURLPath:               "mockPluginURLPath",
-				})
-
-			mockAPI := &plugintest.API{}
-
-			mockAPI.On("GetBundlePath").Return("mockString", nil)
-
-			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
-
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return()
-
-			mockAPI.On("GetDirectChannel", mock.Anything, mock.Anything).Return(&model.Channel{
-				Id: "mock-channelID",
-			}, test.getDirectChannelError)
-
-			p.SetAPI(mockAPI)
-
-			p.initializeAPI()
-
-			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
-				return &oauth2.Token{}, test.ParseAuthTokenErr
-			})
-
-			var c client
-			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "Call", func(_ *client, _, _, _ string, _ io.Reader, _ interface{}, _ url.Values) (responseData []byte, err error) {
-				return nil, test.callError
-			})
-
 			mockCtrl := gomock.NewController(t)
 			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			mockedClient := mock_plugin.NewMockClient(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
 
-			mockedStore.EXPECT().LoadUser("mock-userID").Return(&serializer.User{}, test.LoadUserErr)
+			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 
-			p.store = mockedStore
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ScheduleJob", func(_ *Plugin, _ string) error {
+				return nil
+			})
+
+			if test.isCarousel {
+				mockAPI.On("GetPost", mock.AnythingOfType("string")).Return(testutils.GetPostWithAttachments(2), test.getPostError)
+				mockedStore.EXPECT().LoadPostIDs(testutils.GetID()).Return(test.loadPostIDsReturnValue, test.loadPostIDsError)
+				if test.loadPostIDsReturnValue != nil && len(test.loadPostIDsReturnValue) > 0 {
+					mockedStore.EXPECT().StorePostIDs(testutils.GetID(), []string{}).Return(test.storePostIDsError)
+					mockAPI.On("DeletePost", mock.AnythingOfType("string")).Return(testutils.GetAppError("error in deleting the post"))
+				}
+			}
+
+			setupPluginForCheckOAuthMiddleware(p, mockedStore, mockedClient, t)
+			test.setupClient(mockedClient)
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, "mock-userID")
+			req.Header.Add(constants.HeaderMattermostUserID, testutils.GetID())
 			rr := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, rr, req)
 			test.httpTest.CompareHTTPResponse(rr, test.expectedResponse)
-
-			if test.ParseAuthTokenErr != nil || test.callError != nil || test.LoadUserErr != nil {
-				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
-			}
 		})
 	}
 }
@@ -731,41 +800,16 @@ func Test_handleDateTimeSelection(t *testing.T) {
 	}
 
 	for name, test := range map[string]struct {
-		httpTest          testutils.HTTPTest
-		request           testutils.Request
-		expectedResponse  testutils.ExpectedResponse
-		userID            string
-		ParseAuthTokenErr error
+		httpTest         testutils.HTTPTest
+		request          testutils.Request
+		expectedResponse testutils.ExpectedResponse
+		setupClient      func(c *mock_plugin.MockClient)
 	}{
-		"User is unauthorized": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
-				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusUnauthorized,
-			},
-		},
-		"Error parsing OAuth token": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
-				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusOK,
-			},
-			userID:            "mock-userID",
-			ParseAuthTokenErr: errors.New("mockError"),
-		},
 		"Selected date is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
+				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -773,13 +817,15 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				Body:         &model.SubmitDialogResponse{},
 				ResponseType: "application/json",
 			},
-			userID: "mock-userID",
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), "2022-09-23", true, &serializer.MessageAttachment{}).Return(nil)
+			},
 		},
 		"Selected date is invalid": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
+				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-23-23", "", "Date"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -791,13 +837,13 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID: "mock-userID",
+			setupClient: func(c *mock_plugin.MockClient) {},
 		},
 		"Selected time is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
+				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("", "22:12", "Time"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -805,13 +851,15 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				Body:         &model.SubmitDialogResponse{},
 				ResponseType: "application/json",
 			},
-			userID: "mock-userID",
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), "22:12:00", true, &serializer.MessageAttachment{}).Return(nil)
+			},
 		},
 		"Selected time is invalid": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
+				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("", "25:12", "Time"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -823,13 +871,13 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID: "mock-userID",
+			setupClient: func(c *mock_plugin.MockClient) {},
 		},
 		"Selected date-time is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
+				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-09-23", "22:12", "DateTime"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -839,13 +887,15 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID: "mock-userID",
+			setupClient: func(c *mock_plugin.MockClient) {
+				c.EXPECT().SendMessageToVirtualAgentAPI(testutils.GetServiceNowSysID(), gomock.Any(), true, &serializer.MessageAttachment{}).Return(nil)
+			},
 		},
 		"Selected date-time is invalid": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTime),
+				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTime),
 				Body:   getHandleDateTimeSelectionRequestBody("2022-13-23", "24:12", "DateTime"),
 			},
 			expectedResponse: testutils.ExpectedResponse{
@@ -858,41 +908,28 @@ func Test_handleDateTimeSelection(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID: "mock-userID",
+			setupClient: func(c *mock_plugin.MockClient) {},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			p := new(Plugin)
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			mockedClient := mock_plugin.NewMockClient(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
 
-			mockAPI := &plugintest.API{}
-			mockAPI.On("GetBundlePath").Return("mockString", nil)
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
-			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
+			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 			mockAPI.On("UpdatePost", mock.AnythingOfType("*model.Post")).Return(nil, nil)
-			p.SetAPI(mockAPI)
 
-			p.initializeAPI()
-
-			var c client
-			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "SendMessageToVirtualAgentAPI", func(_ *client, _, _ string, _ bool, _ *MessageAttachment) error {
+			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ScheduleJob", func(_ *Plugin, _ string) error {
 				return nil
 			})
 
-			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
-				return &oauth2.Token{}, test.ParseAuthTokenErr
-			})
-
-			if test.userID != "" {
-				mockCtrl := gomock.NewController(t)
-				mockedStore := mock_plugin.NewMockStore(mockCtrl)
-
-				mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
-
-				p.store = mockedStore
-			}
+			setupPluginForCheckOAuthMiddleware(p, mockedStore, mockedClient, t)
+			test.setupClient(mockedClient)
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, test.userID)
+			req.Header.Add(constants.HeaderMattermostUserID, testutils.GetID())
 			resp := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, resp, req)
 			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
@@ -912,32 +949,13 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 		httpTest             testutils.HTTPTest
 		request              testutils.Request
 		expectedResponse     testutils.ExpectedResponse
-		userID               string
-		parseAuthTokenErr    error
 		openDialogRequestErr error
 	}{
-		"User is unauthorized": {
-			httpTest: httpTestJSON,
-			request: testutils.Request{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTimeDialog),
-				Body: model.PostActionIntegrationRequest{
-					TriggerId: "mockTriggerId",
-					PostId:    "mockPostId",
-					Context: map[string]interface{}{
-						"type": "Date",
-					},
-				},
-			},
-			expectedResponse: testutils.ExpectedResponse{
-				StatusCode: http.StatusUnauthorized,
-			},
-		},
 		"Selected date is successfully sent to virtual Agent": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTimeDialog),
+				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTimeDialog),
 				Body: model.PostActionIntegrationRequest{
 					TriggerId: "mockTriggerId",
 					PostId:    "mockPostId",
@@ -951,13 +969,12 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 				Body:         &model.PostActionIntegrationResponse{},
 				ResponseType: "application/json",
 			},
-			userID: "mock-userID",
 		},
-		"Error in opening data/time selection dialog": {
+		"Error in opening date/time selection dialog": {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodPost,
-				URL:    fmt.Sprintf("/api/v1%s", PathSetDateTimeDialog),
+				URL:    fmt.Sprintf("/api/v1%s", constants.PathSetDateTimeDialog),
 				Body: model.PostActionIntegrationRequest{
 					TriggerId: "mockTriggerId",
 					PostId:    "mockPostId",
@@ -974,41 +991,23 @@ func Test_handleDateTimeSelectionDialog(t *testing.T) {
 				},
 				ResponseType: "application/json",
 			},
-			userID:               "mock-userID",
 			openDialogRequestErr: errors.New("request failed to open date-/time selction dialog"),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			p := new(Plugin)
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			mockedClient := mock_plugin.NewMockClient(mockCtrl)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, mockedStore)
 
-			mockAPI := &plugintest.API{}
-			mockAPI.On("GetBundlePath").Return("mockString", nil)
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return("LogDebug error")
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return("LogError error")
-			p.SetAPI(mockAPI)
 
-			p.initializeAPI()
-
-			monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
-				return &oauth2.Token{}, test.parseAuthTokenErr
-			})
-
-			c := client{}
-			monkey.PatchInstanceMethod(reflect.TypeOf(&c), "OpenDialogRequest", func(_ *client, _ *model.OpenDialogRequest) error {
-				return test.openDialogRequestErr
-			})
-
-			if test.userID != "" {
-				mockCtrl := gomock.NewController(t)
-				mockedStore := mock_plugin.NewMockStore(mockCtrl)
-
-				mockedStore.EXPECT().LoadUser(test.userID).Return(&serializer.User{}, nil)
-
-				p.store = mockedStore
-			}
+			setupPluginForCheckOAuthMiddleware(p, mockedStore, mockedClient, t)
+			mockedClient.EXPECT().OpenDialogRequest(gomock.Any()).Return(test.openDialogRequestErr)
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, test.userID)
+			req.Header.Add(constants.HeaderMattermostUserID, testutils.GetID())
 			resp := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, resp, req)
 			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
@@ -1039,7 +1038,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
-				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, constants.PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusOK,
@@ -1049,7 +1048,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
-				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, constants.PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusBadRequest,
@@ -1066,7 +1065,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
-				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, constants.PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
@@ -1083,7 +1082,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
-				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, constants.PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
@@ -1100,7 +1099,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
-				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, constants.PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusInternalServerError,
@@ -1119,7 +1118,7 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			httpTest: httpTestJSON,
 			request: testutils.Request{
 				Method: http.MethodGet,
-				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, PathParamEncryptedFileInfo),
+				URL:    fmt.Sprintf("%s/file/{%s}", pathPrefix, constants.PathParamEncryptedFileInfo),
 			},
 			expectedResponse: testutils.ExpectedResponse{
 				StatusCode: http.StatusNotFound,
@@ -1128,17 +1127,10 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			p := new(Plugin)
-			p.setConfiguration(&configuration{EncryptionSecret: "mockEncryptionSecret"})
-
-			mockAPI := &plugintest.API{}
-			mockAPI.On("GetBundlePath").Return("mockString", nil)
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
 			mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 6)...).Return()
 			mockAPI.On("GetFile", mock.AnythingOfType("string")).Return([]byte{}, test.getFileError)
-			p.SetAPI(mockAPI)
-
-			p.initializeAPI()
 
 			monkey.Patch(decode, func(_ string) ([]byte, error) {
 				return []byte{}, test.decodeError
@@ -1156,13 +1148,99 @@ func TestPlugin_handleFileAttachments(t *testing.T) {
 			})
 
 			req := test.httpTest.CreateHTTPRequest(test.request)
-			req.Header.Add(HeaderMattermostUserID, "mock-userID")
+			req.Header.Add(constants.HeaderMattermostUserID, testutils.GetID())
 			resp := httptest.NewRecorder()
 			p.ServeHTTP(&plugin.Context{}, resp, req)
 			test.httpTest.CompareHTTPResponse(resp, test.expectedResponse)
 
 			if test.isErrorExpected {
 				mockAPI.AssertNumberOfCalls(t, "LogError", 1)
+			}
+		})
+	}
+}
+
+func TestCheckAuth(t *testing.T) {
+	requestURL := fmt.Sprintf("%s%s", pathPrefix, constants.PathOAuth2Connect)
+	t.Run("user id not present", func(t *testing.T) {
+		assert := assert.New(t)
+		p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
+		mockAPI.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, requestURL, nil)
+		p.ServeHTTP(nil, w, r)
+
+		result := w.Result()
+		require.NotNil(t, result)
+		defer result.Body.Close()
+
+		assert.Equal(http.StatusUnauthorized, result.StatusCode)
+		var resp *serializer.APIErrorResponse
+		err := json.NewDecoder(result.Body).Decode(&resp)
+		require.Nil(t, err)
+		assert.Contains(resp.Message, constants.ErrorNotAuthorized)
+	})
+}
+
+func TestCheckOAuth(t *testing.T) {
+	requestURL := fmt.Sprintf("%s%s", pathPrefix, constants.PathSetDateTimeDialog)
+	for name, test := range map[string]struct {
+		SetupAPI             func(*plugintest.API)
+		SetupPluginAndStore  func(p *Plugin, s *mock_plugin.MockStore)
+		ExpectedStatusCode   int
+		ExpectedErrorMessage string
+	}{
+		"failed to load the user": {
+			SetupAPI: func(api *plugintest.API) {
+				api.On("LogError", mock.AnythingOfType("string"), "Error", "load user error")
+			},
+			SetupPluginAndStore: func(p *Plugin, s *mock_plugin.MockStore) {
+				s.EXPECT().LoadUser(testutils.GetID()).Return(nil, errors.New("load user error"))
+			},
+			ExpectedStatusCode:   http.StatusInternalServerError,
+			ExpectedErrorMessage: "load user error",
+		},
+		"failed to parse auth token": {
+			SetupAPI: func(api *plugintest.API) {
+				api.On("LogError", mock.AnythingOfType("string"), "Error", "token error")
+			},
+			SetupPluginAndStore: func(p *Plugin, s *mock_plugin.MockStore) {
+				s.EXPECT().LoadUser(testutils.GetID()).Return(testutils.GetSerializerUser(), nil)
+				monkey.PatchInstanceMethod(reflect.TypeOf(p), "ParseAuthToken", func(_ *Plugin, _ string) (*oauth2.Token, error) {
+					return nil, fmt.Errorf("token error")
+				})
+			},
+			ExpectedStatusCode:   http.StatusInternalServerError,
+			ExpectedErrorMessage: "token error",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert := assert.New(t)
+			defer monkey.UnpatchAll()
+
+			mockCtrl := gomock.NewController(t)
+			mockedStore := mock_plugin.NewMockStore(mockCtrl)
+			p, api := setupTestPlugin(&plugintest.API{}, mockedStore)
+			api.On("LogDebug", testutils.GetMockArgumentsWithType("string", 7)...).Return()
+			test.SetupAPI(api)
+			test.SetupPluginAndStore(p, mockedStore)
+			defer api.AssertExpectations(t)
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodPost, requestURL, nil)
+			r.Header.Add(constants.HeaderMattermostUserID, testutils.GetID())
+			p.ServeHTTP(nil, w, r)
+
+			result := w.Result()
+			require.NotNil(t, result)
+			defer result.Body.Close()
+
+			assert.Equal(test.ExpectedStatusCode, result.StatusCode)
+			if test.ExpectedErrorMessage != "" {
+				var resp *serializer.APIErrorResponse
+				err := json.NewDecoder(result.Body).Decode(&resp)
+				require.Nil(t, err)
+				assert.Contains(resp.Message, test.ExpectedErrorMessage)
 			}
 		})
 	}

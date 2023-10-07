@@ -42,18 +42,14 @@ func TestDM(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
 
-			mockAPI := &plugintest.API{}
 			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 			mockAPI.On("GetDirectChannel", mock.Anything, mock.Anything).Return(testCase.mockChannel, testCase.mockChannelErr)
 			mockAPI.On("CreatePost", mock.Anything).Return(testCase.mockPost, testCase.mockPostErr)
 
-			p.SetAPI(mockAPI)
-
 			_, err := p.DM("mock-userID", "mockFormat")
-
 			if testCase.mockChannel == nil || testCase.mockPost == nil {
 				require.Error(t, err)
 			} else {
@@ -79,16 +75,13 @@ func TestEphemeral(t *testing.T) {
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			p := Plugin{}
+			p, mockAPI := setupTestPlugin(&plugintest.API{}, nil)
 
-			mockAPI := &plugintest.API{}
 			mockAPI.On("LogInfo", testutils.GetMockArgumentsWithType("string", 5)...).Return()
 			mockAPI.On("LogError", testutils.GetMockArgumentsWithType("string", 3)...).Return()
 			mockAPI.On("SendEphemeralPost", mock.Anything, mock.Anything).Return(&model.Post{})
-			p.SetAPI(mockAPI)
 
 			p.Ephemeral("mock-userID", "mockChannelID", "mockFormat")
-
 			mockAPI.AssertNumberOfCalls(t, "SendEphemeralPost", 1)
 		})
 	}

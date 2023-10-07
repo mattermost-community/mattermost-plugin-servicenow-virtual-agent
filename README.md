@@ -54,6 +54,10 @@ This plugin integrates the ServiceNow Virtual Agent in Mattermost. For a stable 
 
         ![image](https://user-images.githubusercontent.com/55234496/196125018-b4e0ecbd-4f2a-4e6d-9dc4-e3a08704d7cc.png)
 
+  6. **Carousel**
+
+        ![image](https://user-images.githubusercontent.com/77336594/209838525-69c4e002-4703-4fb9-9a46-1fb7e8ff86b3.png)
+
 **Note-** For sending file attachments to the Live Agent other than an image, you need to have ServiceNow version greater than or equal to "San Diego Patch 4". Also, the link of the file attachment sent to the Virtual Agent/Live Agent will be expired in 15 minutes.
 
 ## Installation

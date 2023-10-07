@@ -114,3 +114,19 @@ func Test_validateTime(t *testing.T) {
 		})
 	}
 }
+
+func Test_IsCharCountSafe(t *testing.T) {
+	p := Plugin{}
+	for _, test := range []struct {
+		description string
+	}{
+		{
+			description: "result is returned successfully",
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			isSafe := p.IsCharCountSafe([]*model.SlackAttachment{})
+			assert.Equal(t, true, isSafe)
+		})
+	}
+}

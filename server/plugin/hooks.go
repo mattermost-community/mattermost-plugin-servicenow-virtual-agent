@@ -8,6 +8,9 @@ import (
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
+
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/constants"
+	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 )
 
 type FileStruct struct {
@@ -37,7 +40,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 			isBotDMChannel = false
 		}
 
-		if err = p.channelCache.SetWithExpire(post.ChannelId, isBotDMChannel, time.Minute*time.Duration(ChannelCacheTTL)); err != nil {
+		if err = p.channelCache.SetWithExpire(post.ChannelId, isBotDMChannel, time.Minute*time.Duration(constants.ChannelCacheTTL)); err != nil {
 			p.API.LogDebug("Failed to add channel in cache", "Error", err.Error())
 		}
 	}
@@ -51,14 +54,14 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 	user, err := p.GetUser(mattermostUserID)
 	if err != nil {
 		if err == ErrNotFound {
-			_, _ = p.DM(mattermostUserID, WelcomePretextMessage, fmt.Sprintf("%s%s", p.GetPluginURL(), PathOAuth2Connect))
+			_, _ = p.DM(mattermostUserID, constants.WelcomePretextMessage, fmt.Sprintf("%s%s", p.GetPluginURL(), constants.PathOAuth2Connect))
 		} else {
 			p.logAndSendErrorToUser(mattermostUserID, post.ChannelId, fmt.Sprintf("Error occurred while fetching user by ID. UserID: %s. Error: %s", mattermostUserID, err.Error()))
 		}
 		return
 	}
 
-	if strings.ToLower(post.Message) == DisconnectKeyword {
+	if strings.ToLower(post.Message) == constants.DisconnectKeyword {
 		_, _ = p.DMWithAttachments(post.UserId, p.CreateDisconnectUserAttachment())
 		return
 	}
@@ -74,7 +77,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		return
 	}
 
-	var attachment *MessageAttachment
+	var attachment *serializer.MessageAttachment
 	if len(post.FileIds) == 1 {
 		attachment, err = p.CreateMessageAttachment(post.FileIds[0], mattermostUserID)
 		if err != nil {
@@ -83,6 +86,7 @@ func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
 		}
 	}
 
+	_ = p.ScheduleJob(mattermostUserID)
 	client := p.MakeClient(context.Background(), token)
 	if err = client.SendMessageToVirtualAgentAPI(user.UserID, post.Message, true, attachment); err != nil {
 		p.logAndSendErrorToUser(mattermostUserID, post.ChannelId, err.Error())
