@@ -5,8 +5,8 @@
 package mock_plugin
 
 import (
-	serializer "github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	gomock "github.com/golang/mock/gomock"
+	serializer "github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
 	reflect "reflect"
 )
 

@@ -7,14 +7,17 @@ import (
 
 	"github.com/bluele/gcache"
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-server/v5/model"
-	"github.com/mattermost/mattermost-server/v5/plugin"
+	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/mattermost/mattermost/server/public/pluginapi"
 	"github.com/pkg/errors"
 )
 
 // Plugin implements the interface expected by the Mattermost server to communicate between the server and plugin processes.
 type Plugin struct {
 	plugin.MattermostPlugin
+
+	client *pluginapi.Client
 
 	// configurationLock synchronizes access to the configuration.
 	configurationLock sync.RWMutex
@@ -37,6 +40,7 @@ func (p *Plugin) OnActivate() error {
 		return err
 	}
 
+	p.client = pluginapi.NewClient(p.API, p.Driver)
 	p.store = p.NewStore(p.API)
 
 	if err := p.initBotUser(); err != nil {
@@ -57,11 +61,11 @@ func (p *Plugin) OnDeactivate() error {
 }
 
 func (p *Plugin) initBotUser() error {
-	botID, err := p.Helpers.EnsureBot(&model.Bot{
+	botID, err := p.client.Bot.EnsureBot(&model.Bot{
 		Username:    BotUsername,
 		DisplayName: BotDisplayName,
 		Description: BotDescription,
-	}, plugin.ProfileImagePath(filepath.Join("assets", "profile.png")))
+	}, pluginapi.ProfileImagePath(filepath.Join("assets", "profile.png")))
 	if err != nil {
 		return errors.Wrap(err, "can't ensure bot")
 	}

@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"bou.ke/monkey"
-	"github.com/mattermost/mattermost-server/v5/plugin"
-	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
+	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/mattermost/mattermost/server/public/plugin/plugintest"
 	"github.com/stretchr/testify/require"
 
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/testutils"

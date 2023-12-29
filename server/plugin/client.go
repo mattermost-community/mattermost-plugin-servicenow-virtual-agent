@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/mattermost/mattermost/server/public/model"
 	"golang.org/x/oauth2"
 
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"
