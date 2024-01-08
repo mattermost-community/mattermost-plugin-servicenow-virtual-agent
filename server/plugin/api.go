@@ -23,7 +23,7 @@ import (
 )
 
 // ServeHTTP demonstrates a plugin that handles HTTP requests.
-func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
+func (p *Plugin) ServeHTTP(_ *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	p.API.LogDebug("New request:", "Host", r.Host, "RequestURI", r.RequestURI, "Method", r.Method)
 
 	p.initializeAPI().ServeHTTP(w, r)

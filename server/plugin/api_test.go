@@ -29,7 +29,7 @@ import (
 type panicHandler struct {
 }
 
-func (ph panicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (ph panicHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {
 	panic("bad handler")
 }
 
