@@ -79,7 +79,7 @@ func (p *Plugin) GetSiteURL() string {
 }
 
 func (p *Plugin) GetPluginURLPath() string {
-	return "/plugins/" + manifest.ID + "/api/v1"
+	return "/plugins/" + manifest.Id + "/api/v1"
 }
 
 func (p *Plugin) GetPluginURL() string {
