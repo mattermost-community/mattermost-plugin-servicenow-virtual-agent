@@ -15,7 +15,7 @@ type FileStruct struct {
 	Expiry time.Time
 }
 
-func (p *Plugin) MessageHasBeenPosted(c *plugin.Context, post *model.Post) {
+func (p *Plugin) MessageHasBeenPosted(_ *plugin.Context, post *model.Post) {
 	// If the message is posted by bot simply return
 	if post.UserId == p.botUserID {
 		return
