@@ -285,11 +285,8 @@ func (p *Plugin) ProcessResponse(data []byte) error {
 			if _, err = p.DM(userID, res.Header); err != nil {
 				return err
 			}
-
-			for _, value := range res.Values {
-				if _, err = p.DMWithAttachments(userID, p.CreateGroupedPartsOutputControlAttachment(value)); err != nil {
-					return err
-				}
+			if err = p.CreatePostForGroupedPartsOutputControl(userID, res); err != nil {
+				return err
 			}
 		case *OutputCard:
 			switch res.TemplateName {
@@ -407,11 +404,20 @@ func (p *Plugin) CreateOutputCardRecordAttachment(body *OutputCardRecordData) *m
 	}
 }
 
-func (p *Plugin) CreateGroupedPartsOutputControlAttachment(body GroupedPartsOutputControlValue) *model.SlackAttachment {
-	return &model.SlackAttachment{
-		Title: fmt.Sprintf("[%s](%s)", body.Label, body.Action),
-		Text:  body.Description,
+func (p *Plugin) CreatePostForGroupedPartsOutputControl(userID string, res *GroupedPartsOutputControl) error {
+	var message strings.Builder
+	for index, value := range res.Values {
+		message.WriteString(fmt.Sprintf("[%s](%s)\n%s", value.Label, value.Action, value.Description))
+		if index != len(res.Values)-1 {
+			message.WriteString("\n\n")
+		}
 	}
+
+	if _, err := p.DM(userID, message.String()); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *Plugin) CreateTopicPickerControlAttachment(body *TopicPickerControl) *model.SlackAttachment {
