@@ -55,6 +55,7 @@ func (p *Plugin) httpOAuth2Complete(w http.ResponseWriter, r *http.Request) {
 <html>
 	<head>
 		<script>
+			window.open('','_parent','');
 			window.close();
 		</script>
 	</head>
