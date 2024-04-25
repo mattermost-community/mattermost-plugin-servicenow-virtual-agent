@@ -9,9 +9,9 @@ import (
 
 	"bou.ke/monkey"
 	"github.com/bluele/gcache"
-	"github.com/mattermost/mattermost-server/v5/model"
-	"github.com/mattermost/mattermost-server/v5/plugin"
-	"github.com/mattermost/mattermost-server/v5/plugin/plugintest"
+	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/mattermost/mattermost/server/public/plugin/plugintest"
 	"golang.org/x/oauth2"
 
 	"github.com/mattermost/mattermost-plugin-servicenow-virtual-agent/server/serializer"

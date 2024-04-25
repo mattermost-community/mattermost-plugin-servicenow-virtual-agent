@@ -1,6 +1,6 @@
 package testutils
 
-import "github.com/mattermost/mattermost-server/v5/model"
+import "github.com/mattermost/mattermost/server/public/model"
 
 func GetID() string {
 	return "sfmq19kpztg5iy47ebe51hb31w"

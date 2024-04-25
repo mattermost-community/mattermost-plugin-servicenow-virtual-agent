@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-server/v5/model"
-	"github.com/mattermost/mattermost-server/v5/plugin"
+	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost/server/public/plugin"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
@@ -494,14 +494,14 @@ func (p *Plugin) handleVirtualAgentWebhook(w http.ResponseWriter, r *http.Reques
 
 func (p *Plugin) returnPostActionIntegrationResponse(w http.ResponseWriter, res *model.PostActionIntegrationResponse) {
 	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(res.ToJson()); err != nil {
+	if _, err := w.Write(model.ToJSON(res)); err != nil {
 		p.API.LogWarn("Failed to write PostActionIntegrationResponse", "Error", err.Error())
 	}
 }
 
 func (p *Plugin) returnSubmitDialogResponse(w http.ResponseWriter, res *model.SubmitDialogResponse) {
 	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(res.ToJson()); err != nil {
+	if _, err := w.Write(model.ToJSON(res)); err != nil {
 		p.API.LogWarn("Failed to write SubmitDialogResponse", "Error", err.Error())
 	}
 }
