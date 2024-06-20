@@ -16,12 +16,13 @@ func TestIsValid(t *testing.T) {
 		{
 			description: "valid configuration: pre-registered app",
 			config: &configuration{
-				ServiceNowURL:               "mockServiceNowURL",
-				ServiceNowOAuthClientID:     "mockServiceNowOAuthClientID",
-				ServiceNowOAuthClientSecret: "mockServiceNowOAuthClientSecret",
-				EncryptionSecret:            "mockEncryptionSecret",
-				WebhookSecret:               "mockWebhookSecret",
-				ChannelCacheSize:            10000,
+				ServiceNowURL:                "mockServiceNowURL",
+				ServiceNowOAuthClientID:      "mockServiceNowOAuthClientID",
+				ServiceNowOAuthClientSecret:  "mockServiceNowOAuthClientSecret",
+				EncryptionSecret:             "mockEncryptionSecret",
+				WebhookSecret:                "mockWebhookSecret",
+				ChannelCacheSize:             10000,
+				AttachmentLinkExpirationTime: 15,
 			},
 		},
 		{
@@ -80,6 +81,19 @@ func TestIsValid(t *testing.T) {
 				ChannelCacheSize:            -1,
 			},
 			errMsg: InvalidChannelCacheSizeErrorMessage,
+		},
+		{
+			description: "invalid configuration: AttachmentLinkExpirationTime invalid",
+			config: &configuration{
+				ServiceNowURL:                "mockServiceNowURL",
+				ServiceNowOAuthClientID:      "mockServiceNowOAuthClientID",
+				ServiceNowOAuthClientSecret:  "mockServiceNowOAuthClientSecret",
+				EncryptionSecret:             "mockEncryptionSecret",
+				WebhookSecret:                "mockWebhookSecret",
+				ChannelCacheSize:             10000,
+				AttachmentLinkExpirationTime: -1,
+			},
+			errMsg: InvalidAttachmentLinkExpirationTimeErrorMessage,
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {

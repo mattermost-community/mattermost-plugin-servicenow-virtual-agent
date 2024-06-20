@@ -20,16 +20,17 @@ import (
 // If you add non-reference types to your configuration struct, be sure to rewrite Clone as a deep
 // copy appropriate for your types.
 type configuration struct {
-	ServiceNowURL               string `json:"ServiceNowURL"`
-	ServiceNowOAuthClientID     string `json:"ServiceNowOAuthClientID"`
-	ServiceNowOAuthClientSecret string `json:"ServiceNowOAuthClientSecret"`
-	EncryptionSecret            string `json:"EncryptionSecret"`
-	WebhookSecret               string `json:"WebhookSecret"`
-	ChannelCacheSize            int    `json:"ChannelCacheSize"`
-	MattermostSiteURL           string
-	PluginID                    string
-	PluginURL                   string
-	PluginURLPath               string
+	ServiceNowURL                string `json:"ServiceNowURL"`
+	ServiceNowOAuthClientID      string `json:"ServiceNowOAuthClientID"`
+	ServiceNowOAuthClientSecret  string `json:"ServiceNowOAuthClientSecret"`
+	EncryptionSecret             string `json:"EncryptionSecret"`
+	WebhookSecret                string `json:"WebhookSecret"`
+	ChannelCacheSize             int    `json:"ChannelCacheSize"`
+	AttachmentLinkExpirationTime int    `json:"AttachmentLinkExpirationTime"`
+	MattermostSiteURL            string
+	PluginID                     string
+	PluginURL                    string
+	PluginURLPath                string
 }
 
 // Clone shallow copies the configuration. Your implementation may require a deep copy if
@@ -99,6 +100,9 @@ func (c *configuration) IsValid() error {
 	}
 	if c.ChannelCacheSize <= 0 {
 		return fmt.Errorf(InvalidChannelCacheSizeErrorMessage)
+	}
+	if c.AttachmentLinkExpirationTime <= 0 {
+		return fmt.Errorf(InvalidAttachmentLinkExpirationTimeErrorMessage)
 	}
 	return nil
 }
