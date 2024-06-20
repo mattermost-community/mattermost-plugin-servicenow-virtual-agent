@@ -289,8 +289,6 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 		Placeholder: "YYYY-MM-DD",
 		HelpText:    "Please enter the date in the format YYYY-MM-DD. Example: 2001-11-04",
 		Optional:    false,
-		MinLength:   10,
-		MaxLength:   10,
 	}
 
 	time := model.DialogElement{
@@ -300,8 +298,6 @@ func (p *Plugin) handleSetDateTimeDialog(w http.ResponseWriter, r *http.Request)
 		Placeholder: "HH:MM",
 		HelpText:    "Please enter the time in 24 hour format as HH:MM. Example: 20:04",
 		Optional:    false,
-		MinLength:   5,
-		MaxLength:   5,
 	}
 
 	inputType := fmt.Sprintf("%v", postActionIntegrationRequest.Context[DateTimeDialogType])
